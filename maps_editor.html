@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Map Editor - Street Game</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #1a1a2e; color: #fff; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; user-select: none; }
+#topBar { display: flex; align-items: center; gap: 10px; padding: 6px 14px; background: rgba(0,0,0,0.5); border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; flex-wrap: wrap; }
+#topBar .title { font-weight: 800; font-size: 16px; color: #ffd700; margin-right: 12px; white-space: nowrap; }
+#topBar button { padding: 5px 12px; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; font-size: 12px; transition: all 0.2s; white-space: nowrap; }
+#topBar button:hover { background: rgba(255,215,0,0.12); border-color: #ffd700; color: #ffd700; }
+#topBar button.primary { background: #ffd700; color: #06060c; font-weight: 700; border-color: #ffd700; }
+#topBar button.primary:hover { background: #ffe44d; color: #06060c; }
+#topBar button.danger { background: rgba(255,51,102,0.15); border-color: #ff3366; color: #ff6688; }
+#topBar button.danger:hover { background: #ff3366; color: #fff; }
+#topBar .sep { color: rgba(255,255,255,0.15); font-size: 16px; }
+#topBar .hint { font-size: 11px; color: rgba(255,255,255,0.35); }
+#editorArea { display: flex; flex: 1; overflow: hidden; }
+#canvasWrap { flex: 1; position: relative; overflow: hidden; background: #0d0d1a; }
+#canvasWrap canvas { display: block; position: absolute; top: 0; left: 0; }
+#toolbar { width: 230px; background: rgba(0,0,0,0.35); border-left: 1px solid rgba(255,255,255,0.06); padding: 10px; overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+#toolbar::-webkit-scrollbar { width: 4px; }
+#toolbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
+.tool-group { border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
+.tool-group:last-child { border-bottom: none; }
+.tool-group .label { font-size: 10px; font-weight: 700; color: #ffd700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+.tool-row { display: flex; gap: 3px; flex-wrap: wrap; }
+.tool-btn { padding: 4px 8px; border: 1px solid rgba(255,255,255,0.08); border-radius: 5px; background: rgba(255,255,255,0.02); color: #bbb; cursor: pointer; font-size: 11px; transition: all 0.15s; text-align: center; white-space: nowrap; flex: 1 0 auto; }
+.tool-btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15); }
+.tool-btn.active { background: #ffd700; color: #06060c; border-color: #ffd700; font-weight: 700; }
+.tool-btn.tile-preview { position: relative; padding-left: 22px; min-width: 60px; }
+.tile-preview .ts { position: absolute; left: 5px; top: 5px; width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.15); background-size: cover; background-position: center; }
+.ts-grass { background-image: url('assets/park.svg'); background-color: #2d5a27; }
+.ts-building { background-image: url('assets/building_detail.svg'); background-color: #808080; }
+.ts-water { background-image: url('assets/water.svg'); background-color: #1a66a0; }
+.ts-sand { background-image: url('assets/sidewalk.svg'); background-color: #e8d4a0; }
+.ts-road { background-image: url('assets/road.svg'); background-color: #3d3d3d; }
+.ts-shop { background-image: url('assets/special_detail.svg'); background-color: #cc8844; }
+.prop-row { display: flex; align-items: center; gap: 5px; margin: 3px 0; }
+.prop-row label { font-size: 11px; color: #999; min-width: 44px; }
+.prop-row input, .prop-row select { flex: 1; padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); color: #fff; font-size: 11px; }
+.prop-row input[type="color"] { flex: 0 0 36px; height: 26px; padding: 1px; cursor: pointer; }
+.prop-row input[type="range"] { flex: 1; }
+.prop-row input:focus, .prop-row select:focus { outline: none; border-color: #ffd700; }
+.prop-row select option { background: #1a1a2e; color: #fff; }
+#statusBar { position: absolute; bottom: 6px; left: 8px; font-size: 11px; color: rgba(255,255,255,0.3); pointer-events: none; z-index: 5; }
+#cursorInfo { position: absolute; top: 6px; right: 8px; font-size: 11px; color: rgba(255,255,255,0.4); pointer-events: none; z-index: 5; text-align: right; line-height: 1.5; }
+.dialog-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(4,4,8,0.85); backdrop-filter: blur(10px); z-index: 100; display: none; justify-content: center; align-items: center; }
+.dialog-box { background: rgba(12,12,23,0.96); padding: 28px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.07); min-width: 380px; max-width: 680px; max-height: 80vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(0,0,0,0.7); }
+.dialog-box h2 { font-size: 20px; font-weight: 800; color: #ffd700; margin-bottom: 14px; }
+.dialog-box textarea { width: 100%; height: 280px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; padding: 10px; font-family: 'Consolas','Courier New',monospace; font-size: 11px; resize: vertical; }
+.dialog-box textarea:focus { outline: none; border-color: #ffd700; }
+.dialog-buttons { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+.dialog-buttons button { padding: 8px 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); color: #fff; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+.dialog-buttons button:hover { background: rgba(255,255,255,0.1); }
+.dialog-buttons button.primary { background: #ffd700; color: #06060c; border-color: #ffd700; }
+.dialog-buttons button.primary:hover { background: #ffe44d; }
+#missionList { max-height: 180px; overflow-y: auto; margin: 6px 0; }
+#missionList .mi { display: flex; align-items: center; gap: 5px; padding: 4px 6px; background: rgba(255,255,255,0.02); border-radius: 4px; margin: 2px 0; cursor: pointer; border: 1px solid transparent; font-size: 11px; }
+#missionList .mi:hover { border-color: rgba(255,255,255,0.1); }
+#missionList .mi.selected { border-color: #ffd700; background: rgba(255,215,0,0.05); }
+#missionList .mi .mi-num { color: #ffd700; font-weight: 700; min-width: 20px; }
+#missionList .mi .mi-type { color: #ccc; flex: 1; }
+#missionList .mi .mi-pos { color: #666; font-size: 10px; }
+#missionList .mi .mi-del { cursor: pointer; color: #ff3366; padding: 2px 5px; border-radius: 3px; }
+#missionList .mi .mi-del:hover { background: rgba(255,51,102,0.15); }
+#spammerList { max-height: 120px; overflow-y: auto; margin: 4px 0; }
+#spammerList .si { display: flex; align-items: center; gap: 5px; padding: 3px 5px; background: rgba(255,255,255,0.02); border-radius: 3px; margin: 2px 0; font-size: 11px; }
+#spammerList .si .si-pos { color: #888; flex: 1; }
+#spammerList .si .si-del { cursor: pointer; color: #ff3366; padding: 1px 4px; border-radius: 3px; }
+#spammerList .si .si-del:hover { background: rgba(255,51,102,0.15); }
+.section-toggle { font-size: 10px; color: #ffd700; cursor: pointer; padding: 2px 6px; border-radius: 3px; background: rgba(255,215,0,0.05); border: 1px solid rgba(255,215,0,0.1); }
+.section-toggle:hover { background: rgba(255,215,0,0.1); }
+</style>
+</head>
+<body>
+
+<div id="topBar">
+  <span class="title">🗺️ Map Editor</span>
+  <button onclick="newMapDialog()">🆕 New</button>
+  <button onclick="resizeMapDialog()">📐 Resize</button>
+  <button onclick="openImportDialog()">📂 Open</button>
+  <span class="sep">|</span>
+  <button class="primary" onclick="exportMap()">📋 Export JSON</button>
+  <button class="primary" onclick="downloadMap()">💾 Download</button>
+  <span class="sep">|</span>
+  <span class="hint">🔄 Scroll: Zoom</span>
+  <span class="hint">🖱️ RMB: Pan</span>
+  <label style="display:flex;align-items:center;gap:3px;font-size:11px;color:rgba(255,255,255,0.4);cursor:pointer;margin-left:auto">
+    <input type="checkbox" checked onchange="drawGrid=this.checked;render()"> Grid
+  </label>
+</div>
+
+<div id="editorArea">
+  <div id="canvasWrap">
+    <canvas id="editorCanvas"></canvas>
+    <div id="statusBar">Ready</div>
+    <div id="cursorInfo"></div>
+  </div>
+  <div id="toolbar">
+    <!-- Tools -->
+    <div class="tool-group">
+      <div class="label">🖌️ Tool</div>
+      <div class="tool-row">
+        <button class="tool-btn active" data-tool="brush" onclick="setTool('brush')">Brush</button>
+        <button class="tool-btn" data-tool="bucket" onclick="setTool('bucket')">Flood</button>
+        <button class="tool-btn" data-tool="eraser" onclick="setTool('eraser')">Eraser</button>
+        <button class="tool-btn" data-tool="picker" onclick="setTool('picker')">Pick</button>
+      </div>
+    </div>
+    <!-- Tiles -->
+    <div class="tool-group">
+      <div class="label">🧱 Tile</div>
+      <div class="tool-row">
+        <button class="tool-btn tile-preview active" data-tile="4" onclick="selectTile(4)"><span class="ts ts-grass"></span>Grass</button>
+        <button class="tool-btn tile-preview" data-tile="3" onclick="selectTile(3)"><span class="ts ts-building"></span>Bld</button>
+        <button class="tool-btn tile-preview" data-tile="0" onclick="selectTile(0)"><span class="ts ts-water"></span>Water</button>
+        <button class="tool-btn tile-preview" data-tile="2" onclick="selectTile(2)"><span class="ts ts-sand"></span>Sand</button>
+        <button class="tool-btn tile-preview" data-tile="1" onclick="selectTile(1)"><span class="ts ts-road"></span>Road</button>
+        <button class="tool-btn tile-preview" data-tile="6" onclick="selectTile(6)"><span class="ts ts-shop"></span>Shop</button>
+        <button class="tool-btn tile-preview" data-tile="7" onclick="selectTile(7)" style="background:rgba(255,215,0,0.08)"><span style="font-size:14px">🎯</span>Mission</button>
+        <button class="tool-btn tile-preview" data-tile="8" onclick="selectTile(8)" style="background:rgba(255,51,102,0.08)"><span style="font-size:14px">💀</span>Spammer</button>
+      </div>
+    </div>
+    <!-- Building props -->
+    <div class="tool-group" id="buildingProps" style="display:none">
+      <div class="label">🏗️ Building</div>
+      <div class="prop-row">
+        <label>Height</label>
+        <input type="range" id="bldH" min="1" max="5" value="2" oninput="editor.bldH=+this.value;document.getElementById('bldHV').textContent=this.value">
+        <span id="bldHV" style="min-width:14px;text-align:center;color:#ffd700;font-weight:700">2</span>
+      </div>
+      <div class="prop-row">
+        <label>Color</label>
+        <input type="color" id="bldC" value="#808080" oninput="editor.bldC=this.value">
+      </div>
+      <div class="prop-row">
+        <label>Shape</label>
+        <select id="bldShape" onchange="editor.bldShape=+this.value;render()">
+          <option value="0">1 - Cap Left</option>
+          <option value="1">2 - Cap Right</option>
+          <option value="2">3 - Tall+Small</option>
+        </select>
+      </div>
+      <div class="prop-row">
+        <label>Rotate</label>
+        <div style="display:flex;gap:4px;flex:1">
+          <button class="tool-btn" onclick="rotateBuilding(-1)" title="Rotate 90° CCW">↺ 90°</button>
+          <span id="bldRotV" style="min-width:32px;text-align:center;color:#ffd700;font-weight:700;line-height:26px">0°</span>
+          <button class="tool-btn" onclick="rotateBuilding(1)" title="Rotate 90° CW">↻ 90°</button>
+        </div>
+      </div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.35);text-align:center">Shapes numbered 1-3, rotate only 90°</div>
+    </div>
+    <!-- Shop props -->
+    <div class="tool-group" id="shopProps" style="display:none">
+      <div class="label">🏪 Shop</div>
+      <div class="prop-row">
+        <label>Type</label>
+        <select id="shopT" onchange="editor.shopT=this.value">
+          <option value="🔫 Ammu-Nation">🔫 Ammu-Nation</option>
+          <option value="👕 Binco">👕 Binco</option>
+          <option value="🚗 Car Showroom">🚗 Car Showroom</option>
+          <option value="🏥 Hospital">🏥 Hospital</option>
+          <option value="🏛️ Police Station">🏛️ Police Station</option>
+          <option value="🏦 Bank">🏦 Bank</option>
+          <option value="🏪 General Store">🏪 General Store</option>
+          <option value="🏟️ Stadium">🏟️ Stadium</option>
+          <option value="💊 Clinic">💊 Clinic</option>
+          <option value="🎰 Casino">🎰 Casino</option>
+          <option value="🛩️ Airport">🛩️ Airport</option>
+        </select>
+      </div>
+      <div class="prop-row">
+        <label>Color</label>
+        <input type="color" id="shopC" value="#cc8844" oninput="editor.shopC=this.value">
+      </div>
+      <div class="prop-row">
+        <label>Rotate</label>
+        <div style="display:flex;gap:4px;flex:1">
+          <button class="tool-btn" onclick="rotateShop(-1)" title="Rotate 90° CCW">↺ 90°</button>
+          <span id="shopRotV" style="min-width:32px;text-align:center;color:#ffd700;font-weight:700;line-height:26px">0°</span>
+          <button class="tool-btn" onclick="rotateShop(1)" title="Rotate 90° CW">↻ 90°</button>
+        </div>
+      </div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.35);text-align:center">Rotate store 90° increments</div>
+    </div>
+    <!-- Spawn point -->
+    <div class="tool-group">
+      <div class="label">📍 Spawn</div>
+      <button class="tool-btn" onclick="setSpawnAtCursor()" style="width:100%">Set Spawn at Cursor</button>
+    </div>
+    <!-- Mission props (shown when Mission tile is selected) -->
+    <div class="tool-group" id="missionProps" style="display:none">
+      <div class="label">🎯 Place Mission</div>
+      <div class="prop-row">
+        <label>Type</label>
+        <select id="missionT" style="flex:1" onchange="editor.missionType=this.value">
+          <option value="taxi">🚕 Taxi</option>
+          <option value="race">🏁 Race</option>
+          <option value="delivery">📦 Delivery</option>
+          <option value="heist">💰 Heist</option>
+          <option value="chase">🚔 Chase</option>
+          <option value="collection">⭐ Collection</option>
+          <option value="protect">🛡️ Protect</option>
+          <option value="smuggle">🚛 Smuggle</option>
+          <option value="stealCar">🚗 Steal Car</option>
+          <option value="transport">🚚 Transport</option>
+          <option value="killPolice">👮 Kill Police</option>
+          <option value="killCivilians">👤 Kill Civilians</option>
+          <option value="killGang">💀 Kill Gang</option>
+          <option value="smuggleProhibited">📯 Smuggle Prohib.</option>
+          <option value="smuggleWeapons">🔫 Smuggle Weapons</option>
+        </select>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.4)">Click the map to place a mission giver</div>
+    </div>
+    <!-- Missions list -->
+    <div class="tool-group">
+      <div class="label" style="display:flex;justify-content:space-between;align-items:center">
+        <span>📋 Mission Order</span>
+        <span style="font-weight:400;color:rgba(255,255,255,0.3);font-size:10px" id="missionCount">0</span>
+      </div>
+      <div id="missionList"></div>
+      <div class="tool-row">
+        <button class="tool-btn" onclick="moveMission(-1)">⬆ Up</button>
+        <button class="tool-btn" onclick="moveMission(1)">⬇ Down</button>
+        <button class="tool-btn danger" onclick="removeSelectedMission()">✖ Remove</button>
+      </div>
+    </div>
+    <!-- Spammers -->
+    <div class="tool-group">
+      <div class="label" style="display:flex;justify-content:space-between;align-items:center">
+        <span>💀 Spammers</span>
+        <span style="font-weight:400;color:rgba(255,255,255,0.3);font-size:10px" id="spammerCount">0</span>
+      </div>
+      <div id="spammerList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Import Dialog -->
+<div class="dialog-overlay" id="importDialog">
+  <div class="dialog-box">
+    <h2>📂 Open Map</h2>
+    <p style="font-size:12px;color:#aaa;margin-bottom:8px">Paste JSON or upload a .json file:</p>
+    <textarea id="importText" placeholder='Paste map JSON here...'></textarea>
+    <div style="margin:8px 0">
+      <input type="file" id="importFile" accept=".json" style="color:#fff;font-size:12px">
+    </div>
+    <div class="dialog-buttons">
+      <button class="primary" onclick="importMap()">✅ Load</button>
+      <button onclick="closeDialog('importDialog')">❌ Cancel</button>
+    </div>
+  </div>
+</div>
+<!-- New Map Dialog -->
+<div class="dialog-overlay" id="newMapDialog">
+  <div class="dialog-box" style="min-width:300px">
+    <h2>🆕 New Map</h2>
+    <div class="prop-row"><label>Columns</label><input type="number" id="newCols" value="60" min="8" max="200"></div>
+    <div class="prop-row"><label>Rows</label><input type="number" id="newRows" value="60" min="8" max="200"></div>
+    <div class="dialog-buttons">
+      <button class="primary" onclick="createNewMap()">✅ Create</button>
+      <button onclick="closeDialog('newMapDialog')">❌ Cancel</button>
+    </div>
+  </div>
+</div>
+<!-- Resize Map Dialog -->
+<div class="dialog-overlay" id="resizeMapDialog">
+  <div class="dialog-box" style="min-width:300px">
+    <h2>📐 Resize Map</h2>
+    <p style="font-size:12px;color:#aaa;margin-bottom:8px">Current: <span id="resizeCurrent" style="color:#ffd700">60×60</span></p>
+    <div class="prop-row"><label>Columns</label><input type="number" id="resizeCols" min="8" max="200"></div>
+    <div class="prop-row"><label>Rows</label><input type="number" id="resizeRows" min="8" max="200"></div>
+    <p style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:6px">Expanding fills new area with water. Shrinking crops from the edges.</p>
+    <div class="dialog-buttons">
+      <button class="primary" onclick="resizeMap()">✅ Apply</button>
+      <button onclick="closeDialog('resizeMapDialog')">❌ Cancel</button>
+    </div>
+  </div>
+</div>
+<!-- Export Dialog -->
+<div class="dialog-overlay" id="exportDialog">
+  <div class="dialog-box" style="min-width:500px">
+    <h2>📋 Export Map</h2>
+    <textarea id="exportText" style="height:220px" readonly></textarea>
+    <div class="dialog-buttons">
+      <button onclick="copyExport()">📋 Copy</button>
+      <button class="primary" onclick="exportAndDownload()">💾 Download</button>
+      <button onclick="closeDialog('exportDialog')">❌ Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================ CONSTANTS ================
+const T = { WATER:0, ROAD:1, SIDEWALK:2, BUILDING:3, PARK:4, PARKING:5, SPECIAL:6 };
+const TS = 32;
+
+// ======================== TILE ASSETS (SVG) ========================
+const TILE_ASSETS = {
+    [T.WATER]:    { name: 'water',    src: 'assets/water.svg',    img: null },
+    [T.ROAD]:     { name: 'road',     src: 'assets/road.svg',     img: null },
+    [T.SIDEWALK]: { name: 'sidewalk', src: 'assets/sidewalk.svg', img: null },
+    [T.BUILDING]: { name: 'building', src: 'assets/building_detail.svg', img: null },
+    [T.PARK]:     { name: 'park',     src: 'assets/park.svg',     img: null },
+    [T.PARKING]:  { name: 'parking',  src: 'assets/parking.svg',  img: null },
+    [T.SPECIAL]:  { name: 'special',  src: 'assets/special_detail.svg', img: null }
+};
+const SAND_IMG = { src: 'assets/sand.svg', img: null };
+
+function preloadAssets() {
+    return Promise.all([
+        ...Object.values(TILE_ASSETS).map(a => new Promise(resolve => {
+            a.img = new Image();
+            a.img.onload = resolve;
+            a.img.onerror = resolve;
+            a.img.src = a.src;
+        })),
+        new Promise(resolve => {
+            SAND_IMG.img = new Image();
+            SAND_IMG.img.onload = resolve;
+            SAND_IMG.img.onerror = resolve;
+            SAND_IMG.img.src = SAND_IMG.src;
+        })
+    ]);
+}
+const MISSION_ICONS = {
+  taxi:'🚕', race:'🏁', delivery:'📦', heist:'💰', chase:'🚔',
+  collection:'⭐', protect:'🛡️', smuggle:'🚛', stealCar:'🚗',
+  transport:'🚚', killPolice:'👮', killCivilians:'👤',
+  killGang:'💀', smuggleProhibited:'📯', smuggleWeapons:'🔫', spammer:'💀'
+};
+
+// ================ STATE ================
+const editor = {
+  cols: 60, rows: 60,
+  tiles: [], buildingColors: [], buildingHeights: [], buildingShapes: [], buildingRotations: [],
+  specialBuildings: [],
+  spawnPoint: { x: 30, y: 30 },
+  missionGivers: [],
+  spammers: [],
+  zones: [],
+  curTile: 4, curTool: 'brush',
+  bldH: 2, bldC: '#808080', bldShape: 0, bldRot: 0,
+  shopT: '🔫 Ammu-Nation', shopC: '#cc8844', shopRot: 0,
+  selMission: -1,
+  missionType: 'taxi'
+};
+
+let drawGrid = true;
+let cam = { x: 0, y: 0 };
+let zoom = 1;
+let panning = false, pStart = {}, cStart = {};
+let mTile = { tx:0, ty:0 };
+let mDown = false;
+let renderPending = false;
+
+const canvas = document.getElementById('editorCanvas');
+const ctx = canvas.getContext('2d');
+const wrap = document.getElementById('canvasWrap');
+
+function resize() {
+  canvas.width = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  render();
+}
+window.addEventListener('resize', resize);
+
+// ================ MAP ================
+function initMap(cols, rows) {
+  editor.cols = cols; editor.rows = rows;
+  editor.tiles = []; editor.buildingColors = []; editor.buildingHeights = []; editor.buildingShapes = []; editor.buildingRotations = [];
+  editor.specialBuildings = []; editor.missionGivers = []; editor.spammers = [];
+  editor.selMission = -1;
+  editor.spawnPoint = { x: Math.floor(cols/2), y: Math.floor(rows/2) };
+  for (let y = 0; y < rows; y++) {
+    editor.tiles[y] = []; editor.buildingColors[y] = []; editor.buildingHeights[y] = []; editor.buildingShapes[y]=[]; editor.buildingRotations[y]=[];
+    for (let x = 0; x < cols; x++) {
+      const isEdge = x < 2 || x >= cols-2 || y < 2 || y >= rows-2;
+      editor.tiles[y][x] = isEdge ? T.WATER : T.PARK;
+      editor.buildingColors[y][x] = null;
+      editor.buildingHeights[y][x] = 0;
+      editor.buildingShapes[y][x] = null;
+      editor.buildingRotations[y][x] = 0;
+    }
+  }
+  editor.zones = [{ name:'City', x1:0, y1:0, x2:cols-1, y2:rows-1, pal:'downtown' }];
+  refreshUI();
+  resize();
+  setStatus(`New map: ${cols}x${rows}`);
+}
+
+function loadMap(data) {
+  editor.cols = data.cols || 60; editor.rows = data.rows || 60;
+  editor.tiles = data.tiles || [];
+  editor.buildingColors = data.buildingColors ? data.buildingColors.map(r=>r.map(c=>c===null?null:c)) : [];
+  editor.buildingHeights = data.buildingHeights ? data.buildingHeights.map(r=>r.map(h=>h===null?0:h)) : [];
+  editor.buildingShapes = data.buildingShapes ? data.buildingShapes.map(r=>r.map(c=>c===null?null:c)) : [];
+  editor.buildingRotations = data.buildingRotations ? data.buildingRotations.map(r=>r.map(c=>c===null?0:c)) : [];
+  editor.specialBuildings = data.specialBuildings || [];
+  // Validate spawnPoint - ensure numbers and within bounds, else fallback to center
+  if (data.spawnPoint && typeof data.spawnPoint.x === "number" && typeof data.spawnPoint.y === "number"
+      && data.spawnPoint.x >= 0 && data.spawnPoint.x < editor.cols
+      && data.spawnPoint.y >= 0 && data.spawnPoint.y < editor.rows) {
+    editor.spawnPoint = { x: Math.floor(data.spawnPoint.x), y: Math.floor(data.spawnPoint.y) };
+  } else {
+    if (data.spawnPoint) console.warn("[editor] Invalid spawnPoint in map data, falling back to center:", data.spawnPoint);
+    editor.spawnPoint = { x:Math.floor(editor.cols/2), y:Math.floor(editor.rows/2) };
+  }
+  editor.missionGivers = (data.missionGivers||[]).filter(m => m.type !== 'spammer');
+  editor.spammers = (data.missionGivers||[]).filter(m => m.type === 'spammer').map(m => ({ x:m.x, y:m.y }));
+  editor.zones = data.zones || [{ name:'City', x1:0, y1:0, x2:editor.cols-1, y2:editor.rows-1, pal:'downtown' }];
+  editor.selMission = -1;
+  for (let y = 0; y < editor.rows; y++) {
+    if (!editor.tiles[y]) editor.tiles[y] = [];
+    if (!editor.buildingColors[y]) editor.buildingColors[y] = [];
+    if (!editor.buildingHeights[y]) editor.buildingHeights[y] = [];
+    if (!editor.buildingShapes[y]) editor.buildingShapes[y] = [];
+    if (!editor.buildingRotations[y]) editor.buildingRotations[y] = [];
+    for (let x = 0; x < editor.cols; x++) {
+      if (editor.tiles[y][x] === undefined) editor.tiles[y][x] = T.WATER;
+      if (editor.buildingColors[y][x] === undefined) editor.buildingColors[y][x] = null;
+      if (editor.buildingHeights[y][x] === undefined) editor.buildingHeights[y][x] = 0;
+      if (editor.buildingShapes[y][x] === undefined) editor.buildingShapes[y][x] = null;
+      if (editor.buildingRotations[y][x] === undefined) editor.buildingRotations[y][x] = 0;
+    }
+  }
+  // Enforce 4 sqm (2x2) buildings: unify each 2x2 block where all 4 tiles are buildings
+  for(let y=0;y<editor.rows-1;y++){
+    for(let x=0;x<editor.cols-1;x++){
+      if(editor.tiles[y][x]!==T.BUILDING) continue;
+      // check if this is top-left of a 2x2 building block (use local 2x2 even grouping)
+      // Only unify if the 2x2 window is fully building
+      if(x+1>=editor.cols || y+1>=editor.rows) continue;
+      if(editor.tiles[y][x+1]!==T.BUILDING || editor.tiles[y+1][x]!==T.BUILDING || editor.tiles[y+1][x+1]!==T.BUILDING) continue;
+      // Check left/top not same building to avoid double processing
+      const col=editor.buildingColors[y][x], h=editor.buildingHeights[y][x];
+      const shape=editor.buildingShapes[y][x], rot=editor.buildingRotations[y][x];
+      if(col==null) continue;
+      const leftSame = x>0 && editor.buildingColors[y][x-1]===col && editor.buildingHeights[y][x-1]===h && editor.buildingShapes[y][x-1]===shape && editor.buildingRotations[y][x-1]===rot;
+      const topSame = y>0 && editor.buildingColors[y-1][x]===col && editor.buildingHeights[y-1][x]===h && editor.buildingShapes[y-1][x]===shape && editor.buildingRotations[y-1][x]===rot;
+      if(leftSame || topSame) continue;
+      // Unify the 2x2
+      for(let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++){
+        editor.buildingColors[y+dy][x+dx]=col;
+        editor.buildingHeights[y+dy][x+dx]=h;
+        editor.buildingShapes[y+dy][x+dx]=shape;
+        editor.buildingRotations[y+dy][x+dx]=rot;
+      }
+    }
+  }
+  refreshUI();
+  resize();
+  setStatus(`Loaded: ${editor.cols}x${editor.rows}`);
+}
+
+function buildMapObject() {
+  const bC = editor.buildingColors.map(r=>r.map(c=>c||null));
+  const bH = editor.buildingHeights.map(r=>r.map(h=>h||null));
+  const bS = editor.buildingShapes.map(r=>r.map(c=>c===null?null:c));
+  const bR = editor.buildingRotations.map(r=>r.map(c=>c===null?0:c));
+  const allMG = [
+    ...editor.missionGivers.map(m=>({ x:m.x, y:m.y, type:m.type, icon:m.icon||MISSION_ICONS[m.type]||'⭐' })),
+    ...editor.spammers.map(s=>({ x:s.x, y:s.y, type:'spammer', icon:'💀' }))
+  ];
+  // Ensure spawnPoint is always a valid tile coordinate - never emit null
+  let outSpawn = editor.spawnPoint;
+  if (!outSpawn || typeof outSpawn.x !== "number" || typeof outSpawn.y !== "number"
+      || outSpawn.x < 0 || outSpawn.x >= editor.cols || outSpawn.y < 0 || outSpawn.y >= editor.rows) {
+    outSpawn = { x:Math.floor(editor.cols/2), y:Math.floor(editor.rows/2) };
+    // Heal editor state so subsequent exports are consistent
+    editor.spawnPoint = outSpawn;
+  } else {
+    outSpawn = { x: Math.floor(outSpawn.x), y: Math.floor(outSpawn.y) };
+  }
+  return {
+    cols: editor.cols, rows: editor.rows,
+    tiles: editor.tiles,
+    buildingColors: bC, buildingHeights: bH, buildingShapes: bS, buildingRotations: bR,
+    specialBuildings: editor.specialBuildings,
+    spawnPoint: outSpawn,
+    missionGivers: allMG,
+    zones: editor.zones
+  };
+}
+
+// ================ TOOLS ================
+function setTool(t) {
+  editor.curTool = t;
+  document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool===t));
+  canvas.style.cursor = t==='brush'?'crosshair':t==='eraser'?'not-allowed':t==='picker'?'cell':'crosshair';
+  setStatus('Tool: '+t);
+}
+
+function selectTile(t) {
+  editor.curTile = t;
+  document.querySelectorAll('[data-tile]').forEach(b => b.classList.toggle('active', +b.dataset.tile===t));
+  document.getElementById('buildingProps').style.display = t===3?'block':'none';
+  document.getElementById('shopProps').style.display = t===6?'block':'none';
+  document.getElementById('missionProps').style.display = t===7?'block':'none';
+  const names = {0:'Water',1:'Road',2:'Sand',3:'Building',4:'Grass',5:'Parking',6:'Shop',7:'Mission',8:'Spammer'};
+  setStatus('Tile: '+ (names[t]||t));
+}
+
+// ================ CANVAS ================
+function getMouse(e) {
+  const r = canvas.getBoundingClientRect();
+  const mx = e.clientX - r.left, my = e.clientY - r.top;
+  const wx = (mx - canvas.width/2)/zoom + cam.x;
+  const wy = (my - canvas.height/2)/zoom + cam.y;
+  return { mx, my, wx, wy, tx:Math.floor(wx/TS), ty:Math.floor(wy/TS) };
+}
+function ib(tx, ty) { return tx>=0 && tx<editor.cols && ty>=0 && ty<editor.rows; }
+
+canvas.addEventListener('mousedown', e => {
+  if (e.button === 2) {
+    panning = true; pStart.x=e.clientX; pStart.y=e.clientY;
+    cStart.x=cam.x; cStart.y=cam.y; canvas.style.cursor='grabbing'; return;
+  }
+  mDown = true;
+  const m = getMouse(e);
+  mTile = m;
+  document.getElementById('cursorInfo').innerHTML = `(${m.tx}, ${m.ty})<br>Tile: ${editor.tiles[m.ty]?.[m.tx]??'?'}`;
+  if (!ib(m.tx, m.ty)) return;
+  if (editor.curTool === 'picker') pick(m.tx,m.ty);
+  else if (editor.curTool === 'eraser') erase(m.tx,m.ty);
+  else if (editor.curTool === 'bucket') flood(m.tx,m.ty);
+  else if (editor.curTool === 'brush') paint(m.tx,m.ty);
+});
+
+canvas.addEventListener('mousemove', e => {
+  const m = getMouse(e);
+  mTile = m;
+  document.getElementById('cursorInfo').innerHTML = `(${m.tx}, ${m.ty})<br>Tile: ${editor.tiles[m.ty]?.[m.tx]??'?'}`;
+  if (panning) {
+    cam.x = cStart.x - (e.clientX-pStart.x)/zoom;
+    cam.y = cStart.y - (e.clientY-pStart.y)/zoom;
+    render(); return;
+  }
+  if (mDown && ib(m.tx,m.ty)) {
+    if (editor.curTool==='brush') paint(m.tx,m.ty);
+    else if (editor.curTool==='eraser') erase(m.tx,m.ty);
+  }
+});
+
+canvas.addEventListener('mouseup', e=>{
+  mDown=false;
+  if (e.button===2) { panning=false; canvas.style.cursor='crosshair'; }
+});
+canvas.addEventListener('mouseleave', ()=>{mDown=false;panning=false;canvas.style.cursor='crosshair';});
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  zoom = Math.max(0.15, Math.min(6, zoom - e.deltaY*0.001*zoom));
+  render();
+}, {passive:false});
+canvas.addEventListener('contextmenu', e=>e.preventDefault());
+
+// ================ PAINT ================
+function paint(tx, ty, tile) {
+  tile = tile !== undefined ? tile : editor.curTile;
+  if (tile === 3) {
+    // 2x2 building (4 sqm) with selectable shape and 90° rotation
+    for(let dy=0; dy<2; dy++){
+      for(let dx=0; dx<2; dx++){
+        const nx=tx+dx, ny=ty+dy;
+        if(!ib(nx,ny)) continue;
+        editor.tiles[ny][nx] = T.BUILDING;
+        editor.buildingColors[ny][nx] = editor.bldC;
+        editor.buildingHeights[ny][nx] = editor.bldH;
+        editor.buildingShapes[ny][nx] = editor.bldShape;
+        editor.buildingRotations[ny][nx] = editor.bldRot;
+      }
+    }
+  } else if (tile === 6) {
+    // Shops are 4 sqm (2x2) like buildings - place as 2x2 block with 90° rotation
+    for(let dy=0; dy<2; dy++){
+      for(let dx=0; dx<2; dx++){
+        const nx=tx+dx, ny=ty+dy;
+        if(!ib(nx,ny)) continue;
+        editor.tiles[ny][nx] = T.SPECIAL;
+        editor.buildingRotations[ny][nx] = editor.shopRot;
+        if (!editor.specialBuildings.some(s=>s.x===nx&&s.y===ny))
+          editor.specialBuildings.push({x:nx, y:ny, color:editor.shopC, name:editor.shopT});
+        else {
+          // Update existing shop tile to new type/color
+          const sb = editor.specialBuildings.find(s=>s.x===nx&&s.y===ny);
+          if(sb){ sb.color=editor.shopC; sb.name=editor.shopT; }
+        }
+      }
+    }
+  } else if (tile === 7) {
+    // Place mission giver
+    editor.tiles[ty][tx] = editor.tiles[ty][tx] || T.PARK; // don't overwrite meaningful tile
+    const type = editor.missionType || 'taxi';
+    if (!editor.missionGivers.some(m=>m.x===tx&&m.y===ty))
+      editor.missionGivers.push({x:tx, y:ty, type, icon:MISSION_ICONS[type]||'⭐'});
+    refreshUI();
+  } else if (tile === 8) {
+    // Place spammer
+    editor.tiles[ty][tx] = editor.tiles[ty][tx] || T.PARK;
+    if (!editor.spammers.some(s=>s.x===tx&&s.y===ty))
+      editor.spammers.push({x:tx, y:ty});
+    refreshUI();
+  } else {
+    editor.tiles[ty][tx] = tile;
+    if (tile !== T.BUILDING) { editor.buildingColors[ty][tx]=null; editor.buildingHeights[ty][tx]=0; }
+  }
+  render();
+}
+
+function erase(tx, ty) {
+  // Handle shop (T.SPECIAL) 2x2 block first - erase whole shop
+  if(editor.tiles[ty]?.[tx]===T.SPECIAL){
+    const sb = editor.specialBuildings.find(s=>s.x===tx&&s.y===ty);
+    const shopName = sb?.name || null;
+    if(shopName){
+      // find 2x2 origin containing this tile with same shop name
+      let ox=tx, oy=ty, found=false;
+      for(let candY=ty-1; candY<=ty; candY++){
+        for(let candX=tx-1; candX<=tx; candX++){
+          if(!ib(candX,candY)) continue;
+          let ok=true;
+          for(let dy=0;dy<2;dy++){
+            for(let dx=0;dx<2;dx++){
+              const nx=candX+dx, ny=candY+dy;
+              if(!ib(nx,ny) || editor.tiles[ny][nx]!==T.SPECIAL) ok=false;
+              else if(!editor.specialBuildings.some(s=>s.x===nx&&s.y===ny&&s.name===shopName)) ok=false;
+            }
+          }
+          if(ok && candX<=tx && tx < candX+2 && candY<=ty && ty < candY+2){
+            ox=candX; oy=candY; found=true; break;
+          }
+        }
+        if(found) break;
+      }
+      if(found){
+        // Erase the 2x2 shop block
+        for(let dy=0; dy<2; dy++){
+          for(let dx=0; dx<2; dx++){
+            const nx=ox+dx, ny=oy+dy;
+            if(!ib(nx,ny)) continue;
+            editor.tiles[ny][nx]=T.WATER;
+            editor.buildingColors[ny][nx]=null;
+            editor.buildingHeights[ny][nx]=0;
+            editor.buildingShapes[ny][nx]=null;
+            editor.buildingRotations[ny][nx]=0;
+          }
+        }
+        editor.specialBuildings = editor.specialBuildings.filter(s=> !(s.x>=ox && s.x<ox+2 && s.y>=oy && s.y<oy+2 && s.name===shopName));
+        editor.missionGivers = editor.missionGivers.filter(m=>!(Math.floor(m.x)===tx&&Math.floor(m.y)===ty));
+        editor.spammers = editor.spammers.filter(s=>!(Math.floor(s.x)===tx&&Math.floor(s.y)===ty));
+        if (editor.spawnPoint && editor.spawnPoint.x===tx && editor.spawnPoint.y===ty) {
+          editor.spawnPoint = { x: Math.floor(editor.cols/2), y: Math.floor(editor.rows/2) };
+          setStatus(`Spawn was at erased tile (${tx},${ty}) - reset to center (${editor.spawnPoint.x},${editor.spawnPoint.y})`);
+        }
+        refreshUI(); render();
+        setStatus(`Erased shop ${shopName} 2x2 at (${ox},${oy})`);
+        return;
+      }
+    }
+    // Fallback single tile shop erase
+    editor.specialBuildings = editor.specialBuildings.filter(s=>!(s.x===tx&&s.y===ty));
+  } else {
+    editor.specialBuildings = editor.specialBuildings.filter(s=>!(s.x===tx&&s.y===ty));
+  }
+  editor.missionGivers = editor.missionGivers.filter(m=>!(Math.floor(m.x)===tx&&Math.floor(m.y)===ty));
+  editor.spammers = editor.spammers.filter(s=>!(Math.floor(s.x)===tx&&Math.floor(s.y)===ty));
+  if (editor.spawnPoint && editor.spawnPoint.x===tx && editor.spawnPoint.y===ty) {
+    // Reset to center instead of null so export never loses spawn data
+    editor.spawnPoint = { x: Math.floor(editor.cols/2), y: Math.floor(editor.rows/2) };
+    setStatus(`Spawn was at erased tile (${tx},${ty}) - reset to center (${editor.spawnPoint.x},${editor.spawnPoint.y})`);
+  }
+  // If it's a building, erase its whole 2x2 block (find origin)
+  if(editor.tiles[ty]?.[tx]===T.BUILDING){
+    let col=editor.buildingColors[ty][tx], h=editor.buildingHeights[ty][tx];
+    // Try to find origin of 2x2 building containing (tx,ty)
+    let ox=tx, oy=ty;
+    for(let candY=ty-1; candY<=ty; candY++){
+      for(let candX=tx-1; candX<=tx; candX++){
+        if(!ib(candX,candY)) continue;
+        let ok=true;
+        for(let dy=0;dy<2;dy++){
+          for(let dx=0;dx<2;dx++){
+            const nx=candX+dx, ny=candY+dy;
+            if(!ib(nx,ny) || editor.tiles[ny][nx]!==T.BUILDING) ok=false;
+            else if(editor.buildingColors[ny][nx]!==col || editor.buildingHeights[ny][nx]!==h) ok=false;
+          }
+        }
+        if(ok && candX<=tx && tx < candX+2 && candY<=ty && ty < candY+2){
+          ox=candX; oy=candY;
+          break;
+        }
+      }
+    }
+    // Erase the 2x2 block if found, else single tile
+    let erased=false;
+    for(let dy=0; dy<2; dy++){
+      for(let dx=0; dx<2; dx++){
+        const nx=ox+dx, ny=oy+dy;
+        if(!ib(nx,ny)) continue;
+        if(editor.tiles[ny][nx]===T.BUILDING && editor.buildingColors[ny][nx]===col){
+          editor.tiles[ny][nx]=T.WATER;
+          editor.buildingColors[ny][nx]=null;
+          editor.buildingHeights[ny][nx]=0;
+          editor.buildingShapes[ny][nx]=null;
+          editor.buildingRotations[ny][nx]=0;
+          erased=true;
+        }
+      }
+    }
+    if(!erased){
+      editor.tiles[ty][tx]=T.WATER;
+      editor.buildingColors[ty][tx]=null;
+      editor.buildingHeights[ty][tx]=0;
+      editor.buildingShapes[ty][tx]=null;
+      editor.buildingRotations[ty][tx]=0;
+    }
+  } else {
+    editor.tiles[ty][tx] = T.WATER;
+    editor.buildingColors[ty][tx] = null;
+    editor.buildingHeights[ty][tx] = 0;
+    editor.buildingShapes[ty][tx]=null;
+    editor.buildingRotations[ty][tx]=0;
+  }
+  refreshUI(); render();
+  setStatus(`Erased (${tx},${ty})`);
+}
+
+function pick(tx, ty) {
+  const t = editor.tiles[ty][tx];
+  editor.curTile = t;
+  document.querySelectorAll('[data-tile]').forEach(b => b.classList.toggle('active', +b.dataset.tile===t));
+  document.getElementById('buildingProps').style.display = t===3?'block':'none';
+  document.getElementById('shopProps').style.display = t===6?'block':'none';
+  if (t===3) {
+    const h = editor.buildingHeights[ty][tx]||2, c = editor.buildingColors[ty][tx]||'#808080';
+    const sh = editor.buildingShapes[ty][tx] ?? 0;
+    const rot = editor.buildingRotations[ty][tx] ?? 0;
+    document.getElementById('bldH').value=h; document.getElementById('bldHV').textContent=h;
+    document.getElementById('bldC').value=c; editor.bldH=h; editor.bldC=c;
+    document.getElementById('bldShape').value=sh; editor.bldShape=sh;
+    editor.bldRot=rot; document.getElementById('bldRotV').textContent=(rot*90)+'°';
+  }
+  if (t===6) {
+    const sb = editor.specialBuildings.find(s=>s.x===tx&&s.y===ty);
+    if (sb) {
+      editor.shopT=sb.name; editor.shopC=sb.color;
+      document.getElementById('shopT').value=sb.name; document.getElementById('shopC').value=sb.color;
+    }
+    const r = editor.buildingRotations[ty][tx] ?? 0;
+    editor.shopRot = r;
+    document.getElementById('shopRotV').textContent = (r*90)+'°';
+  }
+  setStatus(`Picked (${tx},${ty})`);
+}
+
+function flood(tx, ty) {
+  const target = editor.tiles[ty][tx];
+  const newTile = editor.curTile;
+  if (target === newTile) return;
+  // Don't flood over special buildings with non-special tiles, or vice versa
+  if (target === T.SPECIAL && newTile !== T.SPECIAL) { setStatus('Cannot flood over shops'); return; }
+  if (target !== T.SPECIAL && newTile === T.SPECIAL) { setStatus('Cannot flood shops onto other tiles'); return; }
+  const stack = [[tx, ty]];
+  const visited = new Uint8Array(editor.cols * editor.rows);
+  let count = 0;
+  while (stack.length > 0 && count < 50000) {
+    const [cx, cy] = stack.pop();
+    if (!ib(cx,cy)) continue;
+    const idx = cy * editor.cols + cx;
+    if (visited[idx]) continue;
+    if (editor.tiles[cy][cx] !== target) continue;
+    visited[idx] = 1;
+    paint(cx, cy, newTile);
+    count++;
+    stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+  }
+  render();
+  setStatus(`Flood fill: ${count} tiles`);
+}
+
+// ================ SPAWN ================
+function setSpawnAtCursor() {
+  if (!ib(mTile.tx, mTile.ty)) { setStatus(`Cannot set spawn: cursor out of bounds (${mTile.tx},${mTile.ty})`); return; }
+  const tile = editor.tiles[mTile.ty]?.[mTile.tx];
+  // Warn if spawn is on unwalkable tile (water=0, building=3) but still allow - engine will fallback to nearest walkable
+  if (tile === T.WATER) setStatus(`⚠ Spawn set to (${mTile.tx}, ${mTile.ty}) on WATER - player will spawn at nearest walkable tile in-game`);
+  else if (tile === T.BUILDING) setStatus(`⚠ Spawn set to (${mTile.tx}, ${mTile.ty}) on BUILDING - player will spawn at nearest walkable tile in-game`);
+  else setStatus(`Spawn set to (${mTile.tx}, ${mTile.ty})`);
+  editor.spawnPoint = { x: mTile.tx, y: mTile.ty };
+  render();
+}
+
+function rotateBuilding(dir){
+  // If cursor is over a building, rotate that building block; else rotate next placement
+  const tx=mTile.tx, ty=mTile.ty;
+  if(ib(tx,ty) && editor.tiles[ty][tx]===T.BUILDING){
+    rotateSelectedBuilding(dir);
+  } else {
+    editor.bldRot = (editor.bldRot + dir + 4) % 4;
+    document.getElementById('bldRotV').textContent = (editor.bldRot*90)+'°';
+    render();
+    setStatus(`Next building rotation: ${editor.bldRot*90}°`);
+  }
+}
+function rotateSelectedBuilding(dir){
+  const tx=mTile.tx, ty=mTile.ty;
+  if(!ib(tx,ty) || editor.tiles[ty][tx]!==T.BUILDING) { rotateBuilding(dir); return; }
+  // find 2x2 origin containing this tile
+  let ox=tx, oy=ty; const col=editor.buildingColors[ty][tx], h=editor.buildingHeights[ty][tx];
+  for(let candY=ty-1;candY<=ty;candY++) for(let candX=tx-1;candX<=tx;candX++){
+    if(!ib(candX,candY)) continue;
+    let ok=true;
+    for(let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++){
+      const nx=candX+dx, ny=candY+dy;
+      if(!ib(nx,ny)||editor.tiles[ny][nx]!==T.BUILDING) ok=false;
+      else if(editor.buildingColors[ny][nx]!==col || editor.buildingHeights[ny][nx]!==h) ok=false;
+    }
+    if(ok && candX<=tx && tx<candX+2 && candY<=ty && ty<candY+2){ ox=candX; oy=candY; break; }
+  }
+  // rotate that building block
+  for(let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++){
+    const nx=ox+dx, ny=oy+dy;
+    if(!ib(nx,ny)) continue;
+    if(editor.tiles[ny][nx]===T.BUILDING){
+      editor.buildingRotations[ny][nx] = ((editor.buildingRotations[ny][nx]||0) + dir + 4)%4;
+    }
+  }
+  editor.bldRot = editor.buildingRotations[ty][tx]||0;
+  document.getElementById('bldRotV').textContent = (editor.bldRot*90)+'°';
+  render();
+  setStatus(`Rotated building at (${ox},${oy}) to ${editor.bldRot*90}°`);
+}
+function rotateShop(dir){
+  const tx=mTile.tx, ty=mTile.ty;
+  if(ib(tx,ty) && editor.tiles[ty][tx]===T.SPECIAL){
+    rotateShopSelected(dir);
+  } else {
+    editor.shopRot = (editor.shopRot + dir + 4) % 4;
+    document.getElementById('shopRotV').textContent = (editor.shopRot*90)+'°';
+    render();
+    setStatus(`Next shop rotation: ${editor.shopRot*90}°`);
+  }
+}
+function rotateShopSelected(dir){
+  const tx=mTile.tx, ty=mTile.ty;
+  if(!ib(tx,ty) || editor.tiles[ty][tx]!==T.SPECIAL) { editor.shopRot = (editor.shopRot + dir + 4)%4; document.getElementById('shopRotV').textContent=(editor.shopRot*90)+'°'; render(); return; }
+  const sb = editor.specialBuildings.find(s=>s.x===tx&&s.y===ty);
+  const shopName = sb?.name || null;
+  if(!shopName){ editor.shopRot = (editor.shopRot + dir + 4)%4; document.getElementById('shopRotV').textContent=(editor.shopRot*90)+'°'; render(); return; }
+  let ox=tx, oy=ty, found=false;
+  for(let candY=ty-1;candY<=ty;candY++) for(let candX=tx-1;candX<=tx;candX++){
+    if(!ib(candX,candY)) continue;
+    let ok=true;
+    for(let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++){
+      const nx=candX+dx, ny=candY+dy;
+      if(!ib(nx,ny)||editor.tiles[ny][nx]!==T.SPECIAL) ok=false;
+      else if(!editor.specialBuildings.some(s=>s.x===nx&&s.y===ny&&s.name===shopName)) ok=false;
+    }
+    if(ok && candX<=tx && tx<candX+2 && candY<=ty && ty<candY+2){ ox=candX; oy=candY; found=true; break; }
+  }
+  if(!found){ ox=tx; oy=ty; }
+  for(let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++){
+    const nx=ox+dx, ny=oy+dy;
+    if(!ib(nx,ny)) continue;
+    if(editor.tiles[ny][nx]===T.SPECIAL && editor.specialBuildings.some(s=>s.x===nx&&s.y===ny&&s.name===shopName)){
+      editor.buildingRotations[ny][nx] = ((editor.buildingRotations[ny][nx]||0) + dir + 4)%4;
+    }
+  }
+  const newRot = editor.buildingRotations[ty][tx]||0;
+  editor.shopRot=newRot;
+  document.getElementById('shopRotV').textContent=(newRot*90)+'°';
+  render();
+  setStatus(`Rotated shop ${shopName} at (${ox},${oy}) to ${newRot*90}°`);
+}
+
+// ================ MISSIONS ================
+function refreshMissionList() {
+  const el = document.getElementById('missionList');
+  el.innerHTML = '';
+  editor.missionGivers.forEach((m, i) => {
+    const d = document.createElement('div');
+    d.className = 'mi' + (i===editor.selMission?' selected':'');
+    d.innerHTML = `<span class="mi-num">#${i+1}</span><span class="mi-type">${m.icon||'⭐'} ${m.type}</span><span class="mi-pos">(${m.x},${m.y})</span><span class="mi-del">✖</span>`;
+    d.querySelector('.mi-del').onclick = e => { e.stopPropagation(); editor.missionGivers.splice(i,1); if(editor.selMission>=editor.missionGivers.length)editor.selMission=-1; refreshUI(); render(); };
+    d.onclick = () => { editor.selMission=i; refreshMissionList(); };
+    el.appendChild(d);
+  });
+  document.getElementById('missionCount').textContent = editor.missionGivers.length;
+}
+
+function moveMission(dir) {
+  const i = editor.selMission;
+  if (i<0 || i>=editor.missionGivers.length) return;
+  const j = i+dir;
+  if (j<0 || j>=editor.missionGivers.length) return;
+  [editor.missionGivers[i], editor.missionGivers[j]] = [editor.missionGivers[j], editor.missionGivers[i]];
+  editor.selMission = j;
+  refreshMissionList(); render();
+}
+
+function removeSelectedMission() {
+  const i = editor.selMission;
+  if (i<0 || i>=editor.missionGivers.length) return;
+  editor.missionGivers.splice(i,1);
+  editor.selMission = -1;
+  refreshUI(); render();
+}
+
+// ================ SPAMMERS ================
+function refreshSpammerList() {
+  const el = document.getElementById('spammerList');
+  el.innerHTML = '';
+  if (!editor.spammers.length) {
+    el.innerHTML = '<div style="color:rgba(255,255,255,0.2);font-size:11px">None</div>';
+    document.getElementById('spammerCount').textContent = '0';
+    return;
+  }
+  editor.spammers.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'si';
+    d.innerHTML = `<span>💀 #${i+1}</span><span class="si-pos">(${s.x},${s.y})</span><span class="si-del">✖</span>`;
+    d.querySelector('.si-del').onclick = () => { editor.spammers.splice(i,1); refreshUI(); render(); };
+    el.appendChild(d);
+  });
+  document.getElementById('spammerCount').textContent = editor.spammers.length;
+}
+
+function refreshUI() {
+  refreshMissionList();
+  refreshSpammerList();
+}
+
+// ================ EXPORT / IMPORT ================
+function exportMap() {
+  const obj = buildMapObject();
+  const json = JSON.stringify(obj, null, 2);
+  document.getElementById('exportText').value = json;
+  document.getElementById('exportDialog').style.display = 'flex';
+}
+
+function copyExport() {
+  const ta = document.getElementById('exportText');
+  ta.select(); document.execCommand('copy');
+  setStatus('Copied!');
+}
+
+function downloadMap() {
+  const obj = buildMapObject();
+  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'map.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setStatus('Downloaded!');
+}
+
+function exportAndDownload() {
+  downloadMap();
+  closeDialog('exportDialog');
+}
+
+function openImportDialog() {
+  document.getElementById('importText').value = '';
+  document.getElementById('importFile').value = '';
+  document.getElementById('importDialog').style.display = 'flex';
+}
+
+function importMap() {
+  const text = document.getElementById('importText').value.trim();
+  const file = document.getElementById('importFile').files[0];
+  if (file) {
+    const r = new FileReader();
+    r.onload = e => { try { loadMap(JSON.parse(e.target.result)); closeDialog('importDialog'); } catch(err) { alert('Invalid JSON: '+err.message); } };
+    r.readAsText(file); return;
+  }
+  if (!text) { alert('Paste JSON or select a file.'); return; }
+  try { loadMap(JSON.parse(text)); closeDialog('importDialog'); } catch(err) { alert('Invalid JSON: '+err.message); }
+}
+
+function newMapDialog() { document.getElementById('newMapDialog').style.display='flex'; }
+function createNewMap() {
+  const cols = +document.getElementById('newCols').value||60;
+  const rows = +document.getElementById('newRows').value||60;
+  initMap(cols, rows);
+  closeDialog('newMapDialog');
+  cam.x = cols*TS/2; cam.y = rows*TS/2;
+  render();
+}
+function closeDialog(id) { document.getElementById(id).style.display='none'; }
+
+function resizeMapDialog() {
+  document.getElementById('resizeCols').value = editor.cols;
+  document.getElementById('resizeRows').value = editor.rows;
+  document.getElementById('resizeCurrent').textContent = editor.cols + '\u00d7' + editor.rows;
+  document.getElementById('resizeMapDialog').style.display = 'flex';
+}
+function resizeMap() {
+  const newCols = +document.getElementById('resizeCols').value || editor.cols;
+  const newRows = +document.getElementById('resizeRows').value || editor.rows;
+  if (newCols < 8 || newRows < 8 || newCols > 200 || newRows > 200) { alert('Dimensions must be 8–200'); return; }
+  if (newCols === editor.cols && newRows === editor.rows) { closeDialog('resizeMapDialog'); return; }
+  // Resize tile arrays
+  const oldCols = editor.cols, oldRows = editor.rows;
+  for (let y = 0; y < newRows; y++) {
+    if (!editor.tiles[y]) editor.tiles[y] = [];
+    if (!editor.buildingColors[y]) editor.buildingColors[y] = [];
+    if (!editor.buildingHeights[y]) editor.buildingHeights[y] = [];
+    if (!editor.buildingShapes[y]) editor.buildingShapes[y] = [];
+    if (!editor.buildingRotations[y]) editor.buildingRotations[y] = [];
+    for (let x = 0; x < newCols; x++) {
+      if (x >= oldCols || y >= oldRows || editor.tiles[y][x] === undefined) {
+        editor.tiles[y][x] = T.WATER;
+        editor.buildingColors[y][x] = null;
+        editor.buildingHeights[y][x] = 0;
+        editor.buildingShapes[y][x] = null;
+        editor.buildingRotations[y][x] = 0;
+      }
+    }
+    editor.tiles[y].length = newCols;
+    editor.buildingColors[y].length = newCols;
+    editor.buildingHeights[y].length = newCols;
+    editor.buildingShapes[y].length = newCols;
+    editor.buildingRotations[y].length = newCols;
+  }
+  editor.tiles.length = newRows;
+  editor.buildingColors.length = newRows;
+  editor.buildingHeights.length = newRows;
+  editor.buildingShapes.length = newRows;
+  editor.buildingRotations.length = newRows;
+  editor.cols = newCols;
+  editor.rows = newRows;
+  // Remove out-of-bounds special buildings, missions, spammers
+  editor.specialBuildings = editor.specialBuildings.filter(s => s.x < newCols && s.y < newRows);
+  editor.missionGivers = editor.missionGivers.filter(m => m.x < newCols && m.y < newRows);
+  editor.spammers = editor.spammers.filter(s => s.x < newCols && s.y < newRows);
+  if (editor.spawnPoint) {
+    if (editor.spawnPoint.x >= newCols || editor.spawnPoint.y >= newRows)
+      editor.spawnPoint = { x: Math.floor(newCols/2), y: Math.floor(newRows/2) };
+  }
+  refreshUI();
+  closeDialog('resizeMapDialog');
+  setStatus(`Resized to ${newCols}\u00d7${newRows}`);
+  resize();
+}
+
+function setStatus(msg) {
+  document.getElementById('statusBar').textContent = `${editor.cols}\u00d7${editor.rows} | ${msg}`;
+}
+
+// ================ RENDER ================
+// ======================== LOW BUILDING (<=3 floors) HELPERS (editor preview) ========================
+function hexToRgb2(hex){
+  let h=hex.replace("#",""); if(h.length===3) h=h.split("").map(c=>c+c).join("");
+  const n=parseInt(h,16); return {r:(n>>16)&255,g:(n>>8)&255,b:n&255};
+}
+function lightenHex2(hex,amt){
+  const {r,g,b}=hexToRgb2(hex);
+  return "#" + [r,g,b].map((v,i)=>{
+    const c=[r,g,b][i];
+    const nc=Math.round(c+(255-c)*amt);
+    return Math.min(255,nc).toString(16).padStart(2,"0");
+  }).join("");
+}
+function hashTile2(x,y){
+  let h=(x*374761393) ^ (y*668265263);
+  h=(h ^ (h>>>13))*1274126177;
+  return (h>>>0);
+}
+function drawCapsule2(x,y,w,h,col){
+  const r=h/2;
+  ctx.fillStyle=col;
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.arc(x+w-r,y+r,r,-Math.PI/2,Math.PI/2);
+  ctx.lineTo(x+r,y+h);
+  ctx.arc(x+r,y+r,r,Math.PI/2,-Math.PI/2);
+  ctx.closePath();
+  ctx.fill();
+}
+function isEditorBuildingOrigin(x,y,col,h){
+  const leftSame = x>0 && editor.buildingColors[y]?.[x-1]===col && editor.buildingHeights[y]?.[x-1]===h;
+  const topSame = y>0 && editor.buildingColors[y-1]?.[x]===col && editor.buildingHeights[y-1]?.[x]===h;
+  return !leftSame && !topSame;
+}
+function drawShopEditor(px, py, S, shopName, rotOverride=0){
+  const rot = ((rotOverride||0)%4+4)%4;
+  let drawPx=px, drawPy=py;
+  let needsRestore=false;
+  if(rot!==0){
+    const cx=px+S/2, cy=py+S/2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot*Math.PI/2);
+    ctx.translate(-S/2, -S/2);
+    drawPx=0; drawPy=0;
+    needsRestore=true;
+  }
+  // Determine shop style - matches reference images: dark building, gray border, striped awning, door, bars
+  const n = (shopName||"").toLowerCase();
+  let awningType = "generic";
+  let doorPos = "se"; // sw, se, center
+  let barPos = "bottomMid"; // leftMid, bottomMid
+  if(n.includes("binco") || n.includes("clothing") || n.includes("ملابس")){
+    awningType="red"; doorPos="se"; barPos="bottomMid";
+  } else if(n.includes("car") || n.includes("سيارات") || n.includes("showroom")){
+    awningType="blue"; doorPos="sw"; barPos="leftMid";
+  } else if(n.includes("casino") || n.includes("كازينو") || n.includes("caligula")){
+    awningType="gold"; doorPos="se"; barPos="leftMid";
+  } else if(n.includes("ammu") || n.includes("amu")){ awningType="black"; doorPos="se"; barPos="bottomMid"; }
+  else if(n.includes("clinic") || n.includes("عيادة")){ awningType="red"; doorPos="sw"; barPos="bottomMid"; }
+  else if(n.includes("bank") || n.includes("بنك")){ awningType="gold"; doorPos="center"; barPos="leftMid"; }
+  // Colors
+  const borderCol = "#6b7280";
+  const innerCol = "#2e3545";
+  let awningDark, awningLight;
+  if(awningType==="blue"){ awningDark="#1e3a5c"; awningLight="#5b8fd4"; }
+  else if(awningType==="red"){ awningDark="#9b2c2c"; awningLight="#f9e6e6"; }
+  else if(awningType==="gold"){ awningDark="#7a5a10"; awningLight="#f7d65a"; }
+  else if(awningType==="black"){ awningDark="#1f2937"; awningLight="#9ca3af"; }
+  else { awningDark="#374151"; awningLight="#d1d5db"; }
+  const bw = Math.max(3, Math.round(S*0.065));
+  // Outer border
+  ctx.fillStyle = borderCol;
+  ctx.fillRect(drawPx, drawPy, S, S);
+  // Inner
+  ctx.fillStyle = innerCol;
+  ctx.fillRect(drawPx+bw, drawPy+bw, S-bw*2, S-bw*2);
+  // Door - light square with black circle
+  const doorSize = Math.round(S*0.22);
+  let doorX, doorY;
+  if(doorPos==="sw"){ doorX = drawPx + bw + Math.round(S*0.08); doorY = drawPy + S - bw - doorSize - Math.round(S*0.06); }
+  else if(doorPos==="se"){ doorX = drawPx + S - bw - doorSize - Math.round(S*0.08); doorY = drawPy + S - bw - doorSize - Math.round(S*0.06); }
+  else { doorX = drawPx + Math.round((S - doorSize)/2); doorY = drawPy + S - bw - doorSize - Math.round(S*0.06); }
+  ctx.fillStyle = "#cbd5e1";
+  ctx.fillRect(doorX, doorY, doorSize, doorSize);
+  // black circle inside door
+  ctx.fillStyle = "#0f1115";
+  ctx.beginPath();
+  ctx.arc(doorX+doorSize/2, doorY+doorSize/2, doorSize*0.32, 0, Math.PI*2);
+  ctx.fill();
+  // Bars - two horizontal rounded bars gray
+  const barW = Math.round(S*0.24);
+  const barH = Math.max(2, Math.round(S*0.045));
+  const barGap = Math.round(S*0.022);
+  let barX, barY0;
+  if(barPos==="leftMid"){
+    barX = drawPx + bw + Math.round(S*0.08);
+    barY0 = drawPy + bw + Math.round(S*0.30);
+  } else { // bottomMid - to left of door
+    barX = doorX - barW - Math.round(S*0.06);
+    // if door is sw, bars would be to right of door, adjust
+    if(doorPos==="sw"){ barX = doorX + doorSize + Math.round(S*0.06); }
+    barY0 = doorY + Math.round(doorSize*0.15);
+    // clamp inside inner
+    if(barX < drawPx+bw+2) barX = drawPx+bw+2;
+    if(barX+barW > drawPx+S-bw-2) barX = drawPx+S-bw-2-barW;
+  }
+  // ensure bars stay inside
+  const barColor = "#9ca3af";
+  ctx.fillStyle = barColor;
+  for(let i=0;i<2;i++){
+    const by = barY0 + i*(barH+barGap);
+    // draw rounded bar
+    const r = barH/2;
+    ctx.beginPath();
+    ctx.moveTo(barX+r, by);
+    ctx.lineTo(barX+barW-r, by);
+    ctx.arc(barX+barW-r, by+r, r, -Math.PI/2, Math.PI/2);
+    ctx.lineTo(barX+r, by+barH);
+    ctx.arc(barX+r, by+r, r, Math.PI/2, -Math.PI/2);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Awning - striped rectangle below building
+  const awningW = Math.round(S*0.86);
+  const awningH = Math.round(S*0.16);
+  const awningX = drawPx + Math.round((S - awningW)/2);
+  const awningY = drawPy + S; // directly below building
+  // awning background (dark)
+  ctx.fillStyle = awningDark;
+  // draw with slight bottom radius
+  const awR = Math.max(2, Math.round(awningH*0.18));
+  ctx.beginPath();
+  ctx.moveTo(awningX, awningY);
+  ctx.lineTo(awningX+awningW, awningY);
+  ctx.lineTo(awningX+awningW, awningY+awningH-awR);
+  ctx.quadraticCurveTo(awningX+awningW, awningY+awningH, awningX+awningW-awR, awningY+awningH);
+  ctx.lineTo(awningX+awR, awningY+awningH);
+  ctx.quadraticCurveTo(awningX, awningY+awningH, awningX, awningY+awningH-awR);
+  ctx.lineTo(awningX, awningY);
+  ctx.closePath();
+  ctx.fill();
+  // stripes
+  const numStripes = 12;
+  const stripeW = awningW / numStripes;
+  for(let i=0;i<numStripes;i++){
+    if(i%2===0) continue; // keep dark for even, light for odd - dark already background
+    ctx.fillStyle = awningLight;
+    const sx = awningX + i*stripeW;
+    // clip to awning shape
+    ctx.fillRect(sx+1, awningY+1, stripeW-1, awningH-2);
+  }
+  // awning top edge highlight (where it meets building)
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.fillRect(awningX, awningY, awningW, Math.max(1, Math.round(awningH*0.12)));
+  if(needsRestore) ctx.restore();
+}
+function drawLowEditor(px,py,col,tx,ty,h, span=1, shapeOverride=null, rotOverride=0){
+  const S=TS*span;
+  const rot = ((rotOverride||0)%4+4)%4;
+  let needsRestore=false;
+  let drawPx=px, drawPy=py;
+  if(rot!==0){
+    const cx=px+S/2, cy=py+S/2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot*Math.PI/2);
+    ctx.translate(-S/2,-S/2);
+    drawPx=0; drawPy=0;
+    needsRestore=true;
+  }
+  const borderW=Math.max(2,Math.round(S*0.075));
+  const borderCol=lightenHex2(col,0.18);
+  const innerX=drawPx+borderW, innerY=drawPy+borderW, innerW=S-borderW*2, innerH=S-borderW*2;
+  if(needsRestore){
+    // drawing via transformed context - offset handled by translate, use 0,0 base
+    ctx.fillStyle=borderCol; ctx.fillRect(0,0,S,S);
+    ctx.fillStyle=col; ctx.fillRect(borderW,borderW,innerW,innerH);
+  } else {
+    ctx.fillStyle=borderCol; ctx.fillRect(drawPx,drawPy,S,S);
+    ctx.fillStyle=col; ctx.fillRect(innerX,innerY,innerW,innerH);
+  }
+  // Select shape by number (0,1,2) - if override null use hash random for backward compat
+  let variant;
+  if(shapeOverride!==null && shapeOverride!==undefined) variant = ((shapeOverride%3)+3)%3;
+  else {
+    const seed=(hashTile2(tx,ty) ^ (h*0x9e3779b9))>>>0;
+    variant=seed%3;
+  }
+  // For rotated context, coordinates for capsules/doors should be relative to transformed origin
+  const baseX = needsRestore ? 0 : drawPx;
+  const baseY = needsRestore ? 0 : drawPy;
+  // recompute inner for both cases
+  const iX = baseX+borderW, iY=baseY+borderW;
+  const capW=Math.round(innerW*0.30), capH=Math.round(innerH*0.075), capGap=Math.round(innerH*0.025);
+  if(variant===0){
+    const cx=iX+Math.round(innerW*0.08), cy0=iY+Math.round(innerH*0.14);
+    drawCapsule2(cx,cy0,capW,capH,"#8E9196");
+    drawCapsule2(cx,cy0+capH+capGap,capW,capH,"#8E9196");
+    const doorW=Math.round(innerW*0.24), doorH=Math.round(innerH*0.42);
+    const dx=iX+innerW-doorW-Math.round(innerW*0.08), dy=iY+innerH-doorH-Math.round(innerH*0.08);
+    ctx.fillStyle="#8D8D8F"; ctx.fillRect(dx,dy,doorW,doorH);
+  } else if(variant===1){
+    const capW2=Math.round(innerW*0.32), cx=iX+innerW-capW2-Math.round(innerW*0.08), cy0=iY+Math.round(innerH*0.14);
+    drawCapsule2(cx,cy0,capW2,capH,"#F2F2F2");
+    drawCapsule2(cx,cy0+capH+capGap,capW2,capH,"#F2F2F2");
+    const doorW=Math.round(innerW*0.24), doorH=Math.round(innerH*0.52);
+    const dx=iX+Math.round(innerW*0.08), dy=iY+innerH-doorH-Math.round(innerH*0.08);
+    ctx.fillStyle="#2E2E32"; ctx.fillRect(dx,dy,doorW,doorH);
+  } else {
+    const doorDark="#3A393E";
+    const tallW=Math.round(innerW*0.28), tallH=Math.round(innerH*0.52), tx1=iX+innerW-tallW-Math.round(innerW*0.09), ty1=iY+Math.round(innerH*0.09);
+    ctx.fillStyle=doorDark; ctx.fillRect(tx1,ty1,tallW,tallH);
+    const smallW=Math.round(innerW*0.24), smallH=Math.round(innerH*0.32), tx2=iX+Math.round(innerW*0.09), ty2=iY+innerH-smallH-Math.round(innerH*0.09);
+    ctx.fillStyle=doorDark; ctx.fillRect(tx2,ty2,smallW,smallH);
+  }
+  if(needsRestore) ctx.restore();
+}
+
+function render() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#0d0d1a'; ctx.fillRect(0,0,W,H);
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  ctx.scale(zoom, zoom);
+  ctx.translate(-cam.x, -cam.y);
+
+  const vw = W/zoom, vh = H/zoom;
+  const sx = Math.max(0, Math.floor((cam.x-vw/2)/TS)-1);
+  const ex = Math.min(editor.cols-1, Math.ceil((cam.x+vw/2)/TS)+1);
+  const sy = Math.max(0, Math.floor((cam.y-vh/2)/TS)-1);
+  const ey = Math.min(editor.rows-1, Math.ceil((cam.y+vh/2)/TS)+1);
+  const t = Date.now();
+
+  for (let y = sy; y <= ey; y++) {
+    for (let x = sx; x <= ex; x++) {
+      const tile = editor.tiles[y]?.[x] ?? T.WATER;
+      const px = x*TS, py = y*TS;
+      switch (tile) {
+        case T.WATER: {
+          const a = TILE_ASSETS[T.WATER];
+          if (a.img && a.img.complete) ctx.drawImage(a.img, px, py, TS, TS);
+          ctx.fillStyle=`rgba(255,255,255,${0.04+Math.sin(t/800+x*0.5+y*0.3)*0.02})`;
+          ctx.fillRect(px+4, py+4+Math.sin(t/600+x+y)*2, TS-8, 2);
+          break;
+        }
+        case T.ROAD: {
+          const a = TILE_ASSETS[T.ROAD];
+          if (a.img && a.img.complete) ctx.drawImage(a.img, px, py, TS, TS);
+          ctx.fillStyle='rgba(255,200,0,0.12)';
+          ctx.fillRect(px+TS/2-1, py+3, 2, TS-6);
+          break;
+        }
+        case T.SIDEWALK: {
+          const a = TILE_ASSETS[T.SIDEWALK];
+          if (a.img && a.img.complete) ctx.drawImage(a.img, px, py, TS, TS);
+          break;
+        }
+        case T.BUILDING:
+          break;
+        case T.PARK: {
+          const a = TILE_ASSETS[T.PARK];
+          if (a.img && a.img.complete) ctx.drawImage(a.img, px, py, TS, TS);
+          break;
+        }
+        case T.PARKING: {
+          const a = TILE_ASSETS[T.PARKING];
+          if (a.img && a.img.complete) ctx.drawImage(a.img, px, py, TS, TS);
+          break;
+        }
+        default: {
+          ctx.fillStyle='#cc8844'; ctx.fillRect(px,py,TS,TS);
+          ctx.fillStyle='rgba(0,0,0,0.1)'; ctx.fillRect(px+2,py+2,TS-4,TS-4);
+        }
+      }
+    }
+  }
+
+  // Draw buildings (2x2, 4 sqm) - greedy cover
+  {
+    const visited = new Set();
+    for (let y = sy; y <= ey; y++) {
+      for (let x = sx; x <= ex; x++) {
+        if (editor.tiles[y]?.[x] !== T.BUILDING) continue;
+        const key = x + "," + y;
+        if (visited.has(key)) continue;
+        const col = editor.buildingColors[y][x] || '#808080';
+        const h = editor.buildingHeights[y][x] || 1;
+        const shape = editor.buildingShapes[y][x] ?? 0;
+        const rot = editor.buildingRotations[y][x] ?? 0;
+        let can2x2 = x + 1 < editor.cols && y + 1 < editor.rows &&
+          editor.tiles[y][x + 1] === T.BUILDING && editor.tiles[y + 1][x] === T.BUILDING && editor.tiles[y + 1][x + 1] === T.BUILDING &&
+          !visited.has((x + 1) + "," + y) && !visited.has(x + "," + (y + 1)) && !visited.has((x + 1) + "," + (y + 1)) &&
+          editor.buildingColors[y][x + 1] === col && editor.buildingColors[y + 1][x] === col && editor.buildingColors[y + 1][x + 1] === col &&
+          editor.buildingHeights[y][x + 1] === h && editor.buildingHeights[y + 1][x] === h && editor.buildingHeights[y + 1][x + 1] === h &&
+          (editor.buildingShapes[y][x + 1] ?? 0) === shape && (editor.buildingShapes[y + 1][x] ?? 0) === shape && (editor.buildingShapes[y + 1][x + 1] ?? 0) === shape &&
+          (editor.buildingRotations[y][x + 1] ?? 0) === rot && (editor.buildingRotations[y + 1][x] ?? 0) === rot && (editor.buildingRotations[y + 1][x + 1] ?? 0) === rot;
+        if (can2x2) {
+          const px = x * TS, py = y * TS;
+          if (h <= 3) drawLowEditor(px, py, col, x, y, h, 2, shape, rot);
+          else {
+            const S = TS * 2;
+            if(rot!==0){
+              const cx=px+S/2, cy=py+S/2;
+              ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot*Math.PI/2); ctx.translate(-S/2,-S/2);
+              ctx.fillStyle = col; ctx.fillRect(0, 0, S, S);
+              ctx.fillStyle = 'rgba(0,0,0,0.2)';
+              ctx.fillRect(S - 3, 0, 3, S); ctx.fillRect(0, S - 3, S, 3);
+              const ba = TILE_ASSETS[T.BUILDING];
+              if (ba.img && ba.img.complete) for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) ctx.drawImage(ba.img, dx * TS, dy * TS, TS, TS);
+              ctx.restore();
+            } else {
+              ctx.fillStyle = col; ctx.fillRect(px, py, S, S);
+              ctx.fillStyle = 'rgba(0,0,0,0.2)';
+              ctx.fillRect(px + S - 3, py, 3, S); ctx.fillRect(px, py + S - 3, S, 3);
+              const ba = TILE_ASSETS[T.BUILDING];
+              if (ba.img && ba.img.complete) for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) ctx.drawImage(ba.img, px + dx * TS, py + dy * TS, TS, TS);
+            }
+          }
+          visited.add(key); visited.add((x + 1) + "," + y); visited.add(x + "," + (y + 1)); visited.add((x + 1) + "," + (y + 1));
+        } else {
+          const px = x * TS, py = y * TS;
+          if (h <= 3) drawLowEditor(px, py, col, x, y, h, 1, shape, rot);
+          else {
+            if(rot!==0){
+              const S=TS;
+              const cx=px+S/2, cy=py+S/2;
+              ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot*Math.PI/2); ctx.translate(-S/2,-S/2);
+              ctx.fillStyle = col; ctx.fillRect(0, 0, S, S);
+              ctx.fillStyle = 'rgba(0,0,0,0.2)';
+              ctx.fillRect(S - 3, 0, 3, S); ctx.fillRect(0, S - 3, S, 3);
+              const ba = TILE_ASSETS[T.BUILDING];
+              if (ba.img && ba.img.complete) ctx.drawImage(ba.img, 0, 0, TS, TS);
+              ctx.restore();
+            } else {
+              ctx.fillStyle = col; ctx.fillRect(px, py, TS, TS);
+              ctx.fillStyle = 'rgba(0,0,0,0.2)';
+              ctx.fillRect(px + TS - 3, py, 3, TS); ctx.fillRect(px, py + TS - 3, TS, 3);
+              const ba = TILE_ASSETS[T.BUILDING];
+              if (ba.img && ba.img.complete) ctx.drawImage(ba.img, px, py, TS, TS);
+            }
+          }
+          visited.add(key);
+        }
+      }
+    }
+  }
+
+  // Special building labels (grouped by connected same-name buildings)
+  const sbMap = new Map();
+  for (const sb of editor.specialBuildings) sbMap.set(sb.x+','+sb.y, sb);
+  const sbVisited = new Set();
+  for (const sb of editor.specialBuildings) {
+    const key = sb.x+','+sb.y;
+    if (sbVisited.has(key)) continue;
+    // Collect connected group
+    const group = [];
+    const stack = [sb];
+    sbVisited.add(key);
+    while (stack.length > 0) {
+      const cur = stack.pop();
+      group.push(cur);
+      for (const [dx,dy] of [[0,-1],[0,1],[-1,0],[1,0]]) {
+        const nk = (cur.x+dx)+','+(cur.y+dy);
+        if (!sbVisited.has(nk)) {
+          const n = sbMap.get(nk);
+          if (n && n.name === cur.name) { sbVisited.add(nk); stack.push(n); }
+        }
+      }
+    }
+    // Render group as 4 sqm shop (2x2) with reference design - striped awning, door, bars
+    const minX = Math.min(...group.map(g=>g.x));
+    const maxX = Math.max(...group.map(g=>g.x));
+    const minYg = Math.min(...group.map(g=>g.y));
+    const maxYg = Math.max(...group.map(g=>g.y));
+    const groupW = maxX - minX + 1;
+    const groupH = maxYg - minYg + 1;
+    // Check if group is valid 2x2 (4 sqm) - use custom shop renderer, else fallback per-tile
+    const isShop2x2 = groupW===2 && groupH===2 && group.length===4;
+    // Also check if viewport cull - if shop completely outside view, skip
+    const shopPx = minX*TS, shopPy = minYg*TS;
+    const shopS = groupW*TS; // for 2x2, S=64; includes awning below
+    // simple viewport check expanded for awning
+    if(shopPx + shopS < (cam.x - (canvas.width/zoom)/2) - 20 || shopPx > (cam.x + (canvas.width/zoom)/2) + 20 ||
+       shopPy + shopS + Math.round(shopS*0.16) < (cam.y - (canvas.height/zoom)/2) - 20 || shopPy > (cam.y + (canvas.height/zoom)/2) + 20){
+      // outside view, skip drawing but still need label later
+    } else if(isShop2x2){
+      const rot = editor.buildingRotations[minYg]?.[minX] ?? editor.shopRot ?? 0;
+      drawShopEditor(shopPx, shopPy, shopS, sb.name, rot);
+    } else {
+      // Fallback per-tile for irregular groups
+      for (const g of group) {
+        if (g.x<sx || g.x>ex || g.y<sy || g.y>ey) continue;
+        const px=g.x*TS, py=g.y*TS;
+        ctx.fillStyle=g.color; ctx.fillRect(px,py,TS,TS);
+        ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=1;
+        ctx.strokeRect(px+1,py+1,TS-2,TS-2);
+        ctx.fillStyle='rgba(255,255,255,0.2)';
+        ctx.fillRect(px+3,py+3,TS/2-6,TS/2-6);
+        ctx.fillRect(px+TS/2+3,py+3,TS/2-6,TS/2-6);
+        ctx.fillRect(px+3,py+TS/2+3,TS/2-6,TS/2-6);
+        ctx.fillRect(px+TS/2+3,py+TS/2+3,TS/2-6,TS/2-6);
+      }
+    }
+    // Render name label centered above group (reuse minX/maxX/minYg)
+    const cx = (minX+maxX+1)/2*TS;
+    const cy = minYg*TS;
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    const name = sb.name;
+    ctx.font = 'bold 8px Arial';
+    const tw = ctx.measureText(name).width + 8;
+    ctx.fillRect(cx - tw/2, cy - 18, tw, 14);
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.fillText(name, cx, cy - 8);
+  }
+
+  // Spawn
+  if (editor.spawnPoint) {
+    const spx=editor.spawnPoint.x*TS+TS/2, spy=editor.spawnPoint.y*TS+TS/2;
+    ctx.fillStyle='#00ffcc'; ctx.shadowColor='#00ffcc'; ctx.shadowBlur=18;
+    ctx.beginPath(); ctx.arc(spx,spy,8,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#fff'; ctx.font='bold 8px Arial'; ctx.textAlign='center';
+    ctx.fillText('SPAWN', spx, spy-14);
+  }
+
+  // Mission givers
+  for (const m of editor.missionGivers) {
+    const mx=m.x*TS+TS/2, my=m.y*TS+TS/2;
+    ctx.fillStyle='#ffd700'; ctx.shadowColor='#ffd700'; ctx.shadowBlur=14;
+    ctx.beginPath(); ctx.arc(mx,my,7,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(mx-9,my-19,18,12);
+    ctx.fillStyle='#ffd700'; ctx.font='bold 7px Arial'; ctx.textAlign='center';
+    const idx = editor.missionGivers.indexOf(m);
+    ctx.fillText('#'+(idx+1), mx, my-10);
+    ctx.fillStyle='#fff'; ctx.font='8px Arial';
+    ctx.fillText(m.icon||'⭐', mx, my+3);
+  }
+
+  // Spammers
+  for (const s of editor.spammers) {
+    const sx2=s.x*TS+TS/2, sy2=s.y*TS+TS/2;
+    ctx.fillStyle='#ff3366'; ctx.shadowColor='#ff3366'; ctx.shadowBlur=14;
+    ctx.beginPath(); ctx.arc(sx2,sy2,7,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#fff'; ctx.font='9px Arial'; ctx.textAlign='center';
+    ctx.fillText('💀', sx2, sy2+3);
+  }
+
+  // Grid
+  if (drawGrid && zoom>0.3) {
+    ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=0.5;
+    for (let y=sy;y<=ey;y++) { ctx.beginPath(); ctx.moveTo(sx*TS,y*TS); ctx.lineTo((ex+1)*TS,y*TS); ctx.stroke(); }
+    for (let x=sx;x<=ex;x++) { ctx.beginPath(); ctx.moveTo(x*TS,sy*TS); ctx.lineTo(x*TS,(ey+1)*TS); ctx.stroke(); }
+  }
+
+  // Cursor
+  const mt = mTile;
+  if (ib(mt.tx, mt.ty)) {
+    ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=2; ctx.setLineDash([4,4]);
+    ctx.strokeRect(mt.tx*TS, mt.ty*TS, TS, TS);
+    ctx.setLineDash([]);
+  }
+
+  ctx.restore();
+}
+
+// ================ INIT ================
+preloadAssets().then(() => {
+    initMap(60, 60);
+    cam.x = 30*TS; cam.y = 30*TS;
+    render();
+    function animLoop() { render(); requestAnimationFrame(animLoop); }
+    setTimeout(()=>animLoop(), 100);
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === '1') selectTile(4);
+  else if (e.key === '2') selectTile(3);
+  else if (e.key === '3') selectTile(1);
+  else if (e.key === '4') selectTile(0);
+  else if (e.key === '5') selectTile(2);
+  else if (e.key === 'b') setTool('brush');
+  else if (e.key === 'f') setTool('bucket');
+  else if (e.key === 'e') setTool('eraser');
+  else if (e.key === 'p') setTool('picker');
+  else if (e.key === 'g') { drawGrid=!drawGrid; document.querySelector('#topBar input[type=checkbox]').checked=drawGrid; render(); }
+  else if (e.key === 'r' || e.key === 'R') { rotateBuilding(1); }
+  else if (e.key === 'q' || e.key === 'Q') { rotateBuilding(-1); }
+  else if (e.key === '6') { editor.bldShape=0; document.getElementById('bldShape').value=0; setStatus('Shape: 1'); render(); }
+  else if (e.key === '7') { editor.bldShape=1; document.getElementById('bldShape').value=1; setStatus('Shape: 2'); render(); }
+  else if (e.key === '8') { editor.bldShape=2; document.getElementById('bldShape').value=2; setStatus('Shape: 3'); render(); }
+});
+</script>
+</body>
+</html>

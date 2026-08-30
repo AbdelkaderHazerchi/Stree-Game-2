@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ar">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+        <meta http-equiv="Pragma" content="no-cache">
+        <meta http-equiv="Expires" content="0">
+        <title>Street Game - 2D Edition</title>
+        <link rel="stylesheet" href="style.css?v=12">
+    </head>
+    <body>
+        <div id="gameContainer">
+            <video id="introVideo" muted playsinline>
+                <source src="SG_starter.mp4" type="video/mp4">
+            </video>
+            <canvas id="gameCanvas"></canvas>
+            <div id="hud">
+                <div id="topBar">
+                    <div id="healthMoney">
+                        <div>
+                            <div id="healthLabel" data-i18n="hud.health">✅ الصحة</div>
+                            <div id="healthBar">
+                                <div id="healthFill"></div>
+                            </div>
+                        </div>
+                        <div id="moneyDisplay">
+                            💰 $<span id="moneyAmount">500</span>
+                        </div>
+                        <div id="ammoDisplay">
+                            🔫 <span id="weaponName" data-i18n="weapon.pistol">مسدس</span>
+                            <span id="ammoAmount">30</span>
+                            /<span id="ammoMax">∞</span>
+                        </div>
+                    </div>
+                    <div id="wantedDisplay"></div>
+                </div>
+            </div>
+            <div id="missionBox">
+                <div id="missionTitle" data-i18n="hud.noMission">🎯 لا توجد مهمة نشطة</div>
+                <div id="missionDesc" data-i18n="hud.goYellow">اذهب إلى النقاط الصفراء على الخريطة لبدء مهمة</div>
+                <div id="missionProgress"></div>
+            </div>
+            <div id="minimap">
+                <canvas id="minimapCanvas"></canvas>
+            </div>
+            <div id="controlsHelp">
+                <span>WASD</span>
+                تحريك | <span>E</span>
+                دخول/خروج | <span>مسافة</span>
+                إطلاق نار<br>
+                <span>F</span>
+                بوق | <span>M</span>
+                إلغاء مهمة | <span>I</span>
+                حقيبة | <span>1-5</span>
+                سلاح<br>
+                <span>F2</span> إخفاء/إظهار الواجهة | <span>F4</span> تخطي الفيديو
+            </div>
+            <div id="skipHint" style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.6);color:#ffd700;padding:6px 14px;border-radius:8px;font-size:13px;z-index:101;pointer-events:none;display:flex;align-items:center;gap:6px;">⏩ اضغط <span style="background:rgba(255,215,0,0.2);padding:1px 6px;border-radius:4px;border:1px solid rgba(255,215,0,0.3)">F4</span> لتخطي الفيديو</div>
+            <div id="notification"></div>
+            <div id="inventoryPanel">
+                <div id="invHeader" data-i18n="inventory.title">🎒 الحقيبة</div>
+                <div id="invWeapons"></div>
+                <div id="invItems"></div>
+                <div id="invHint" data-i18n="inventory.hint">1-5 تبديل سلاح • I إغلاق</div>
+            </div>
+            <div id="gameOverlay">
+                <div id="overlayContent">
+                    <h2 id="overlayTitle" data-i18n="overlay.gta">GTA 6 - 2D</h2>
+                    <p id="overlayMsg" data-i18n="overlay.vice">مدينة Vice City تنتظرك!</p>
+                    <button id="overlayBtn" data-i18n="overlay.start">ابدأ المغامرة</button>
+                </div>
+            </div>
+            <!-- Shop Dialog -->
+            <div class="dialog-overlay" id="shopDialog">
+                <div class="dialog-box" style="min-width:380px">
+                    <h2 id="shopTitle" data-i18n="shop.title">🏪 متجر</h2>
+                    <div id="shopItems" class="slots-container" style="max-height:320px"></div>
+                    <div style="margin-top:8px;font-size:12px;color:#888" id="shopPlayerInfo"></div>
+                    <div class="dialog-buttons" style="margin-top:12px">
+                        <button class="menu-btn secondary" id="closeShopBtn" data-i18n="shop.close">❌ إغلاق</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Main Menu — SG2 Cover Full-Bleed -->
+            <div id="mainMenu" role="dialog" aria-label="Main Menu">
+                <div class="menu-container">
+                    <div class="menu-left" aria-hidden="true">
+                        <div class="menu-title-line">Street</div>
+                        <div class="menu-title-line">Game 2</div>
+                    </div>
+                    <div class="menu-right">
+                        <div class="menu-buttons">
+                            <button class="menu-btn primary menu-btn-large" id="newGameBtn" data-i18n="menu.newGame">🎮 لعب جديد</button>
+                            <button class="menu-btn secondary" id="continueBtn" data-i18n="menu.continue">💾 استمرار</button>
+                            <button class="menu-btn secondary" id="mainSettingsBtn" data-i18n="menu.settings">⚙️ الإعدادات</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- New Game Dialog -->
+            <div class="dialog-overlay" id="newGameDialog">
+                <div class="dialog-box">
+                    <h2 data-i18n="newGame.title">🎮 لعب جديد</h2>
+                    <p data-i18n="newGame.prompt">ادخل اسم اللعبة:</p>
+                    <input type="text" id="saveNameInput" placeholder="اسم اللعبة..." maxlength="20" data-i18n-placeholder="newGame.placeholder">
+                    <div class="dialog-buttons">
+                        <button class="menu-btn primary" id="startNewBtn" data-i18n="newGame.start">✅ ابدأ</button>
+                        <button class="menu-btn secondary" id="cancelNewBtn" data-i18n="newGame.cancel">❌ إلغاء</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Pause Menu -->
+            <div id="pauseMenu">
+                <div class="dialog-box" style="text-align:center">
+                    <h2 style="font-size:28px" data-i18n="pause.title">⏸ إيقاف مؤقت</h2>
+                    <div class="menu-buttons" style="margin-top:25px">
+                        <button class="menu-btn primary" id="resumeBtn" data-i18n="pause.resume">▶ استئناف</button>
+                        <button class="menu-btn secondary" id="saveGameBtn" data-i18n="pause.save">💾 حفظ اللعبة</button>
+                        <button class="menu-btn secondary" id="settingsBtn" data-i18n="pause.settings">⚙️ الإعدادات</button>
+                        <button class="menu-btn secondary" id="quitToMenuBtn" data-i18n="pause.quit">🚪 القائمة الرئيسية</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Save Slots -->
+            <div class="dialog-overlay" id="saveDialog">
+                <div class="dialog-box">
+                    <h2 data-i18n="save.title">💾 حفظ اللعبة</h2>
+                    <div id="saveSlots" class="slots-container"></div>
+                    <div class="dialog-buttons" style="margin-top:10px">
+                        <button class="menu-btn secondary" id="cancelSaveBtn" data-i18n="save.cancel">❌ إلغاء</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Load Slots -->
+            <div class="dialog-overlay" id="loadDialog">
+                <div class="dialog-box">
+                    <h2 data-i18n="load.title">📂 تحميل اللعبة</h2>
+                    <div id="loadSlots" class="slots-container"></div>
+                    <div class="dialog-buttons" style="margin-top:10px">
+                        <button class="menu-btn secondary" id="cancelLoadBtn" data-i18n="load.cancel">❌ إلغاء</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Settings Dialog — Reorganized -->
+            <div class="dialog-overlay" id="settingsDialog">
+                <div class="dialog-box settings-box">
+                    <h2 id="settingsTitle" data-i18n="settings.title">⚙️ الإعدادات</h2>
+                    <div class="settings-tabs" role="tablist">
+                        <button class="settings-tab active" data-tab="general" role="tab" aria-selected="true" data-i18n="settings.general">⚙️ عام</button>
+                        <button class="settings-tab" data-tab="controls" role="tab" aria-selected="false" data-i18n="settings.controls">⌨️ التحكم</button>
+                    </div>
+                    <!-- General Panel -->
+                    <div id="settingsGeneral" class="settings-panel active">
+                        <div class="settings-section">
+                            <div class="settings-row">
+                                <div class="settings-label">
+                                    <span class="settings-icon">🌐</span>
+                                    <div>
+                                        <div class="settings-name" data-i18n="settings.language">اللغة</div>
+                                        <div class="settings-desc">Language</div>
+                                    </div>
+                                </div>
+                                <select id="langSelect" class="settings-select" aria-label="Language">
+                                    <option value="ar">العربية</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </div>
+                            <div class="settings-divider"></div>
+                            <div class="settings-row difficulty-row">
+                                <div class="settings-label">
+                                    <span class="settings-icon">⚔️</span>
+                                    <div>
+                                        <div class="settings-name" data-i18n="settings.difficulty">الصعوبة</div>
+                                        <div class="settings-desc" id="difficultyDesc">تجربة متوازنة</div>
+                                    </div>
+                                </div>
+                                <div class="difficulty-group" id="difficultyGroup" role="group" aria-label="Difficulty">
+                                    <button data-diff="easy" class="diff-btn" data-i18n="settings.difficulty.easy">🟢 سهل</button>
+                                    <button data-diff="medium" class="diff-btn active" data-i18n="settings.difficulty.medium">🟡 متوسط</button>
+                                    <button data-diff="hard" class="diff-btn" data-i18n="settings.difficulty.hard">🔴 صعب</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Controls Panel -->
+                    <div id="settingsControls" class="settings-panel">
+                        <div class="settings-section">
+                            <h3 class="settings-subtitle" data-i18n="settings.keyboard.title">⌨️ لوحة المفاتيح</h3>
+                            <div class="settings-hint" data-i18n="settings.keyboard.hint">اضغط على زر المفتاح ثم اضغط المفتاح الجديد — ESC للإلغاء</div>
+                            <div id="keybindList"></div>
+                        </div>
+                    </div>
+                    <div class="dialog-buttons" style="margin-top:18px">
+                        <button class="menu-btn primary" id="closeSettingsBtn" data-i18n="settings.done">✅ تم</button>
+                        <button class="menu-btn secondary" id="resetKeybindsBtn" data-i18n="settings.reset">🔄 إعادة تعيين</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Touch Controls (mobile) -->
+            <div id="touchControls">
+                <div id="joystickZone">
+                    <div id="joystickBase">
+                        <div id="joystickKnob"></div>
+                    </div>
+                </div>
+                <div id="touchBtns">
+                    <div class="touch-btn shoot-btn" data-touch-action="shoot">🔫</div>
+                    <div class="touch-btn" data-touch-action="enterExit">🚪</div>
+                    <div class="touch-btn" data-touch-action="weaponNext">🔄</div>
+                    <div class="touch-btn" data-touch-action="inventory">🎒</div>
+                    <div class="touch-btn" data-touch-action="horn">📯</div>
+                </div>
+                <div id="touchPause" data-touch-action="pause">⏸</div>
+                <div id="touchCancelMiss" data-touch-action="cancelMission">❌</div>
+            </div>
+        </div>
+        <script type="module" src="js/main.js?v=17"></script>
+    </body>
+</html>

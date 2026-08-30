@@ -1,0 +1,19 @@
+// ======================== DOM REFS ========================
+// Extracted from game.js:451-468 - no logic changed
+export const healthFill = document.getElementById("healthFill");
+export const moneySpan = document.getElementById("moneyAmount");
+export const ammoSpan = document.getElementById("ammoAmount");
+export const wantedEl = document.getElementById("wantedDisplay");
+export const missionTitle = document.getElementById("missionTitle");
+export const missionDesc = document.getElementById("missionDesc");
+export const missionProg = document.getElementById("missionProgress");
+export const overlay = document.getElementById("gameOverlay");
+export const overlayTitle = document.getElementById("overlayTitle");
+export const overlayMsg = document.getElementById("overlayMsg");
+export const overlayBtn = document.getElementById("overlayBtn");
+export const notifEl = document.getElementById("notification");
+export const weaponNameEl = document.getElementById("weaponName");
+export const ammoMaxEl = document.getElementById("ammoMax");
+export const invPanel = document.getElementById("inventoryPanel");
+export const invWeaponsEl = document.getElementById("invWeapons");
+export const invItemsEl = document.getElementById("invItems");
