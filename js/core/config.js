@@ -72,6 +72,7 @@ export const T = {
   PARK: 4,
   PARKING: 5,
   SPECIAL: 6,
+  PAVEMENT: 7,
 };
 
 export const G = {

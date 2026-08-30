@@ -1,8 +1,8 @@
 // ======================== VEHICLES ========================
 // Extracted from game.js:51599, 51650-51796 - no logic changed
-import { CFG } from "../core/config.js?v=16";
-import { T } from "../core/config.js?v=16";
-import { getTile } from "../map/mapUtils.js?v=15";
+import { CFG } from "../core/config.js?v=25";
+import { T } from "../core/config.js?v=25";
+import { getTile } from "../map/mapUtils.js?v=25";
 
 export let vehicles = [];
 export let explosions = [];
@@ -54,6 +54,26 @@ export const VEHICLE_TYPES = [
   },
 ];
 
+// Random car color palettes - shades of blue, green, red, yellow, orange (police excluded)
+// Each palette contains 10 curated shades from dark to bright for vivid diversity
+export const CAR_COLOR_PALETTES = {
+  blue: ["#1e293b","#1e3a8a","#1e40af","#1d4ed8","#2563eb","#3b82f6","#60a5fa","#0ea5e9","#0284c7","#38bdf8"],
+  green: ["#052e16","#14532d","#166534","#15803d","#16a34a","#22c55e","#4ade80","#065f46","#10b981","#6ee7b7"],
+  red: ["#450a0a","#7f1d1d","#991b1b","#b91c1c","#dc2626","#ef4444","#f87171","#e74c3c","#c0392b","#ff8787"],
+  yellow: ["#422006","#713f12","#a16207","#ca8a04","#eab308","#facc15","#fde047","#fef08a","#fef9c3","#fde68a"],
+  orange: ["#431407","#7c2d12","#9a3412","#c2410c","#ea580c","#f97316","#fb923c","#fdba74","#ffedd5","#ff7f50"]
+};
+export const CAR_COLOR_KEYS = Object.keys(CAR_COLOR_PALETTES);
+export function getRandomCarColor(){
+  const paletteKey = CAR_COLOR_KEYS[Math.floor(Math.random()*CAR_COLOR_KEYS.length)];
+  const shades = CAR_COLOR_PALETTES[paletteKey];
+  return shades[Math.floor(Math.random()*shades.length)];
+}
+export function getRandomCarColorByType(typeName){
+  // Optional: keep some type-based bias but still random within hue
+  return getRandomCarColor();
+}
+
 export function spawnVehicles() {
   vehicles.length = 0;
   explosions.length = 0;
@@ -91,7 +111,7 @@ export function spawnVehicles() {
       w: type.w,
       h: type.h,
       speed: type.speed + (Math.random() - 0.5) * 0.5,
-      color: type.color,
+      color: getRandomCarColor(),
       type: type,
       angle: initAngle,
       vx: 0,
@@ -199,6 +219,7 @@ export function isWalkable(px, py) {
   return (
     tile === T.ROAD ||
     tile === T.SIDEWALK ||
+    tile === T.PAVEMENT ||
     tile === T.PARK ||
     tile === T.PARKING
   );

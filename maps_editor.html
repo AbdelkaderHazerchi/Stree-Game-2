@@ -1,242 +1,1188 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Map Editor - Street Game</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #1a1a2e; color: #fff; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; user-select: none; }
-#topBar { display: flex; align-items: center; gap: 10px; padding: 6px 14px; background: rgba(0,0,0,0.5); border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; flex-wrap: wrap; }
-#topBar .title { font-weight: 800; font-size: 16px; color: #ffd700; margin-right: 12px; white-space: nowrap; }
-#topBar button { padding: 5px 12px; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; font-size: 12px; transition: all 0.2s; white-space: nowrap; }
-#topBar button:hover { background: rgba(255,215,0,0.12); border-color: #ffd700; color: #ffd700; }
-#topBar button.primary { background: #ffd700; color: #06060c; font-weight: 700; border-color: #ffd700; }
-#topBar button.primary:hover { background: #ffe44d; color: #06060c; }
-#topBar button.danger { background: rgba(255,51,102,0.15); border-color: #ff3366; color: #ff6688; }
-#topBar button.danger:hover { background: #ff3366; color: #fff; }
-#topBar .sep { color: rgba(255,255,255,0.15); font-size: 16px; }
-#topBar .hint { font-size: 11px; color: rgba(255,255,255,0.35); }
-#editorArea { display: flex; flex: 1; overflow: hidden; }
-#canvasWrap { flex: 1; position: relative; overflow: hidden; background: #0d0d1a; }
-#canvasWrap canvas { display: block; position: absolute; top: 0; left: 0; }
-#toolbar { width: 230px; background: rgba(0,0,0,0.35); border-left: 1px solid rgba(255,255,255,0.06); padding: 10px; overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
-#toolbar::-webkit-scrollbar { width: 4px; }
-#toolbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 2px; }
-.tool-group { border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
-.tool-group:last-child { border-bottom: none; }
-.tool-group .label { font-size: 10px; font-weight: 700; color: #ffd700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-.tool-row { display: flex; gap: 3px; flex-wrap: wrap; }
-.tool-btn { padding: 4px 8px; border: 1px solid rgba(255,255,255,0.08); border-radius: 5px; background: rgba(255,255,255,0.02); color: #bbb; cursor: pointer; font-size: 11px; transition: all 0.15s; text-align: center; white-space: nowrap; flex: 1 0 auto; }
-.tool-btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15); }
-.tool-btn.active { background: #ffd700; color: #06060c; border-color: #ffd700; font-weight: 700; }
-.tool-btn.tile-preview { position: relative; padding-left: 22px; min-width: 60px; }
-.tile-preview .ts { position: absolute; left: 5px; top: 5px; width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.15); background-size: cover; background-position: center; }
-.ts-grass { background-image: url('assets/park.svg'); background-color: #2d5a27; }
-.ts-building { background-image: url('assets/building_detail.svg'); background-color: #808080; }
-.ts-water { background-image: url('assets/water.svg'); background-color: #1a66a0; }
-.ts-sand { background-image: url('assets/sidewalk.svg'); background-color: #e8d4a0; }
-.ts-road { background-image: url('assets/road.svg'); background-color: #3d3d3d; }
-.ts-shop { background-image: url('assets/special_detail.svg'); background-color: #cc8844; }
-.prop-row { display: flex; align-items: center; gap: 5px; margin: 3px 0; }
-.prop-row label { font-size: 11px; color: #999; min-width: 44px; }
-.prop-row input, .prop-row select { flex: 1; padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); color: #fff; font-size: 11px; }
-.prop-row input[type="color"] { flex: 0 0 36px; height: 26px; padding: 1px; cursor: pointer; }
-.prop-row input[type="range"] { flex: 1; }
-.prop-row input:focus, .prop-row select:focus { outline: none; border-color: #ffd700; }
-.prop-row select option { background: #1a1a2e; color: #fff; }
-#statusBar { position: absolute; bottom: 6px; left: 8px; font-size: 11px; color: rgba(255,255,255,0.3); pointer-events: none; z-index: 5; }
-#cursorInfo { position: absolute; top: 6px; right: 8px; font-size: 11px; color: rgba(255,255,255,0.4); pointer-events: none; z-index: 5; text-align: right; line-height: 1.5; }
-.dialog-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(4,4,8,0.85); backdrop-filter: blur(10px); z-index: 100; display: none; justify-content: center; align-items: center; }
-.dialog-box { background: rgba(12,12,23,0.96); padding: 28px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.07); min-width: 380px; max-width: 680px; max-height: 80vh; overflow-y: auto; box-shadow: 0 25px 60px rgba(0,0,0,0.7); }
-.dialog-box h2 { font-size: 20px; font-weight: 800; color: #ffd700; margin-bottom: 14px; }
-.dialog-box textarea { width: 100%; height: 280px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; padding: 10px; font-family: 'Consolas','Courier New',monospace; font-size: 11px; resize: vertical; }
-.dialog-box textarea:focus { outline: none; border-color: #ffd700; }
-.dialog-buttons { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
-.dialog-buttons button { padding: 8px 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.04); color: #fff; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s; }
-.dialog-buttons button:hover { background: rgba(255,255,255,0.1); }
-.dialog-buttons button.primary { background: #ffd700; color: #06060c; border-color: #ffd700; }
-.dialog-buttons button.primary:hover { background: #ffe44d; }
-#missionList { max-height: 180px; overflow-y: auto; margin: 6px 0; }
-#missionList .mi { display: flex; align-items: center; gap: 5px; padding: 4px 6px; background: rgba(255,255,255,0.02); border-radius: 4px; margin: 2px 0; cursor: pointer; border: 1px solid transparent; font-size: 11px; }
-#missionList .mi:hover { border-color: rgba(255,255,255,0.1); }
-#missionList .mi.selected { border-color: #ffd700; background: rgba(255,215,0,0.05); }
-#missionList .mi .mi-num { color: #ffd700; font-weight: 700; min-width: 20px; }
-#missionList .mi .mi-type { color: #ccc; flex: 1; }
-#missionList .mi .mi-pos { color: #666; font-size: 10px; }
-#missionList .mi .mi-del { cursor: pointer; color: #ff3366; padding: 2px 5px; border-radius: 3px; }
-#missionList .mi .mi-del:hover { background: rgba(255,51,102,0.15); }
-#spammerList { max-height: 120px; overflow-y: auto; margin: 4px 0; }
-#spammerList .si { display: flex; align-items: center; gap: 5px; padding: 3px 5px; background: rgba(255,255,255,0.02); border-radius: 3px; margin: 2px 0; font-size: 11px; }
-#spammerList .si .si-pos { color: #888; flex: 1; }
-#spammerList .si .si-del { cursor: pointer; color: #ff3366; padding: 1px 4px; border-radius: 3px; }
-#spammerList .si .si-del:hover { background: rgba(255,51,102,0.15); }
-.section-toggle { font-size: 10px; color: #ffd700; cursor: pointer; padding: 2px 6px; border-radius: 3px; background: rgba(255,215,0,0.05); border: 1px solid rgba(255,215,0,0.1); }
-.section-toggle:hover { background: rgba(255,215,0,0.1); }
+:root{
+  --bg-0:#0e0e17;
+  --bg-1:#16162a;
+  --panel:#1c1c2f;
+  --panel-2:#22223a;
+  --panel-3:#2a2a48;
+  --border:rgba(255,255,255,0.07);
+  --border-strong:rgba(255,255,255,0.12);
+  --accent:#ffd700;
+  --accent-2:#ffcc33;
+  --text:#e8e8ef;
+  --text-dim:#9aa0b6;
+  --text-faint:rgba(255,255,255,0.35);
+  --danger:#ff3355;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  background:var(--bg-0);
+  color:var(--text);
+  font-family:'Segoe UI',system-ui,-apple-system,'Cairo','Noto Naskh Arabic',Tahoma,sans-serif;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  user-select:none;
+  transition:all 0.2s ease;
+}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,215,0,0.35)}
+
+/* ===== TOP BAR - Unity/Godot style ===== */
+#topBar{
+  display:flex;
+  align-items:center;
+  gap:0;
+  padding:0;
+  background:linear-gradient(180deg, #1a1a30 0%, #15152a 100%);
+  border-bottom:1px solid var(--border-strong);
+  flex-shrink:0;
+  height:44px;
+  min-height:44px;
+  box-shadow:0 2px 12px rgba(0,0,0,0.35);
+  position:relative;
+  z-index:20;
+}
+#topLeft{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:0 14px;
+  height:100%;
+  border-right:1px solid var(--border);
+}
+#topLeft .title{
+  font-weight:900;
+  font-size:14px;
+  color:var(--accent);
+  white-space:nowrap;
+  letter-spacing:0.5px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+#topLeft .title small{
+  font-weight:600;
+  font-size:10px;
+  color:var(--text-faint);
+  background:rgba(255,215,0,0.08);
+  padding:2px 6px;
+  border-radius:4px;
+  border:1px solid rgba(255,215,0,0.15);
+}
+.top-group{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:0 10px;
+  height:100%;
+  border-right:1px solid var(--border);
+}
+.top-group:last-child{border-right:none}
+#topBar button{
+  padding:5px 11px;
+  border:1px solid var(--border);
+  border-radius:6px;
+  background:rgba(255,255,255,0.04);
+  color:var(--text);
+  cursor:pointer;
+  font-size:12px;
+  transition:all 0.15s;
+  white-space:nowrap;
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  font-weight:500;
+}
+#topBar button:hover{
+  background:rgba(255,215,0,0.12);
+  border-color:var(--accent);
+  color:var(--accent);
+  transform:translateY(-1px);
+}
+#topBar button.primary{
+  background:var(--accent);
+  color:#0a0a12;
+  font-weight:800;
+  border-color:var(--accent);
+  box-shadow:0 2px 8px rgba(255,215,0,0.25);
+}
+#topBar button.primary:hover{
+  background:#ffe44d;
+  transform:translateY(-1px);
+  box-shadow:0 3px 12px rgba(255,215,0,0.35);
+}
+#topBar button.danger{
+  background:rgba(255,51,85,0.10);
+  border-color:rgba(255,51,85,0.35);
+  color:#ff6688;
+}
+#topBar button.danger:hover{background:#ff3355;color:#fff;border-color:#ff3355}
+.top-group .sep{color:rgba(255,255,255,0.12);font-size:16px;user-select:none}
+.top-hint{
+  font-size:11px;
+  color:var(--text-faint);
+  background:rgba(255,255,255,0.04);
+  padding:4px 8px;
+  border-radius:20px;
+  border:1px solid var(--border);
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+}
+#topRight{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-left:auto;
+  padding:0 12px;
+  height:100%;
+}
+[dir="rtl"] #topRight{margin-left:0;margin-right:auto}
+#topRight label{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  font-size:11px;
+  color:var(--text-dim);
+  cursor:pointer;
+  background:rgba(255,255,255,0.04);
+  padding:4px 8px;
+  border-radius:6px;
+  border:1px solid var(--border);
+  transition:all 0.15s;
+}
+#topRight label:hover{border-color:var(--accent);color:var(--text)}
+#langToggle{
+  padding:5px 12px !important;
+  font-size:12px !important;
+  border-radius:20px !important;
+  background:rgba(255,215,0,0.09) !important;
+  border-color:rgba(255,215,0,0.25) !important;
+  color:var(--accent) !important;
+  font-weight:700;
+}
+#langToggle:hover{background:var(--accent) !important;color:#0a0a12 !important}
+
+/* ===== MAIN LAYOUT - DOCKED PANELS ===== */
+#editorArea{
+  display:flex;
+  flex:1;
+  overflow:hidden;
+  background:var(--bg-0);
+}
+.panel{
+  background:var(--panel);
+  border:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  flex-shrink:0;
+  position:relative;
+}
+#leftPanel{
+  width:270px;
+  min-width:220px;
+  max-width:420px;
+  border-left:none;
+  border-top:none;
+  border-bottom:none;
+}
+#rightPanel{
+  width:360px;
+  min-width:280px;
+  max-width:520px;
+  border-right:none;
+  border-top:none;
+  border-bottom:none;
+  background:var(--panel);
+}
+#canvasWrap{
+  flex:1;
+  position:relative;
+  overflow:hidden;
+  background:#0d0d1a;
+  display:flex;
+  flex-direction:column;
+}
+#canvasWrap canvas{display:block;position:absolute;top:0;left:0}
+
+/* Resizer handles */
+.resizer{
+  width:6px;
+  background:transparent;
+  cursor:col-resize;
+  flex-shrink:0;
+  position:relative;
+  z-index:10;
+  transition:background 0.15s;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.resizer::after{
+  content:"";
+  width:1px;
+  height:100%;
+  background:var(--border);
+}
+.resizer:hover,.resizer.dragging{
+  background:rgba(255,215,0,0.08);
+}
+.resizer:hover::after,.resizer.dragging::after{background:var(--accent)}
+.resizer-hint{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  width:3px;
+  height:30px;
+  background:rgba(255,255,255,0.12);
+  border-radius:2px;
+  opacity:0;
+  transition:opacity 0.15s;
+}
+.resizer:hover .resizer-hint{opacity:1}
+
+/* ===== PANEL HEADER ===== */
+.panel-header{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  background:linear-gradient(180deg, var(--panel-2) 0%, var(--panel) 100%);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+  height:38px;
+  min-height:38px;
+}
+.panel-header .panel-title{
+  font-size:11px;
+  font-weight:800;
+  color:var(--accent);
+  text-transform:uppercase;
+  letter-spacing:0.7px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
+}
+.panel-header .panel-actions{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  margin-left:auto;
+}
+[dir="rtl"] .panel-header .panel-actions{margin-left:0;margin-right:auto}
+.panel-header .icon-btn{
+  width:22px;height:22px;
+  display:grid;place-items:center;
+  border-radius:4px;
+  border:1px solid transparent;
+  background:transparent;
+  color:var(--text-dim);
+  cursor:pointer;
+  font-size:11px;
+  transition:all 0.15s;
+}
+.panel-header .icon-btn:hover{background:rgba(255,255,255,0.07);color:var(--text);border-color:var(--border)}
+.panel-search{
+  flex:1;
+  max-width:160px;
+  position:relative;
+}
+.panel-search input{
+  width:100%;
+  padding:4px 8px 4px 22px;
+  border-radius:6px;
+  border:1px solid var(--border);
+  background:rgba(0,0,0,0.25);
+  color:var(--text);
+  font-size:11px;
+  outline:none;
+  transition:all 0.15s;
+}
+[dir="rtl"] .panel-search input{padding:4px 22px 4px 8px}
+.panel-search input:focus{border-color:var(--accent);background:rgba(0,0,0,0.35)}
+.panel-search input::placeholder{color:var(--text-faint)}
+.panel-search .search-icon{
+  position:absolute;
+  left:6px;top:50%;transform:translateY(-50%);
+  font-size:11px;
+  color:var(--text-faint);
+  pointer-events:none;
+}
+[dir="rtl"] .panel-search .search-icon{left:auto;right:6px}
+
+/* ===== PANEL CONTENT ===== */
+.panel-content{
+  flex:1;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:8px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.panel-content::-webkit-scrollbar{width:5px}
+.panel-content::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.10);border-radius:3px}
+
+/* ===== SECTIONS - Accordion like Unity/Godot Inspector ===== */
+.tool-group{
+  background:rgba(255,255,255,0.02);
+  border:1px solid var(--border);
+  border-radius:8px;
+  overflow:hidden;
+  transition:all 0.2s;
+}
+.tool-group:hover{border-color:rgba(255,255,255,0.09)}
+.tool-group.collapsed .section-body{display:none}
+.section-header{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:7px 10px;
+  background:rgba(255,255,255,0.03);
+  border-bottom:1px solid transparent;
+  cursor:pointer;
+  user-select:none;
+  transition:all 0.15s;
+}
+.tool-group:not(.collapsed) .section-header{
+  background:rgba(255,255,255,0.05);
+  border-bottom-color:var(--border);
+}
+.section-header:hover{background:rgba(255,215,0,0.06) !important}
+.section-header .chevron{
+  font-size:10px;
+  color:var(--text-dim);
+  transition:transform 0.2s ease;
+  width:12px;
+  text-align:center;
+}
+.tool-group:not(.collapsed) .chevron{transform:rotate(90deg);color:var(--accent)}
+.section-header .label{
+  font-size:10px;
+  font-weight:800;
+  color:var(--accent);
+  text-transform:uppercase;
+  letter-spacing:0.8px;
+  flex:1;
+}
+.section-header .section-count{
+  font-size:10px;
+  font-weight:700;
+  color:var(--text-faint);
+  background:rgba(255,255,255,0.07);
+  padding:1px 6px;
+  border-radius:10px;
+  min-width:18px;
+  text-align:center;
+}
+.section-header .section-action{
+  font-size:10px;
+  color:var(--accent);
+  cursor:pointer;
+  padding:2px 6px;
+  border-radius:4px;
+  background:rgba(255,215,0,0.07);
+  border:1px solid rgba(255,215,0,0.12);
+  transition:all 0.15s;
+}
+.section-header .section-action:hover{background:rgba(255,215,0,0.14)}
+.section-body{
+  padding:8px;
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  animation:slideDown 0.18s ease;
+}
+@keyframes slideDown{
+  from{opacity:0;transform:translateY(-4px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* ===== TOOL BUTTONS ===== */
+.tool-row{display:flex;gap:4px;flex-wrap:wrap}
+.tool-btn{
+  padding:5px 10px;
+  border:1px solid var(--border);
+  border-radius:6px;
+  background:rgba(255,255,255,0.03);
+  color:var(--text-dim);
+  cursor:pointer;
+  font-size:11px;
+  font-weight:500;
+  transition:all 0.14s;
+  text-align:center;
+  white-space:nowrap;
+  flex:1 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  min-height:28px;
+}
+.tool-btn:hover{
+  background:rgba(255,255,255,0.07);
+  border-color:rgba(255,255,255,0.14);
+  color:var(--text);
+  transform:translateY(-1px);
+}
+.tool-btn.active{
+  background:var(--accent);
+  color:#0a0a12;
+  border-color:var(--accent);
+  font-weight:800;
+  box-shadow:0 2px 8px rgba(255,215,0,0.25);
+}
+.tool-btn.tile-preview{
+  position:relative;
+  padding-left:24px;
+  min-width:78px;
+  justify-content:flex-start;
+}
+[dir="rtl"] .tool-btn.tile-preview{padding-left:10px;padding-right:24px}
+.tile-preview .ts{
+  position:absolute;
+  left:6px;top:50%;transform:translateY(-50%);
+  width:13px;height:13px;
+  border-radius:3px;
+  border:1px solid rgba(255,255,255,0.18);
+  background-size:cover;
+  background-position:center;
+  box-shadow:0 1px 3px rgba(0,0,0,0.25);
+}
+[dir="rtl"] .tile-preview .ts{left:auto;right:6px}
+.ts-grass{background-image:url('assets/park.svg');background-color:#2d5a27}
+.ts-building{background-image:url('assets/building_detail.svg');background-color:#808080}
+.ts-water{background-image:url('assets/water.svg');background-color:#1a66a0}
+.ts-sand{background-image:url('assets/sand.svg');background-color:#e8d4a0}
+.ts-pavement{background-image:url('assets/pavement.svg');background-color:#9e9e9e}
+.ts-road{background-image:url('assets/road.svg');background-color:#3d3d3d}
+.ts-shop{background-image:url('assets/special_detail.svg');background-color:#cc8844}
+
+/* ===== PROP ROWS - Inspector fields ===== */
+.prop-row{display:flex;align-items:center;gap:6px;margin:2px 0}
+.prop-row label{font-size:11px;color:var(--text-dim);min-width:52px;font-weight:600}
+.prop-row input,.prop-row select{
+  flex:1;
+  padding:5px 8px;
+  border-radius:6px;
+  border:1px solid var(--border);
+  background:rgba(0,0,0,0.25);
+  color:var(--text);
+  font-size:11px;
+  outline:none;
+  transition:all 0.15s;
+}
+.prop-row input:focus,.prop-row select:focus{
+  border-color:var(--accent);
+  background:rgba(0,0,0,0.4);
+  box-shadow:0 0 0 2px rgba(255,215,0,0.12);
+}
+.prop-row select option{background:var(--panel);color:var(--text)}
+.prop-row input[type="color"]{
+  flex:0 0 38px;
+  height:28px;
+  padding:2px;
+  cursor:pointer;
+  border-radius:6px;
+}
+.prop-row input[type="range"]{flex:1;accent-color:var(--accent);height:4px}
+.range-val{
+  min-width:22px;
+  text-align:center;
+  color:var(--accent);
+  font-weight:800;
+  font-size:11px;
+  background:rgba(255,215,0,0.08);
+  padding:2px 6px;
+  border-radius:4px;
+  border:1px solid rgba(255,215,0,0.14);
+}
+
+/* ===== STATUS BAR ===== */
+#statusBar{
+  position:absolute;
+  bottom:8px;left:10px;
+  font-size:11px;
+  color:rgba(255,255,255,0.45);
+  pointer-events:none;
+  z-index:5;
+  background:rgba(10,10,20,0.75);
+  backdrop-filter:blur(8px);
+  padding:4px 10px;
+  border-radius:20px;
+  border:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+[dir="rtl"] #statusBar{left:auto;right:10px}
+#cursorInfo{
+  position:absolute;
+  top:8px;right:10px;
+  font-size:11px;
+  color:rgba(255,255,255,0.55);
+  pointer-events:none;
+  z-index:5;
+  text-align:right;
+  line-height:1.5;
+  background:rgba(10,10,20,0.75);
+  backdrop-filter:blur(8px);
+  padding:5px 10px;
+  border-radius:8px;
+  border:1px solid var(--border);
+}
+[dir="rtl"] #cursorInfo{right:auto;left:10px;text-align:left}
+#bottomStatus{
+  height:22px;
+  min-height:22px;
+  background:var(--panel-2);
+  border-top:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:0 10px;
+  font-size:11px;
+  color:var(--text-faint);
+  flex-shrink:0;
+}
+#bottomStatus .status-sep{opacity:0.3}
+.zoom-controls{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  margin-left:auto;
+}
+[dir="rtl"] .zoom-controls{margin-left:0;margin-right:auto}
+.zoom-controls button{
+  width:20px;height:18px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,0.04);
+  color:var(--text-dim);
+  border-radius:4px;
+  cursor:pointer;
+  font-size:11px;
+  display:grid;place-items:center;
+  transition:all 0.13s;
+}
+.zoom-controls button:hover{border-color:var(--accent);color:var(--accent);background:rgba(255,215,0,0.08)}
+
+/* ===== LISTS - Mission/Quest ===== */
+.list-container{
+  max-height:220px;
+  overflow-y:auto;
+  overflow-x:hidden;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  padding:1px;
+}
+.list-container::-webkit-scrollbar{width:4px}
+.list-container .mi,.list-container .si{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:5px 7px;
+  background:rgba(255,255,255,0.03);
+  border:1px solid transparent;
+  border-radius:6px;
+  cursor:pointer;
+  font-size:11px;
+  transition:all 0.13s;
+}
+.list-container .mi:hover,.list-container .si:hover{
+  background:rgba(255,255,255,0.06);
+  border-color:var(--border);
+  transform:translateX(1px);
+}
+[dir="rtl"] .list-container .mi:hover{transform:translateX(-1px)}
+.list-container .mi.selected{
+  border-color:var(--accent);
+  background:rgba(255,215,0,0.07);
+  box-shadow:0 1px 6px rgba(255,215,0,0.12);
+}
+.list-container .mi .mi-num{color:var(--accent);font-weight:800;min-width:20px}
+.list-container .mi .mi-type{color:#ddd;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-container .mi .mi-pos{color:var(--text-faint);font-size:10px;white-space:nowrap}
+.list-container .mi .mi-del,.list-container .si .si-del{
+  cursor:pointer;
+  color:#ff3355;
+  padding:2px 6px;
+  border-radius:4px;
+  transition:all 0.13s;
+  flex-shrink:0;
+}
+.list-container .mi .mi-del:hover,.list-container .si .si-del:hover{background:rgba(255,51,85,0.13)}
+.list-empty{
+  color:var(--text-faint);
+  font-size:11px;
+  text-align:center;
+  padding:10px;
+  background:rgba(255,255,255,0.02);
+  border:1px dashed var(--border);
+  border-radius:6px;
+  font-style:italic;
+}
+
+/* ===== DIALOGS ===== */
+.dialog-overlay{
+  position:fixed;inset:0;
+  background:rgba(4,4,12,0.85);
+  backdrop-filter:blur(10px);
+  z-index:100;
+  display:none;
+  justify-content:center;
+  align-items:center;
+  animation:fadeIn 0.15s ease;
+}
+@keyframes fadeIn{from{opacity:0} to{opacity:1}}
+.dialog-box{
+  background:linear-gradient(180deg, #1a1a30 0%, #16162a 100%);
+  padding:24px;
+  border-radius:14px;
+  border:1px solid var(--border-strong);
+  min-width:400px;
+  max-width:720px;
+  max-height:85vh;
+  overflow-y:auto;
+  box-shadow:0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,215,0,0.05);
+  animation:popIn 0.2s ease;
+}
+@keyframes popIn{from{opacity:0;transform:scale(0.96) translateY(8px)} to{opacity:1;transform:scale(1) translateY(0)}}
+.dialog-box h2{font-size:18px;font-weight:900;color:var(--accent);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.dialog-box textarea{
+  width:100%;height:280px;
+  background:rgba(0,0,0,0.25);
+  border:1px solid var(--border);
+  border-radius:8px;
+  color:var(--text);
+  padding:10px;
+  font-family:'Consolas','Courier New',monospace;
+  font-size:11px;
+  resize:vertical;
+  outline:none;
+  transition:border-color 0.15s;
+}
+.dialog-box textarea:focus{border-color:var(--accent)}
+.dialog-buttons{display:flex;gap:8px;justify-content:center;margin-top:16px}
+.dialog-buttons button{
+  padding:8px 18px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,0.04);
+  color:var(--text);
+  cursor:pointer;
+  font-size:13px;
+  font-weight:600;
+  transition:all 0.15s;
+}
+.dialog-buttons button:hover{background:rgba(255,255,255,0.08)}
+.dialog-buttons button.primary{background:var(--accent);color:#0a0a12;border-color:var(--accent);font-weight:800}
+.dialog-buttons button.primary:hover{background:#ffe44d}
+.dialog-buttons button.danger{background:rgba(255,51,85,0.12);border-color:#ff3355;color:#ff5577}
+.dialog-buttons button.danger:hover{background:#ff3355;color:#fff}
+
+/* ===== VIEWPORT OVERLAYS ===== */
+.viewport-toolbar{
+  position:absolute;
+  top:8px;left:10px;
+  display:flex;
+  align-items:center;
+  gap:4px;
+  z-index:6;
+  background:rgba(16,16,28,0.85);
+  backdrop-filter:blur(8px);
+  padding:4px;
+  border-radius:8px;
+  border:1px solid var(--border);
+  box-shadow:0 4px 12px rgba(0,0,0,0.3);
+}
+[dir="rtl"] .viewport-toolbar{left:auto;right:10px}
+.viewport-toolbar button{
+  width:26px;height:26px;
+  display:grid;place-items:center;
+  border-radius:6px;
+  border:1px solid transparent;
+  background:transparent;
+  color:var(--text-dim);
+  cursor:pointer;
+  font-size:13px;
+  transition:all 0.14s;
+}
+.viewport-toolbar button:hover{background:rgba(255,255,255,0.07);color:var(--text)}
+.viewport-toolbar button.active{background:var(--accent);color:#0a0a12;border-color:var(--accent)}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width:1100px){
+  #leftPanel{width:240px}
+  #rightPanel{width:300px}
+}
+@media (max-width:780px){
+  #editorArea{flex-direction:column}
+  #leftPanel,#rightPanel{width:100% !important;max-width:none;max-height:38vh}
+  .resizer{display:none}
+}
+
+/* ===== TOOLTIP ===== */
+.tooltip{
+  position:absolute;
+  background:#0f0f1e;
+  color:var(--text);
+  font-size:10px;
+  padding:4px 7px;
+  border-radius:5px;
+  border:1px solid var(--border-strong);
+  pointer-events:none;
+  z-index:200;
+  white-space:nowrap;
+  box-shadow:0 4px 12px rgba(0,0,0,0.4);
+  opacity:0;
+  transform:translateY(4px);
+  transition:all 0.15s;
+}
+.tooltip.show{opacity:1;transform:translateY(0)}
+
+/* ===== COMMAND PALETTE hint ===== */
+.kbd{
+  font-family:'Consolas',monospace;
+  font-size:10px;
+  background:rgba(255,255,255,0.07);
+  border:1px solid var(--border);
+  border-bottom-width:2px;
+  padding:1px 5px;
+  border-radius:4px;
+  color:var(--text-dim);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:18px;
+  height:16px;
+}
 </style>
 </head>
 <body>
 
+<!-- ===== TOP BAR ===== -->
 <div id="topBar">
-  <span class="title">🗺️ Map Editor</span>
-  <button onclick="newMapDialog()">🆕 New</button>
-  <button onclick="resizeMapDialog()">📐 Resize</button>
-  <button onclick="openImportDialog()">📂 Open</button>
-  <span class="sep">|</span>
-  <button class="primary" onclick="exportMap()">📋 Export JSON</button>
-  <button class="primary" onclick="downloadMap()">💾 Download</button>
-  <span class="sep">|</span>
-  <span class="hint">🔄 Scroll: Zoom</span>
-  <span class="hint">🖱️ RMB: Pan</span>
-  <label style="display:flex;align-items:center;gap:3px;font-size:11px;color:rgba(255,255,255,0.4);cursor:pointer;margin-left:auto">
-    <input type="checkbox" checked onchange="drawGrid=this.checked;render()"> Grid
-  </label>
+  <div id="topLeft">
+    <span class="title">🗺️ <span data-i18n-editor="editor.title">محرر الخريطة</span> <small>SG ED</small></span>
+  </div>
+
+  <div class="top-group">
+    <button onclick="newMapDialog()" title="New Map (Ctrl+N)"><span data-i18n-editor="editor.new">جديد</span></button>
+    <button onclick="resizeMapDialog()" title="Resize Map"><span data-i18n-editor="editor.resize">تغيير الحجم</span></button>
+    <button onclick="openImportDialog()" title="Open Map (Ctrl+O)"><span data-i18n-editor="editor.open">فتح</span></button>
+  </div>
+
+  <div class="top-group">
+    <button class="primary" onclick="exportMap()" title="Export JSON (Ctrl+S)"><span data-i18n-editor="editor.export">تصدير JSON</span></button>
+    <button class="primary" onclick="downloadMap()" title="Download file"><span data-i18n-editor="editor.download">تحميل</span></button>
+  </div>
+
+  <div class="top-group" style="border-right:none">
+    <span class="top-hint">🔍 <span data-i18n-editor="editor.hintZoom">عجلة: تكبير</span></span>
+    <span class="top-hint">🖱️ <span data-i18n-editor="editor.hintPan">يمين: سحب</span></span>
+  </div>
+
+  <div id="topRight">
+    <label title="Show Grid (G)"><input type="checkbox" checked onchange="drawGrid=this.checked;render();saveEditorPrefs()"> <span data-i18n-editor="editor.grid">الشبكة</span></label>
+    <button onclick="toggleEditorLang()" id="langToggle" title="Switch Language">🌐 English</button>
+  </div>
 </div>
 
+<!-- ===== MAIN DOCK AREA ===== -->
 <div id="editorArea">
+  <!-- LEFT DOCK - Tools & Tiles (like Godot FileSystem / Unity Hierarchy) -->
+  <aside id="leftPanel" class="panel">
+    <div class="panel-header">
+      <span class="panel-title">🧰 <span data-i18n-editor="editor.tools">الأدوات والبلاط</span></span>
+      <div class="panel-actions">
+        <div class="panel-search"><span class="search-icon">🔍</span><input type="search" id="leftSearch" placeholder="بحث..." data-i18n-editor-ph="editor.searchTiles" oninput="filterLeftPanel(this.value)"></div>
+        <button class="icon-btn" onclick="toggleAllSections('leftPanel', true)" title="Expand all">⤢</button>
+        <button class="icon-btn" onclick="toggleAllSections('leftPanel', false)" title="Collapse all">⤡</button>
+      </div>
+    </div>
+    <div class="panel-content" id="leftContent">
+      <!-- Tools -->
+      <div class="tool-group" data-section="tool" data-keywords="tool brush eraser bucket picker أدوات فرشاة ممحاة">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="chevron">▶</span>
+          <span class="label">🖌️ <span data-i18n-editor="editor.tool">الأداة</span></span>
+          <span class="kbd">B</span>
+        </div>
+        <div class="section-body">
+          <div class="tool-row">
+            <button class="tool-btn active" data-tool="brush" onclick="setTool('brush')" title="Brush (B)"><span data-i18n-editor="editor.brush">فرشاة</span></button>
+            <button class="tool-btn" data-tool="bucket" onclick="setTool('bucket')" title="Flood Fill (F)"><span data-i18n-editor="editor.flood">تعبئة</span></button>
+            <button class="tool-btn" data-tool="eraser" onclick="setTool('eraser')" title="Eraser (E)"><span data-i18n-editor="editor.eraser">ممحاة</span></button>
+            <button class="tool-btn" data-tool="picker" onclick="setTool('picker')" title="Picker (P)"><span data-i18n-editor="editor.picker">التقاط</span></button>
+          </div>
+          <div style="font-size:10px;color:var(--text-faint);text-align:center;margin-top:4px">
+            <span data-i18n-editor="editor.toolHint">اختصارات: B/P/E/F • G للشبكة • R/Q للتدوير</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tiles -->
+      <div class="tool-group" data-section="tiles" data-keywords="tile grass building water sand pavement road shop mission spammer tiles بلاط عشب مبنى ماء رمل رصيف طريق متجر مهمة">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="chevron">▶</span>
+          <span class="label">🧱 <span data-i18n-editor="editor.tile">البلاط</span></span>
+          <span class="section-count" id="tileCount">9</span>
+        </div>
+        <div class="section-body">
+          <div class="tool-row" id="tilePalette">
+            <button class="tool-btn tile-preview active" data-tile="4" onclick="selectTile(4)" data-search="grass park حديقة عشب"><span class="ts ts-grass"></span><span data-i18n-editor="editor.tileGrass">عشب</span></button>
+            <button class="tool-btn tile-preview" data-tile="3" onclick="selectTile(3)" data-search="building مبنى"><span class="ts ts-building"></span><span data-i18n-editor="editor.tileBuilding">مبنى</span></button>
+            <button class="tool-btn tile-preview" data-tile="0" onclick="selectTile(0)" data-search="water ماء"><span class="ts ts-water"></span><span data-i18n-editor="editor.tileWater">ماء</span></button>
+            <button class="tool-btn tile-preview" data-tile="2" onclick="selectTile(2)" data-search="sand رمل"><span class="ts ts-sand"></span><span data-i18n-editor="editor.tileSand">رمل</span></button>
+            <button class="tool-btn tile-preview" data-tile="7" onclick="selectTile(7)" data-search="pavement رصيف"><span class="ts ts-pavement"></span><span data-i18n-editor="editor.tilePavement">رصيف</span></button>
+            <button class="tool-btn tile-preview" data-tile="1" onclick="selectTile(1)" data-search="road طريق"><span class="ts ts-road"></span><span data-i18n-editor="editor.tileRoad">طريق</span></button>
+            <button class="tool-btn tile-preview" data-tile="6" onclick="selectTile(6)" data-search="shop متجر"><span class="ts ts-shop"></span><span data-i18n-editor="editor.tileShop">متجر</span></button>
+            <button class="tool-btn tile-preview" data-tile="8" onclick="selectTile(8)" style="background:rgba(255,215,0,0.08)" data-search="mission quest مهمة"><span style="font-size:14px">🎯</span><span data-i18n-editor="editor.tileMission">مهمة</span></button>
+            <button class="tool-btn tile-preview" data-tile="9" onclick="selectTile(9)" style="background:rgba(255,51,102,0.08)" data-search="spammer عدو"><span style="font-size:14px">💀</span><span data-i18n-editor="editor.tileSpammer">عدو</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Info -->
+      <div class="tool-group collapsed" data-section="shortcuts">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="chevron">▶</span>
+          <span class="label">⌨️ <span data-i18n-editor="editor.shortcuts">الاختصارات</span></span>
+        </div>
+        <div class="section-body" style="font-size:11px;line-height:1.6;color:var(--text-dim)">
+          <div><span class="kbd">1</span> عشب &nbsp;<span class="kbd">2</span> مبنى &nbsp;<span class="kbd">3</span> طريق &nbsp;<span class="kbd">4</span> ماء &nbsp;<span class="kbd">5</span> رمل</div>
+          <div><span class="kbd">B</span> فرشاة &nbsp;<span class="kbd">F</span> تعبئة &nbsp;<span class="kbd">E</span> ممحاة &nbsp;<span class="kbd">P</span> التقاط</div>
+          <div><span class="kbd">R</span>/<span class="kbd">Q</span> تدوير &nbsp;<span class="kbd">6</span><span class="kbd">7</span><span class="kbd">8</span> أشكال المباني</div>
+          <div><span class="kbd">G</span> شبكة &nbsp;<span class="kbd">Ctrl</span>+<span class="kbd">K</span> بحث سريع</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="resizer" id="resizerLeft" title="Drag to resize"><div class="resizer-hint"></div></div>
+
+  <!-- CENTER VIEWPORT -->
   <div id="canvasWrap">
     <canvas id="editorCanvas"></canvas>
+    <div class="viewport-toolbar">
+      <button onclick="setTool('brush')" data-tool="brush" title="Brush (B)" class="active">🖌️</button>
+      <button onclick="setTool('eraser')" data-tool="eraser" title="Eraser (E)">🧹</button>
+      <button onclick="setTool('picker')" data-tool="picker" title="Picker (P)">🎯</button>
+      <span style="width:1px;height:18px;background:var(--border);margin:0 2px"></span>
+      <button onclick="zoom= Math.min(6, zoom*1.25);render()" title="Zoom In">＋</button>
+      <button onclick="zoom= Math.max(0.15, zoom/1.25);render()" title="Zoom Out">－</button>
+      <button onclick="cam.x=editor.cols*TS/2;cam.y=editor.rows*TS/2;zoom=1;render()" title="Fit / Reset View">⊡</button>
+    </div>
     <div id="statusBar">Ready</div>
     <div id="cursorInfo"></div>
   </div>
-  <div id="toolbar">
-    <!-- Tools -->
-    <div class="tool-group">
-      <div class="label">🖌️ Tool</div>
-      <div class="tool-row">
-        <button class="tool-btn active" data-tool="brush" onclick="setTool('brush')">Brush</button>
-        <button class="tool-btn" data-tool="bucket" onclick="setTool('bucket')">Flood</button>
-        <button class="tool-btn" data-tool="eraser" onclick="setTool('eraser')">Eraser</button>
-        <button class="tool-btn" data-tool="picker" onclick="setTool('picker')">Pick</button>
+
+  <div class="resizer" id="resizerRight" title="Drag to resize"><div class="resizer-hint"></div></div>
+
+  <!-- RIGHT DOCK - Inspector (like Unity Inspector / Godot Inspector) -->
+  <aside id="rightPanel" class="panel">
+    <div class="panel-header">
+      <span class="panel-title">🔍 <span data-i18n-editor="editor.inspector">المفتش</span></span>
+      <div class="panel-actions">
+        <div class="panel-search"><span class="search-icon">🔍</span><input type="search" id="rightSearch" placeholder="بحث في الخصائص..." data-i18n-editor-ph="editor.searchInspector" oninput="filterRightPanel(this.value)"></div>
+        <button class="icon-btn" onclick="toggleAllSections('rightPanel', true)" title="Expand all">⤢</button>
+        <button class="icon-btn" onclick="toggleAllSections('rightPanel', false)" title="Collapse all">⤡</button>
       </div>
     </div>
-    <!-- Tiles -->
-    <div class="tool-group">
-      <div class="label">🧱 Tile</div>
-      <div class="tool-row">
-        <button class="tool-btn tile-preview active" data-tile="4" onclick="selectTile(4)"><span class="ts ts-grass"></span>Grass</button>
-        <button class="tool-btn tile-preview" data-tile="3" onclick="selectTile(3)"><span class="ts ts-building"></span>Bld</button>
-        <button class="tool-btn tile-preview" data-tile="0" onclick="selectTile(0)"><span class="ts ts-water"></span>Water</button>
-        <button class="tool-btn tile-preview" data-tile="2" onclick="selectTile(2)"><span class="ts ts-sand"></span>Sand</button>
-        <button class="tool-btn tile-preview" data-tile="1" onclick="selectTile(1)"><span class="ts ts-road"></span>Road</button>
-        <button class="tool-btn tile-preview" data-tile="6" onclick="selectTile(6)"><span class="ts ts-shop"></span>Shop</button>
-        <button class="tool-btn tile-preview" data-tile="7" onclick="selectTile(7)" style="background:rgba(255,215,0,0.08)"><span style="font-size:14px">🎯</span>Mission</button>
-        <button class="tool-btn tile-preview" data-tile="8" onclick="selectTile(8)" style="background:rgba(255,51,102,0.08)"><span style="font-size:14px">💀</span>Spammer</button>
-      </div>
-    </div>
-    <!-- Building props -->
-    <div class="tool-group" id="buildingProps" style="display:none">
-      <div class="label">🏗️ Building</div>
-      <div class="prop-row">
-        <label>Height</label>
-        <input type="range" id="bldH" min="1" max="5" value="2" oninput="editor.bldH=+this.value;document.getElementById('bldHV').textContent=this.value">
-        <span id="bldHV" style="min-width:14px;text-align:center;color:#ffd700;font-weight:700">2</span>
-      </div>
-      <div class="prop-row">
-        <label>Color</label>
-        <input type="color" id="bldC" value="#808080" oninput="editor.bldC=this.value">
-      </div>
-      <div class="prop-row">
-        <label>Shape</label>
-        <select id="bldShape" onchange="editor.bldShape=+this.value;render()">
-          <option value="0">1 - Cap Left</option>
-          <option value="1">2 - Cap Right</option>
-          <option value="2">3 - Tall+Small</option>
-        </select>
-      </div>
-      <div class="prop-row">
-        <label>Rotate</label>
-        <div style="display:flex;gap:4px;flex:1">
-          <button class="tool-btn" onclick="rotateBuilding(-1)" title="Rotate 90° CCW">↺ 90°</button>
-          <span id="bldRotV" style="min-width:32px;text-align:center;color:#ffd700;font-weight:700;line-height:26px">0°</span>
-          <button class="tool-btn" onclick="rotateBuilding(1)" title="Rotate 90° CW">↻ 90°</button>
+    <div class="panel-content" id="toolbar">
+      <!-- Building props -->
+      <div class="tool-group" id="buildingProps" style="display:none" data-section="building" data-keywords="building مبنى height color shape rotate ارتفاع لون شكل تدوير">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="chevron">▶</span>
+          <span class="label">🏗️ <span data-i18n-editor="editor.building">المبنى</span></span>
+          <span class="section-action" onclick="event.stopPropagation();resetBuildingDefaults()">↺</span>
+        </div>
+        <div class="section-body">
+          <div class="prop-row">
+            <label data-i18n-editor="editor.height">الارتفاع</label>
+            <input type="range" id="bldH" min="1" max="5" value="2" oninput="editor.bldH=+this.value;document.getElementById('bldHV').textContent=this.value;saveEditorPrefs()">
+            <span id="bldHV" class="range-val">2</span>
+          </div>
+          <div class="prop-row">
+            <label data-i18n-editor="editor.color">اللون</label>
+            <input type="color" id="bldC" value="#808080" oninput="editor.bldC=this.value;saveEditorPrefs()">
+            <input type="text" id="bldCText" value="#808080" placeholder="#808080" style="max-width:90px" oninput="editor.bldC=this.value;document.getElementById('bldC').value=this.value">
+          </div>
+          <div class="prop-row">
+            <label data-i18n-editor="editor.shape">الشكل</label>
+            <select id="bldShape" onchange="editor.bldShape=+this.value;render();saveEditorPrefs()">
+              <option value="0" data-i18n-editor="editor.shape1">1 - غطاء يسار</option>
+              <option value="1" data-i18n-editor="editor.shape2">2 - غطاء يمين</option>
+              <option value="2" data-i18n-editor="editor.shape3">3 - طويل+صغير</option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <label data-i18n-editor="editor.rotate">تدوير</label>
+            <div style="display:flex;gap:4px;flex:1">
+              <button class="tool-btn" onclick="rotateBuilding(-1)" title="Rotate 90° CCW">↺ 90°</button>
+              <span id="bldRotV" class="range-val" style="min-width:38px">0°</span>
+              <button class="tool-btn" onclick="rotateBuilding(1)" title="Rotate 90° CW">↻ 90°</button>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--text-faint);text-align:center" data-i18n-editor="editor.rotateHint">الأشكال 1-3، التدوير 90° فقط</div>
         </div>
       </div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.35);text-align:center">Shapes numbered 1-3, rotate only 90°</div>
-    </div>
-    <!-- Shop props -->
-    <div class="tool-group" id="shopProps" style="display:none">
-      <div class="label">🏪 Shop</div>
-      <div class="prop-row">
-        <label>Type</label>
-        <select id="shopT" onchange="editor.shopT=this.value">
-          <option value="🔫 Ammu-Nation">🔫 Ammu-Nation</option>
-          <option value="👕 Binco">👕 Binco</option>
-          <option value="🚗 Car Showroom">🚗 Car Showroom</option>
-          <option value="🏥 Hospital">🏥 Hospital</option>
-          <option value="🏛️ Police Station">🏛️ Police Station</option>
-          <option value="🏦 Bank">🏦 Bank</option>
-          <option value="🏪 General Store">🏪 General Store</option>
-          <option value="🏟️ Stadium">🏟️ Stadium</option>
-          <option value="💊 Clinic">💊 Clinic</option>
-          <option value="🎰 Casino">🎰 Casino</option>
-          <option value="🛩️ Airport">🛩️ Airport</option>
-        </select>
-      </div>
-      <div class="prop-row">
-        <label>Color</label>
-        <input type="color" id="shopC" value="#cc8844" oninput="editor.shopC=this.value">
-      </div>
-      <div class="prop-row">
-        <label>Rotate</label>
-        <div style="display:flex;gap:4px;flex:1">
-          <button class="tool-btn" onclick="rotateShop(-1)" title="Rotate 90° CCW">↺ 90°</button>
-          <span id="shopRotV" style="min-width:32px;text-align:center;color:#ffd700;font-weight:700;line-height:26px">0°</span>
-          <button class="tool-btn" onclick="rotateShop(1)" title="Rotate 90° CW">↻ 90°</button>
+
+      <!-- Shop props -->
+      <div class="tool-group" id="shopProps" style="display:none" data-section="shop" data-keywords="shop متجر type color rotate نوع لون تدوير">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="chevron">▶</span>
+          <span class="label">🏪 <span data-i18n-editor="editor.shop">المتجر</span></span>
+        </div>
+        <div class="section-body">
+          <div class="prop-row">
+            <label data-i18n-editor="editor.qType">النوع</label>
+            <select id="shopT" onchange="editor.shopT=this.value;saveEditorPrefs()">
+              <option value="🔫 Ammu-Nation">🔫 Ammu-Nation</option>
+              <option value="👕 Binco">👕 Binco</option>
+              <option value="🚗 Car Showroom">🚗 Car Showroom</option>
+              <option value="🏥 Hospital">🏥 Hospital</option>
+              <option value="🏛️ Police Station">🏛️ Police Station</option>
+              <option value="🏦 Bank">🏦 Bank</option>
+              <option value="🏪 General Store">🏪 General Store</option>
+              <option value="🏟️ Stadium">🏟️ Stadium</option>
+              <option value="💊 Clinic">💊 Clinic</option>
+              <option value="🎰 Casino">🎰 Casino</option>
+              <option value="🛩️ Airport">🛩️ Airport</option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <label data-i18n-editor="editor.color">اللون</label>
+            <input type="color" id="shopC" value="#cc8844" oninput="editor.shopC=this.value">
+          </div>
+          <div class="prop-row">
+            <label data-i18n-editor="editor.rotate">تدوير</label>
+            <div style="display:flex;gap:4px;flex:1">
+              <button class="tool-btn" onclick="rotateShop(-1)">↺ 90°</button>
+              <span id="shopRotV" class="range-val" style="min-width:38px">0°</span>
+              <button class="tool-btn" onclick="rotateShop(1)">↻ 90°</button>
+            </div>
+          </div>
+          <div style="font-size:10px;color:var(--text-faint);text-align:center" data-i18n-editor="editor.rotateHint">تدوير المتجر 90°</div>
         </div>
       </div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.35);text-align:center">Rotate store 90° increments</div>
-    </div>
-    <!-- Spawn point -->
-    <div class="tool-group">
-      <div class="label">📍 Spawn</div>
-      <button class="tool-btn" onclick="setSpawnAtCursor()" style="width:100%">Set Spawn at Cursor</button>
-    </div>
-    <!-- Mission props (shown when Mission tile is selected) -->
-    <div class="tool-group" id="missionProps" style="display:none">
-      <div class="label">🎯 Place Mission</div>
-      <div class="prop-row">
-        <label>Type</label>
-        <select id="missionT" style="flex:1" onchange="editor.missionType=this.value">
-          <option value="taxi">🚕 Taxi</option>
-          <option value="race">🏁 Race</option>
-          <option value="delivery">📦 Delivery</option>
-          <option value="heist">💰 Heist</option>
-          <option value="chase">🚔 Chase</option>
-          <option value="collection">⭐ Collection</option>
-          <option value="protect">🛡️ Protect</option>
-          <option value="smuggle">🚛 Smuggle</option>
-          <option value="stealCar">🚗 Steal Car</option>
-          <option value="transport">🚚 Transport</option>
-          <option value="killPolice">👮 Kill Police</option>
-          <option value="killCivilians">👤 Kill Civilians</option>
-          <option value="killGang">💀 Kill Gang</option>
-          <option value="smuggleProhibited">📯 Smuggle Prohib.</option>
-          <option value="smuggleWeapons">🔫 Smuggle Weapons</option>
-        </select>
+
+      <!-- Spawn point -->
+      <div class="tool-group" data-section="spawn" data-keywords="spawn نقطة البداية">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="chevron">▶</span>
+          <span class="label">📍 <span data-i18n-editor="editor.spawn">نقطة البداية</span></span>
+        </div>
+        <div class="section-body">
+          <button class="tool-btn" onclick="setSpawnAtCursor()" style="width:100%">📍 <span data-i18n-editor="editor.setSpawn">تعيين البداية عند المؤشر</span></button>
+          <div style="font-size:10px;color:var(--text-faint);margin-top:6px;text-align:center" data-i18n-editor="editor.spawnHint">سيتم وضع اللاعب هنا عند بدء اللعبة</div>
+        </div>
       </div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.4)">Click the map to place a mission giver</div>
+
+      <!-- Quest props (shown when Mission tile is selected) - Two-point bilingual Main/Side -->
+      <div class="tool-group" id="missionProps" style="display:none" data-section="quest" data-keywords="quest mission مهمة category type reward title desc category نوع مكافأة عنوان وصف">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="chevron">▶</span>
+          <span class="label">🎯 <span data-i18n-editor="editor.quest">المهمة - نقطتان (بداية → نهاية)</span></span>
+        </div>
+        <div class="section-body">
+          <div style="font-size:10px;color:var(--text-faint);line-height:1.4;margin-bottom:6px;background:rgba(255,215,0,0.04);padding:6px;border-radius:6px;border:1px solid rgba(255,215,0,0.09)" data-i18n-editor="editor.questHint">
+            النقرة الأولى = <span style="color:var(--accent)">البداية (أصفر/بنفسجي)</span> — بعد تحرير النص، النقرة الثانية = <span style="color:#4ade80">النهاية (أخضر)</span>.
+          </div>
+          <div class="prop-row">
+            <label data-i18n-editor="editor.category">الفئة</label>
+            <select id="questCategory" style="flex:1" onchange="editor.questCategory=this.value; if(editor.pendingQuest) editor.pendingQuest.category=this.value; updateQuestHint(); render();">
+              <option value="main">🟡 <span data-i18n-editor="editor.catMain">رئيسية (متسلسلة)</span></option>
+              <option value="side">🟣 <span data-i18n-editor="editor.catSide">جانبية (ظاهرة دائماً)</span></option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <label data-i18n-editor="editor.qType">النوع</label>
+            <select id="missionT" style="flex:1" onchange="editor.missionType=this.value;onQuestTypeChange()">
+              <option value="deliverShipment">📦 <span>توصيل شحنة</span></option>
+              <option value="killTarget">💀 <span>قتل هدف</span></option>
+              <option value="transportPerson">🚕 <span>نقل شخص</span></option>
+              <option value="escapeCar">🚨 <span>هروب بالسيارة</span></option>
+              <option value="stealCar">🚗 <span>سرقة سيارة</span></option>
+              <option value="silentPursuit">🕵️ <span>مطاردة صامتة</span></option>
+              <option value="surveillance">👁️ <span>مراقبة</span></option>
+              <option value="plantBomb">💣 <span>زرع قنبلة</span></option>
+              <option value="meeting">💬 <span>اجتماع</span></option>
+              <option value="theft">🦹 <span>سرقة</span></option>
+              <option value="deliverLoot">🎒 <span>تسليم مسروقات</span></option>
+            </select>
+          </div>
+          <div class="prop-row">
+            <label data-i18n-editor="editor.reward">المكافأة $</label>
+            <input type="number" id="questReward" value="400" min="0" max="10000" step="50" onchange="editor.questReward=+this.value">
+          </div>
+          <div id="questExtraParams" style="display:none; margin-top:6px; padding:6px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:6px">
+            <div id="extraItemNameRow" style="display:none" class="prop-row"><label data-i18n-editor="editor.item">الغرض</label><input type="text" id="questItemName" placeholder="اسم الغرض" maxlength="30" oninput="editor.questItemName=this.value"></div>
+            <div id="extraMeetingRow" style="display:none">
+              <div style="font-size:10px;color:#c084fc;margin-bottom:3px" data-i18n-editor="editor.meetingMsg">رسالة الاجتماع</div>
+              <div class="prop-row"><label>AR</label><input type="text" id="questMeetingAr" placeholder="رسالة الاجتماع" oninput="editor.questMeetingAr=this.value"></div>
+              <div class="prop-row"><label>EN</label><input type="text" id="questMeetingEn" placeholder="Meeting message" oninput="editor.questMeetingEn=this.value"></div>
+            </div>
+          </div>
+          <div style="border-top:1px solid var(--border);margin:6px 0"></div>
+          <div style="font-size:10px;font-weight:800;color:var(--accent);margin-bottom:3px" data-i18n-editor="editor.titleLabel">العنوان — Title</div>
+          <div class="prop-row"><label>AR</label><input type="text" id="questTitleAr" placeholder="عنوان المهمة" maxlength="40" oninput="editor.questTitleAr=this.value"></div>
+          <div class="prop-row"><label>EN</label><input type="text" id="questTitleEn" placeholder="Quest title" maxlength="40" oninput="editor.questTitleEn=this.value"></div>
+          <div style="font-size:10px;font-weight:800;color:var(--accent);margin:6px 0 3px" data-i18n-editor="editor.descLabel">الوصف — Description</div>
+          <div class="prop-row"><label>AR</label><input type="text" id="questDescAr" placeholder="وصف المهمة" oninput="editor.questDescAr=this.value"></div>
+          <div class="prop-row"><label>EN</label><input type="text" id="questDescEn" placeholder="Quest description" oninput="editor.questDescEn=this.value"></div>
+          <div id="questPendingHint" style="margin-top:6px;padding:6px 7px;background:rgba(255,215,0,0.07);border:1px solid rgba(255,215,0,0.18);border-radius:6px;font-size:11px;color:var(--accent);display:none"></div>
+          <div class="tool-row" style="margin-top:6px">
+            <button class="tool-btn" onclick="cancelPendingQuest()" style="flex:1">↩ إلغاء المعلق</button>
+          </div>
+          <div style="font-size:10px;color:var(--text-faint);margin-top:4px" data-i18n-editor="editor.bilingualHint">AR+EN مطلوب. اتركه فارغاً ليُملأ تلقائياً.</div>
+        </div>
+      </div>
+
+      <!-- Quests lists - split Main/Side -->
+      <div class="tool-group" data-section="quests-main" data-keywords="main quests مهام رئيسية">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="chevron">▶</span>
+          <span class="label">🟡 <span data-i18n-editor="editor.mainQuests">المهام الرئيسية (مرتبة)</span></span>
+          <span class="section-count" id="mainQuestCount">0</span>
+        </div>
+        <div class="section-body">
+          <div style="display:flex;gap:4px;margin-bottom:6px">
+            <input type="search" id="mainQuestSearch" placeholder="بحث..." style="flex:1;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:rgba(0,0,0,0.25);color:var(--text);font-size:11px" oninput="filterQuestList('main', this.value)">
+            <select id="mainQuestFilter" style="padding:4px;border-radius:6px;border:1px solid var(--border);background:rgba(0,0,0,0.25);color:var(--text);font-size:11px" onchange="filterQuestList('main', document.getElementById('mainQuestSearch').value)">
+              <option value="" data-i18n-editor="editor.all">الكل</option>
+              <option value="deliverShipment">📦</option>
+              <option value="killTarget">💀</option>
+              <option value="transportPerson">🚕</option>
+            </select>
+          </div>
+          <div id="mainQuestList" class="list-container"></div>
+          <div class="tool-row" style="margin-top:8px">
+            <button class="tool-btn" onclick="moveQuest('main',-1)" title="Move Up">⬆ <span data-i18n-editor="editor.up">أعلى</span></button>
+            <button class="tool-btn" onclick="moveQuest('main',1)" title="Move Down">⬇ <span data-i18n-editor="editor.down">أسفل</span></button>
+            <button class="tool-btn danger" onclick="removeSelectedQuest()">✖ <span data-i18n-editor="editor.remove">حذف</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tool-group" data-section="quests-side" data-keywords="side quests مهام جانبية">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="chevron">▶</span>
+          <span class="label">🟣 <span data-i18n-editor="editor.sideQuests">المهام الجانبية (بنفسجي)</span></span>
+          <span class="section-count" id="sideQuestCount">0</span>
+        </div>
+        <div class="section-body">
+          <div style="display:flex;gap:4px;margin-bottom:6px">
+            <input type="search" id="sideQuestSearch" placeholder="بحث..." style="flex:1;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:rgba(0,0,0,0.25);color:var(--text);font-size:11px" oninput="filterQuestList('side', this.value)">
+          </div>
+          <div id="sideQuestList" class="list-container"></div>
+          <div class="tool-row" style="margin-top:8px">
+            <button class="tool-btn danger" onclick="removeSelectedQuest()" style="width:100%">✖ <span data-i18n-editor="editor.removeSide">حذف المحدد</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden legacy list for compat (not shown) -->
+      <div id="missionList" style="display:none"></div>
+
+      <!-- Spammers -->
+      <div class="tool-group" data-section="spammers" data-keywords="spammer spammers عدو أعداء">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="chevron">▶</span>
+          <span class="label">💀 <span data-i18n-editor="editor.spammers">الأعداء (Spammers)</span></span>
+          <span class="section-count" id="spammerCount">0</span>
+        </div>
+        <div class="section-body">
+          <div style="display:flex;gap:4px;margin-bottom:6px">
+            <input type="search" id="spammerSearch" placeholder="بحث..." style="flex:1;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:rgba(0,0,0,0.25);color:var(--text);font-size:11px" oninput="filterSpammerList(this.value)">
+          </div>
+          <div id="spammerList" class="list-container"></div>
+          <div style="display:flex;gap:4px;margin-top:8px">
+            <button class="tool-btn" onclick="clearAllSpammers()" style="flex:1">🗑 <span data-i18n-editor="editor.clearAll">مسح الكل</span></button>
+            <button class="tool-btn" onclick="exportMap()" style="flex:1">📋 <span data-i18n-editor="editor.export">تصدير</span></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map Info -->
+      <div class="tool-group collapsed" data-section="mapinfo">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="chevron">▶</span>
+          <span class="label">ℹ️ <span data-i18n-editor="editor.mapInfo">معلومات الخريطة</span></span>
+        </div>
+        <div class="section-body" style="font-size:11px;color:var(--text-dim);line-height:1.6">
+          <div style="display:flex;justify-content:space-between"><span data-i18n-editor="editor.dimensions">الأبعاد:</span> <b id="infoDims" style="color:var(--accent)">60×60</b></div>
+          <div style="display:flex;justify-content:space-between"><span data-i18n-editor="editor.buildings">المباني:</span> <b id="infoBuildings" style="color:var(--text)">0</b></div>
+          <div style="display:flex;justify-content:space-between"><span data-i18n-editor="editor.shops">المتاجر:</span> <b id="infoShops" style="color:var(--text)">0</b></div>
+          <div style="display:flex;justify-content:space-between"><span data-i18n-editor="editor.questsCount">المهام:</span> <b id="infoQuests" style="color:var(--text)">0</b></div>
+          <div style="display:flex;gap:4px;margin-top:6px">
+            <button class="tool-btn" onclick="resizeMapDialog()" style="flex:1">📐 <span data-i18n-editor="editor.resize">تغيير الحجم</span></button>
+            <button class="tool-btn" onclick="downloadMap()" style="flex:1">💾 <span data-i18n-editor="editor.download">تحميل</span></button>
+          </div>
+        </div>
+      </div>
     </div>
-    <!-- Missions list -->
-    <div class="tool-group">
-      <div class="label" style="display:flex;justify-content:space-between;align-items:center">
-        <span>📋 Mission Order</span>
-        <span style="font-weight:400;color:rgba(255,255,255,0.3);font-size:10px" id="missionCount">0</span>
-      </div>
-      <div id="missionList"></div>
-      <div class="tool-row">
-        <button class="tool-btn" onclick="moveMission(-1)">⬆ Up</button>
-        <button class="tool-btn" onclick="moveMission(1)">⬇ Down</button>
-        <button class="tool-btn danger" onclick="removeSelectedMission()">✖ Remove</button>
-      </div>
+  </aside>
+</div>
+
+<div id="bottomStatus">
+  <span id="bottomStatusText">جاهز — اسحب بالزر الأيمن للتنقل، عجلة للتكبير</span>
+  <span class="status-sep">|</span>
+  <span id="bottomCoords">(<span id="coordX">0</span>, <span id="coordY">0</span>)</span>
+  <span class="status-sep">|</span>
+  <span id="bottomZoom">100%</span>
+  <div class="zoom-controls">
+    <button onclick="zoom=Math.max(0.15, zoom-0.15);render();saveEditorPrefs()" title="Zoom Out">−</button>
+    <span id="zoomVal" style="min-width:40px;text-align:center;font-weight:700;color:var(--accent)">100%</span>
+    <button onclick="zoom=Math.min(6, zoom+0.15);render();saveEditorPrefs()" title="Zoom In">+</button>
+    <button onclick="drawGrid=!drawGrid;document.querySelector('#topRight input[type=checkbox]').checked=drawGrid;render();saveEditorPrefs()" title="Toggle Grid (G)">▦</button>
+  </div>
+</div>
+
+<!-- Quest Edit Dialog -->
+<div class="dialog-overlay" id="questDialog">
+  <div class="dialog-box" style="min-width:460px">
+    <h2>🎯 <span data-i18n-editor="editor.editQuest">تحرير المهمة</span></h2>
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      <div class="prop-row" style="flex:1"><label data-i18n-editor="editor.category">الفئة</label><select id="qdCategory"><option value="main">🟡 <span>رئيسية</span></option><option value="side">🟣 <span>جانبية</span></option></select></div>
+      <div class="prop-row" style="flex:1"><label data-i18n-editor="editor.qType">النوع</label><select id="qdType" onchange="onDialogTypeChange()">
+        <option value="deliverShipment">📦 توصيل شحنة</option><option value="killTarget">💀 قتل هدف</option><option value="transportPerson">🚕 نقل شخص</option><option value="escapeCar">🚨 هروب</option><option value="stealCar">🚗 سرقة سيارة</option><option value="silentPursuit">🕵️ مطاردة</option><option value="surveillance">👁️ مراقبة</option><option value="plantBomb">💣 زرع قنبلة</option><option value="meeting">💬 اجتماع</option><option value="theft">🦹 سرقة</option><option value="deliverLoot">🎒 تسليم</option>
+      </select></div>
+      <div class="prop-row" style="flex:0 0 110px"><label data-i18n-editor="editor.reward">مكافأة</label><input type="number" id="qdReward" min="0" max="10000" step="50"></div>
     </div>
-    <!-- Spammers -->
-    <div class="tool-group">
-      <div class="label" style="display:flex;justify-content:space-between;align-items:center">
-        <span>💀 Spammers</span>
-        <span style="font-weight:400;color:rgba(255,255,255,0.3);font-size:10px" id="spammerCount">0</span>
-      </div>
-      <div id="spammerList"></div>
+    <div class="prop-row"><label>AR <span data-i18n-editor="editor.titleLabel">عنوان</span></label><input type="text" id="qdTitleAr" placeholder="عنوان المهمة" maxlength="40"></div>
+    <div class="prop-row"><label>EN Title</label><input type="text" id="qdTitleEn" placeholder="Quest title" maxlength="40"></div>
+    <div class="prop-row"><label>AR <span data-i18n-editor="editor.descLabel">وصف</span></label><input type="text" id="qdDescAr" placeholder="وصف المهمة"></div>
+    <div class="prop-row"><label>EN Desc</label><input type="text" id="qdDescEn" placeholder="Quest description"></div>
+    <div class="prop-row" id="qdItemRow" style="display:none"><label data-i18n-editor="editor.item">الغرض</label><input type="text" id="qdItemName" placeholder="Item name / اسم الغرض"></div>
+    <div id="qdMeetingRow" style="display:none">
+      <div class="prop-row"><label>AR</label><input type="text" id="qdMeetingAr" placeholder="رسالة الاجتماع"></div>
+      <div class="prop-row"><label>EN</label><input type="text" id="qdMeetingEn" placeholder="Meeting message"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <div class="prop-row" style="flex:1"><label>Start X</label><input type="number" id="qdStartX" min="0"></div>
+      <div class="prop-row" style="flex:1"><label>Y</label><input type="number" id="qdStartY" min="0"></div>
+      <div class="prop-row" style="flex:1"><label>End X</label><input type="number" id="qdEndX" min="0"></div>
+      <div class="prop-row" style="flex:1"><label>Y</label><input type="number" id="qdEndY" min="0"></div>
+    </div>
+    <div class="dialog-buttons">
+      <button class="primary" onclick="saveQuestDialog()">✅ <span data-i18n-editor="editor.save">حفظ</span></button>
+      <button class="danger" onclick="deleteQuestFromDialog()">🗑 <span data-i18n-editor="editor.delete">حذف</span></button>
+      <button onclick="closeDialog('questDialog')">❌ <span data-i18n-editor="editor.cancel">إلغاء</span></button>
     </div>
   </div>
 </div>
@@ -244,71 +1190,532 @@ body { background: #1a1a2e; color: #fff; font-family: 'Segoe UI', system-ui, san
 <!-- Import Dialog -->
 <div class="dialog-overlay" id="importDialog">
   <div class="dialog-box">
-    <h2>📂 Open Map</h2>
-    <p style="font-size:12px;color:#aaa;margin-bottom:8px">Paste JSON or upload a .json file:</p>
-    <textarea id="importText" placeholder='Paste map JSON here...'></textarea>
+    <h2>📂 <span data-i18n-editor="editor.open">فتح خريطة</span></h2>
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:8px" data-i18n-editor="editor.importHint">الصق JSON أو حمّل ملف .json:</p>
+    <textarea id="importText" placeholder="Paste map JSON here..."></textarea>
     <div style="margin:8px 0">
-      <input type="file" id="importFile" accept=".json" style="color:#fff;font-size:12px">
+      <input type="file" id="importFile" accept=".json" style="color:var(--text);font-size:12px">
     </div>
     <div class="dialog-buttons">
-      <button class="primary" onclick="importMap()">✅ Load</button>
-      <button onclick="closeDialog('importDialog')">❌ Cancel</button>
+      <button class="primary" onclick="importMap()">✅ <span data-i18n-editor="editor.load">تحميل</span></button>
+      <button onclick="closeDialog('importDialog')">❌ <span data-i18n-editor="editor.cancel">إلغاء</span></button>
     </div>
   </div>
 </div>
 <!-- New Map Dialog -->
 <div class="dialog-overlay" id="newMapDialog">
-  <div class="dialog-box" style="min-width:300px">
-    <h2>🆕 New Map</h2>
-    <div class="prop-row"><label>Columns</label><input type="number" id="newCols" value="60" min="8" max="200"></div>
-    <div class="prop-row"><label>Rows</label><input type="number" id="newRows" value="60" min="8" max="200"></div>
+  <div class="dialog-box" style="min-width:340px">
+    <h2>🆕 <span data-i18n-editor="editor.newMap">خريطة جديدة</span></h2>
+    <div class="prop-row"><label data-i18n-editor="editor.columns">أعمدة</label><input type="number" id="newCols" value="60" min="8" max="200"></div>
+    <div class="prop-row"><label data-i18n-editor="editor.rows">صفوف</label><input type="number" id="newRows" value="60" min="8" max="200"></div>
     <div class="dialog-buttons">
-      <button class="primary" onclick="createNewMap()">✅ Create</button>
-      <button onclick="closeDialog('newMapDialog')">❌ Cancel</button>
+      <button class="primary" onclick="createNewMap()">✅ <span data-i18n-editor="editor.create">إنشاء</span></button>
+      <button onclick="closeDialog('newMapDialog')">❌ <span data-i18n-editor="editor.cancel">إلغاء</span></button>
     </div>
   </div>
 </div>
 <!-- Resize Map Dialog -->
 <div class="dialog-overlay" id="resizeMapDialog">
-  <div class="dialog-box" style="min-width:300px">
-    <h2>📐 Resize Map</h2>
-    <p style="font-size:12px;color:#aaa;margin-bottom:8px">Current: <span id="resizeCurrent" style="color:#ffd700">60×60</span></p>
-    <div class="prop-row"><label>Columns</label><input type="number" id="resizeCols" min="8" max="200"></div>
-    <div class="prop-row"><label>Rows</label><input type="number" id="resizeRows" min="8" max="200"></div>
-    <p style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:6px">Expanding fills new area with water. Shrinking crops from the edges.</p>
+  <div class="dialog-box" style="min-width:340px">
+    <h2>📐 <span data-i18n-editor="editor.resizeMap">تغيير حجم الخريطة</span></h2>
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:8px"><span data-i18n-editor="editor.current">الحالي:</span> <span id="resizeCurrent" style="color:var(--accent)">60×60</span></p>
+    <div class="prop-row"><label data-i18n-editor="editor.columns">أعمدة</label><input type="number" id="resizeCols" min="8" max="200"></div>
+    <div class="prop-row"><label data-i18n-editor="editor.rows">صفوف</label><input type="number" id="resizeRows" min="8" max="200"></div>
+    <p style="font-size:11px;color:var(--text-faint);margin-top:6px" data-i18n-editor="editor.resizeHint">التوسيع يملأ المنطقة الجديدة بالماء. التصغير يقتطع من الحواف.</p>
     <div class="dialog-buttons">
-      <button class="primary" onclick="resizeMap()">✅ Apply</button>
-      <button onclick="closeDialog('resizeMapDialog')">❌ Cancel</button>
+      <button class="primary" onclick="resizeMap()">✅ <span data-i18n-editor="editor.apply">تطبيق</span></button>
+      <button onclick="closeDialog('resizeMapDialog')">❌ <span data-i18n-editor="editor.cancel">إلغاء</span></button>
     </div>
   </div>
 </div>
 <!-- Export Dialog -->
 <div class="dialog-overlay" id="exportDialog">
-  <div class="dialog-box" style="min-width:500px">
-    <h2>📋 Export Map</h2>
-    <textarea id="exportText" style="height:220px" readonly></textarea>
+  <div class="dialog-box" style="min-width:540px">
+    <h2>📋 <span data-i18n-editor="editor.exportMap">تصدير الخريطة</span></h2>
+    <textarea id="exportText" style="height:280px" readonly></textarea>
     <div class="dialog-buttons">
-      <button onclick="copyExport()">📋 Copy</button>
-      <button class="primary" onclick="exportAndDownload()">💾 Download</button>
-      <button onclick="closeDialog('exportDialog')">❌ Close</button>
+      <button onclick="copyExport()">📋 <span data-i18n-editor="editor.copy">نسخ</span></button>
+      <button class="primary" onclick="exportAndDownload()">💾 <span data-i18n-editor="editor.download">تحميل</span></button>
+      <button onclick="closeDialog('exportDialog')">❌ <span data-i18n-editor="editor.close">إغلاق</span></button>
     </div>
   </div>
 </div>
 
 <script>
+// ================ EDITOR I18N - Arabic / English ================
+const EDITOR_TRANSLATIONS = {
+  ar: {
+    "editor.title":"محرر الخريطة",
+    "editor.new":"جديد",
+    "editor.resize":"تغيير الحجم",
+    "editor.open":"فتح",
+    "editor.export":"تصدير JSON",
+    "editor.download":"تحميل",
+    "editor.hintZoom":"عجلة: تكبير",
+    "editor.hintPan":"يمين: سحب",
+    "editor.grid":"الشبكة",
+    "editor.tools":"الأدوات والبلاط",
+    "editor.tool":"الأداة",
+    "editor.brush":"فرشاة",
+    "editor.flood":"تعبئة",
+    "editor.eraser":"ممحاة",
+    "editor.picker":"التقاط",
+    "editor.toolHint":"اختصارات: B/P/E/F • G للشبكة • R/Q للتدوير",
+    "editor.tile":"البلاط",
+    "editor.tileGrass":"عشب",
+    "editor.tileBuilding":"مبنى",
+    "editor.tileWater":"ماء",
+    "editor.tileSand":"رمل",
+    "editor.tilePavement":"رصيف",
+    "editor.tileRoad":"طريق",
+    "editor.tileShop":"متجر",
+    "editor.tileMission":"مهمة",
+    "editor.tileSpammer":"عدو",
+    "editor.shortcuts":"الاختصارات",
+    "editor.searchTiles":"بحث في البلاط...",
+    "editor.searchInspector":"بحث في الخصائص...",
+    "editor.inspector":"المفتش",
+    "editor.building":"المبنى",
+    "editor.height":"الارتفاع",
+    "editor.color":"اللون",
+    "editor.shape":"الشكل",
+    "editor.shape1":"1 - غطاء يسار",
+    "editor.shape2":"2 - غطاء يمين",
+    "editor.shape3":"3 - طويل+صغير",
+    "editor.rotate":"تدوير",
+    "editor.rotateHint":"الأشكال 1-3، التدوير 90° فقط",
+    "editor.shop":"المتجر",
+    "editor.shopType":"النوع",
+    "editor.spawn":"نقطة البداية",
+    "editor.setSpawn":"تعيين البداية عند المؤشر",
+    "editor.spawnHint":"سيتم وضع اللاعب هنا عند بدء اللعبة",
+    "editor.quest":"المهمة - نقطتان (بداية → نهاية)",
+    "editor.questHint":"النقرة الأولى = البداية (أصفر/بنفسجي) — بعد تحرير النص، النقرة الثانية = النهاية (أخضر).",
+    "editor.category":"الفئة",
+    "editor.catMain":"رئيسية (متسلسلة)",
+    "editor.catSide":"جانبية (ظاهرة دائماً)",
+    "editor.qType":"النوع",
+    "editor.reward":"المكافأة $",
+    "editor.item":"الغرض",
+    "editor.meetingMsg":"رسالة الاجتماع",
+    "editor.titleLabel":"العنوان — Title",
+    "editor.descLabel":"الوصف — Description",
+    "editor.cancelPending":"إلغاء المعلق",
+    "editor.bilingualHint":"AR+EN مطلوب. اتركه فارغاً ليُملأ تلقائياً.",
+    "editor.mainQuests":"المهام الرئيسية (مرتبة)",
+    "editor.sideQuests":"المهام الجانبية (بنفسجي)",
+    "editor.spammers":"الأعداء (Spammers)",
+    "editor.clearAll":"مسح الكل",
+    "editor.mapInfo":"معلومات الخريطة",
+    "editor.dimensions":"الأبعاد:",
+    "editor.buildings":"المباني:",
+    "editor.shops":"المتاجر:",
+    "editor.questsCount":"المهام:",
+    "editor.all":"الكل",
+    "editor.up":"أعلى",
+    "editor.down":"أسفل",
+    "editor.remove":"حذف",
+    "editor.removeSide":"حذف المحدد",
+    "editor.editQuest":"تحرير المهمة",
+    "editor.save":"حفظ",
+    "editor.delete":"حذف",
+    "editor.cancel":"إلغاء",
+    "editor.copy":"نسخ",
+    "editor.close":"إغلاق",
+    "editor.newMap":"خريطة جديدة",
+    "editor.columns":"أعمدة",
+    "editor.rows":"صفوف",
+    "editor.create":"إنشاء",
+    "editor.resizeMap":"تغيير حجم الخريطة",
+    "editor.current":"الحالي:",
+    "editor.resizeHint":"التوسيع يملأ المنطقة الجديدة بالماء. التصغير يقتطع من الحواف.",
+    "editor.apply":"تطبيق",
+    "editor.exportMap":"تصدير الخريطة",
+    "editor.importHint":"الصق JSON أو حمّل ملف .json:",
+    "editor.load":"تحميل",
+  },
+  en: {
+    "editor.title":"Map Editor",
+    "editor.new":"New",
+    "editor.resize":"Resize",
+    "editor.open":"Open",
+    "editor.export":"Export JSON",
+    "editor.download":"Download",
+    "editor.hintZoom":"Scroll: Zoom",
+    "editor.hintPan":"RMB: Pan",
+    "editor.grid":"Grid",
+    "editor.tools":"Tools & Tiles",
+    "editor.tool":"Tool",
+    "editor.brush":"Brush",
+    "editor.flood":"Flood",
+    "editor.eraser":"Eraser",
+    "editor.picker":"Picker",
+    "editor.toolHint":"Shortcuts: B/P/E/F • G grid • R/Q rotate",
+    "editor.tile":"Tiles",
+    "editor.tileGrass":"Grass",
+    "editor.tileBuilding":"Building",
+    "editor.tileWater":"Water",
+    "editor.tileSand":"Sand",
+    "editor.tilePavement":"Pavement",
+    "editor.tileRoad":"Road",
+    "editor.tileShop":"Shop",
+    "editor.tileMission":"Mission",
+    "editor.tileSpammer":"Spammer",
+    "editor.shortcuts":"Shortcuts",
+    "editor.searchTiles":"Search tiles...",
+    "editor.searchInspector":"Search inspector...",
+    "editor.inspector":"Inspector",
+    "editor.building":"Building",
+    "editor.height":"Height",
+    "editor.color":"Color",
+    "editor.shape":"Shape",
+    "editor.shape1":"1 - Cap Left",
+    "editor.shape2":"2 - Cap Right",
+    "editor.shape3":"3 - Tall+Small",
+    "editor.rotate":"Rotate",
+    "editor.rotateHint":"Shapes 1-3, rotate 90° only",
+    "editor.shop":"Shop",
+    "editor.shopType":"Type",
+    "editor.spawn":"Spawn",
+    "editor.setSpawn":"Set Spawn at Cursor",
+    "editor.spawnHint":"Player will spawn here on game start",
+    "editor.quest":"Quest — Two-Point (Start → End)",
+    "editor.questHint":"First click = Start (yellow/purple) — then Second click = End (green).",
+    "editor.category":"Category",
+    "editor.catMain":"Main (sequential)",
+    "editor.catSide":"Side (always visible)",
+    "editor.qType":"Type",
+    "editor.reward":"Reward $",
+    "editor.item":"Item",
+    "editor.meetingMsg":"Meeting message",
+    "editor.titleLabel":"Title",
+    "editor.descLabel":"Description",
+    "editor.cancelPending":"Cancel Pending",
+    "editor.bilingualHint":"AR+EN required. Leave empty to auto-fill.",
+    "editor.mainQuests":"Main Quests (ordered)",
+    "editor.sideQuests":"Side Quests (purple)",
+    "editor.spammers":"Spammers",
+    "editor.clearAll":"Clear All",
+    "editor.mapInfo":"Map Info",
+    "editor.dimensions":"Size:",
+    "editor.buildings":"Buildings:",
+    "editor.shops":"Shops:",
+    "editor.questsCount":"Quests:",
+    "editor.all":"All",
+    "editor.up":"Up",
+    "editor.down":"Down",
+    "editor.remove":"Remove",
+    "editor.removeSide":"Remove Selected",
+    "editor.editQuest":"Edit Quest",
+    "editor.save":"Save",
+    "editor.delete":"Delete",
+    "editor.cancel":"Cancel",
+    "editor.copy":"Copy",
+    "editor.close":"Close",
+    "editor.newMap":"New Map",
+    "editor.columns":"Columns",
+    "editor.rows":"Rows",
+    "editor.create":"Create",
+    "editor.resizeMap":"Resize Map",
+    "editor.current":"Current:",
+    "editor.resizeHint":"Expanding fills with water. Shrinking crops edges.",
+    "editor.apply":"Apply",
+    "editor.exportMap":"Export Map",
+    "editor.importHint":"Paste JSON or upload .json file:",
+    "editor.load":"Load",
+  }
+};
+let editorLang = localStorage.getItem('sg_editor_lang') || 'ar';
+function tEditor(key){
+  const d = EDITOR_TRANSLATIONS[editorLang] || EDITOR_TRANSLATIONS.ar;
+  return d[key] || (EDITOR_TRANSLATIONS.en[key] || key);
+}
+function applyEditorLang(lang){
+  editorLang = lang;
+  localStorage.setItem('sg_editor_lang', lang);
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang==='ar' ? 'rtl' : 'ltr';
+  document.body.dir = lang==='ar' ? 'rtl' : 'ltr';
+  document.querySelectorAll('[data-i18n-editor]').forEach(el=>{
+    const key = el.getAttribute('data-i18n-editor');
+    if(!key) return;
+    const val = tEditor(key);
+    // Only update leaf nodes (no element children) to avoid wiping icons/containers
+    // Buttons with icons have a separate inner span that also has data-i18n-editor; we skip the outer button
+    if(el.children.length>0) return;
+    el.textContent = val;
+  });
+  document.querySelectorAll('[data-i18n-editor-ph]').forEach(el=>{
+    const key = el.getAttribute('data-i18n-editor-ph');
+    if(key) el.placeholder = tEditor(key);
+  });
+  const btn = document.getElementById('langToggle');
+  if(btn) btn.textContent = lang==='ar' ? '🌐 English' : '🌐 العربية';
+  try{ document.getElementById('leftSearch').placeholder = tEditor('editor.searchTiles'); }catch{}
+  try{ document.getElementById('rightSearch').placeholder = tEditor('editor.searchInspector'); }catch{}
+  // Update status bottom
+  updateBottomStatus();
+}
+function toggleEditorLang(){
+  const nl = editorLang==='ar' ? 'en' : 'ar';
+  applyEditorLang(nl);
+}
+// Initialize lang early
+try{ applyEditorLang(editorLang); }catch(e){}
+
+// ===== UX HELPERS - Godot/Unity Inspector behavior =====
+function toggleSection(header){
+  const group = header.closest('.tool-group');
+  if(!group) return;
+  group.classList.toggle('collapsed');
+  saveEditorPrefs();
+}
+function toggleAllSections(panelId, expand){
+  const panel = document.getElementById(panelId);
+  if(!panel) return;
+  panel.querySelectorAll('.tool-group').forEach(g=>{
+    if(expand) g.classList.remove('collapsed');
+    else g.classList.add('collapsed');
+  });
+  saveEditorPrefs();
+}
+function filterLeftPanel(q){
+  q = (q||'').toLowerCase().trim();
+  const tiles = document.querySelectorAll('#tilePalette .tool-btn');
+  tiles.forEach(btn=>{
+    const text = (btn.textContent + ' ' + (btn.getAttribute('data-search')||'')).toLowerCase();
+    const show = !q || text.includes(q);
+    btn.style.display = show ? '' : 'none';
+  });
+  // Also filter sections by data-keywords
+  document.querySelectorAll('#leftPanel .tool-group').forEach(g=>{
+    const kw = (g.getAttribute('data-keywords')||'').toLowerCase();
+    const label = g.querySelector('.label')?.textContent?.toLowerCase()||'';
+    if(!q) g.style.display='';
+    else {
+      const hasVisibleChild = g.querySelectorAll('.tool-btn:not([style*=\"display: none\"])').length>0;
+      const match = kw.includes(q) || label.includes(q) || hasVisibleChild;
+      if(g.getAttribute('data-section')==='tiles' && q) g.style.display = hasVisibleChild? '' : 'none';
+      else if(g.getAttribute('data-section')==='tool' && q) g.style.display = match? '' : 'none';
+      else if(q && !match && g.getAttribute('data-section')!=='tiles'){} // keep? hide empty?
+    }
+  });
+}
+function filterRightPanel(q){
+  q = (q||'').toLowerCase().trim();
+  document.querySelectorAll('#rightPanel .tool-group').forEach(g=>{
+    const kw = (g.getAttribute('data-keywords')||'').toLowerCase();
+    const label = g.querySelector('.label')?.textContent?.toLowerCase()||'';
+    const bodyText = g.querySelector('.section-body')?.textContent?.toLowerCase()||'';
+    if(!q){ g.style.display=''; return; }
+    const match = kw.includes(q) || label.includes(q) || bodyText.includes(q);
+    // Never hide buildingProps/shopProps/missionProps if they are active? filter will hide but we keep visibility via display check
+    if(g.id==='buildingProps' || g.id==='shopProps' || g.id==='missionProps'){
+      // If hidden via tile selection, keep hidden regardless
+      if(g.style.display==='none' && !g.classList.contains('force-show')) return;
+      // else apply filter but keep if matched
+      g.style.display = match ? '' : 'none';
+    } else {
+      g.style.display = match ? '' : 'none';
+    }
+  });
+  // Filter quest list items also via existing inputs? we delegate
+}
+function filterQuestList(which, q){
+  q=(q||'').toLowerCase().trim();
+  const listId = which==='main' ? 'mainQuestList' : 'sideQuestList';
+  const typeFilterEl = which==='main' ? document.getElementById('mainQuestFilter') : null;
+  const typeFilter = typeFilterEl ? typeFilterEl.value : '';
+  const container = document.getElementById(listId);
+  if(!container) return;
+  Array.from(container.children).forEach(el=>{
+    if(el.classList.contains('list-empty')) return;
+    const txt = el.textContent.toLowerCase();
+    const typeMatch = !typeFilter || txt.includes(typeFilter.toLowerCase());
+    const searchMatch = !q || txt.includes(q);
+    el.style.display = (typeMatch && searchMatch) ? '' : 'none';
+  });
+}
+function filterSpammerList(q){
+  q=(q||'').toLowerCase().trim();
+  const c = document.getElementById('spammerList');
+  if(!c) return;
+  Array.from(c.children).forEach(el=>{
+    if(el.classList.contains('list-empty')) return;
+    const txt = el.textContent.toLowerCase();
+    el.style.display = !q || txt.includes(q) ? '' : 'none';
+  });
+}
+function clearAllSpammers(){
+  if(!editor.spammers.length) return;
+  if(!confirm(editorLang==='ar' ? 'هل تريد حذف جميع الأعداء؟' : 'Clear all spammers?')) return;
+  editor.spammers.length=0;
+  refreshUI(); render();
+}
+function resetBuildingDefaults(){
+  editor.bldH=2; editor.bldC='#808080'; editor.bldShape=0; editor.bldRot=0;
+  const h=document.getElementById('bldH'); if(h) h.value=2;
+  const hv=document.getElementById('bldHV'); if(hv) hv.textContent='2';
+  const c=document.getElementById('bldC'); if(c) c.value='#808080';
+  const ct=document.getElementById('bldCText'); if(ct) ct.value='#808080';
+  const s=document.getElementById('bldShape'); if(s) s.value=0;
+  const rv=document.getElementById('bldRotV'); if(rv) rv.textContent='0°';
+  render();
+}
+function saveEditorPrefs(){
+  try{
+    const prefs = {
+      lang: editorLang,
+      collapsed: Array.from(document.querySelectorAll('.tool-group')).map(g=>{
+        const sec = g.getAttribute('data-section')||g.id||'';
+        return sec + ':' + (g.classList.contains('collapsed')?1:0);
+      }).join(','),
+      leftW: document.getElementById('leftPanel')?.style.width || '',
+      rightW: document.getElementById('rightPanel')?.style.width || '',
+      grid: typeof drawGrid!=='undefined'? drawGrid : true,
+      zoom: typeof zoom!=='undefined'? zoom : 1
+    };
+    localStorage.setItem('sg_editor_prefs', JSON.stringify(prefs));
+  }catch{}
+}
+function loadEditorPrefs(){
+  try{
+    const raw = localStorage.getItem('sg_editor_prefs');
+    if(!raw) return;
+    const p = JSON.parse(raw);
+    if(p.lang) applyEditorLang(p.lang);
+    if(p.collapsed){
+      p.collapsed.split(',').forEach(entry=>{
+        const [sec, col]=entry.split(':');
+        if(!sec) return;
+        const el = document.querySelector(`[data-section=\"${sec}\"]`) || document.getElementById(sec);
+        if(el && col==='1') el.classList.add('collapsed');
+        if(el && col==='0') el.classList.remove('collapsed');
+      });
+    }
+    if(p.leftW) document.getElementById('leftPanel').style.width=p.leftW;
+    if(p.rightW) document.getElementById('rightPanel').style.width=p.rightW;
+    if(typeof p.grid!=='undefined') { drawGrid=p.grid; const cb=document.querySelector('#topRight input[type=checkbox]'); if(cb) cb.checked=p.grid; }
+    if(p.zoom) zoom=p.zoom;
+  }catch{}
+}
+function updateBottomStatus(){
+  const dims = document.getElementById('infoDims');
+  if(dims && typeof editor!=='undefined') dims.textContent = editor.cols + '×' + editor.rows;
+  const bCountEl = document.getElementById('infoBuildings');
+  const sCountEl = document.getElementById('infoShops');
+  const qCountEl = document.getElementById('infoQuests');
+  if(bCountEl && typeof editor!=='undefined'){
+    let bc=0; for(let y=0;y<editor.rows;y++) for(let x=0;x<editor.cols;x++) if(editor.tiles[y]?.[x]===3) bc++;
+    bCountEl.textContent = Math.floor(bc/4);
+  }
+  if(sCountEl) sCountEl.textContent = editor?.specialBuildings?.length ? Math.floor(editor.specialBuildings.length/4) : 0;
+  if(qCountEl) qCountEl.textContent = editor?.quests?.length||0;
+  const zv = document.getElementById('zoomVal');
+  const bvz = document.getElementById('bottomZoom');
+  const pct = Math.round((typeof zoom!=='undefined'?zoom:1)*100);
+  if(zv) zv.textContent = pct + '%';
+  if(bvz) bvz.textContent = pct + '%';
+}
+function updateBottomCoords(tx,ty){
+  const cx=document.getElementById('coordX');
+  const cy=document.getElementById('coordY');
+  if(cx) cx.textContent=tx;
+  if(cy) cy.textContent=ty;
+}
+// Resizable panels
+(function initResizers(){
+  function makeResizer(resizerId, panelId, isLeft){
+    const resizer=document.getElementById(resizerId);
+    const panel=document.getElementById(panelId);
+    if(!resizer||!panel) return;
+    let dragging=false, startX, startW;
+    resizer.addEventListener('mousedown', e=>{
+      dragging=true; startX=e.clientX; startW=panel.getBoundingClientRect().width;
+      resizer.classList.add('dragging');
+      document.body.style.cursor='col-resize';
+      document.body.style.userSelect='none';
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove', e=>{
+      if(!dragging) return;
+      const dx = e.clientX - startX;
+      let newW = isLeft ? startW + dx : startW - dx;
+      newW = Math.max(200, Math.min(520, newW));
+      panel.style.width = newW + 'px';
+      if(window.render) render();
+    });
+    window.addEventListener('mouseup', ()=>{
+      if(dragging){
+        dragging=false;
+        resizer.classList.remove('dragging');
+        document.body.style.cursor='';
+        document.body.style.userSelect='';
+        saveEditorPrefs();
+        if(window.render) render();
+      }
+    });
+  }
+  window.addEventListener('DOMContentLoaded', ()=>{
+    makeResizer('resizerLeft','leftPanel', true);
+    makeResizer('resizerRight','rightPanel', false);
+    loadEditorPrefs();
+    updateBottomStatus();
+  });
+  // also try immediately if DOM already loaded
+  if(document.readyState!=='loading'){
+    setTimeout(()=>{
+      makeResizer('resizerLeft','leftPanel', true);
+      makeResizer('resizerRight','rightPanel', false);
+      loadEditorPrefs();
+    }, 100);
+  }
+})();
+
+// Keyboard: Ctrl+K for search, palette
+document.addEventListener('keydown', e=>{
+  if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='k'){
+    e.preventDefault();
+    const ls=document.getElementById('leftSearch');
+    const rs=document.getElementById('rightSearch');
+    // focus whichever panel is more relevant (if inspector quest visible, focus right else left)
+    const missionVisible = document.getElementById('missionProps')?.style.display!=='none';
+    if(missionVisible && rs) rs.focus();
+    else if(ls) ls.focus();
+  }
+});
+
+// Enhance color text sync
+window.addEventListener('DOMContentLoaded', ()=>{
+  const c=document.getElementById('bldC');
+  const ct=document.getElementById('bldCText');
+  if(c && ct){
+    c.addEventListener('input', ()=>{ ct.value=c.value; });
+    ct.addEventListener('input', ()=>{ 
+      if(/^#[0-9a-fA-F]{6}$/.test(ct.value) || /^#[0-9a-fA-F]{3}$/.test(ct.value)){
+        c.value=ct.value; editor.bldC=ct.value;
+      }
+    });
+  }
+});
+
+</script>
+<script>
+
 // ================ CONSTANTS ================
-const T = { WATER:0, ROAD:1, SIDEWALK:2, BUILDING:3, PARK:4, PARKING:5, SPECIAL:6 };
+const T = { WATER:0, ROAD:1, SIDEWALK:2, BUILDING:3, PARK:4, PARKING:5, SPECIAL:6, PAVEMENT:7 };
 const TS = 32;
 
 // ======================== TILE ASSETS (SVG) ========================
 const TILE_ASSETS = {
     [T.WATER]:    { name: 'water',    src: 'assets/water.svg',    img: null },
     [T.ROAD]:     { name: 'road',     src: 'assets/road.svg',     img: null },
-    [T.SIDEWALK]: { name: 'sidewalk', src: 'assets/sidewalk.svg', img: null },
+    [T.SIDEWALK]: { name: 'sand',     src: 'assets/sand.svg',     img: null },
     [T.BUILDING]: { name: 'building', src: 'assets/building_detail.svg', img: null },
     [T.PARK]:     { name: 'park',     src: 'assets/park.svg',     img: null },
     [T.PARKING]:  { name: 'parking',  src: 'assets/parking.svg',  img: null },
-    [T.SPECIAL]:  { name: 'special',  src: 'assets/special_detail.svg', img: null }
+    [T.SPECIAL]:  { name: 'special',  src: 'assets/special_detail.svg', img: null },
+    [T.PAVEMENT]: { name: 'pavement', src: 'assets/pavement.svg', img: null }
 };
 const SAND_IMG = { src: 'assets/sand.svg', img: null };
 
@@ -329,11 +1736,16 @@ function preloadAssets() {
     ]);
 }
 const MISSION_ICONS = {
-  taxi:'🚕', race:'🏁', delivery:'📦', heist:'💰', chase:'🚔',
-  collection:'⭐', protect:'🛡️', smuggle:'🚛', stealCar:'🚗',
-  transport:'🚚', killPolice:'👮', killCivilians:'👤',
-  killGang:'💀', smuggleProhibited:'📯', smuggleWeapons:'🔫', spammer:'💀'
+  deliverShipment:'📦', killTarget:'💀', transportPerson:'🚕', escapeCar:'🚨', stealCar:'🚗',
+  silentPursuit:'🕵️', surveillance:'👁️', plantBomb:'💣', meeting:'💬', theft:'🦹', deliverLoot:'🎒', spammer:'💀'
 };
+const MISSION_REWARDS_DEFAULT = { deliverShipment:400, killTarget:500, transportPerson:350, escapeCar:800, stealCar:300, silentPursuit:600, surveillance:450, plantBomb:700, meeting:200, theft:650, deliverLoot:350 };
+const QUEST_DEFAULTS_AR = { deliverShipment:"توصيل شحنة", killTarget:"قتل هدف", transportPerson:"نقل شخص", escapeCar:"هروب بالسيارة", stealCar:"سرقة سيارة", silentPursuit:"مطاردة صامتة", surveillance:"مراقبة", plantBomb:"زرع قنبلة", meeting:"اجتماع", theft:"سرقة", deliverLoot:"تسليم مسروقات" };
+const QUEST_DEFAULTS_EN = { deliverShipment:"Deliver Shipment", killTarget:"Kill Target", transportPerson:"Transport Person", escapeCar:"Escape by Car", stealCar:"Steal Car", silentPursuit:"Silent Pursuit", surveillance:"Surveillance", plantBomb:"Plant Bomb", meeting:"Meeting", theft:"Theft", deliverLoot:"Deliver Loot" };
+const QUEST_DESC_AR = { deliverShipment:"سلّم الشحنة إلى الموقع المحدد (شحنة واحدة)", killTarget:"اقتل العصابة المحددة على الخريطة (مرة واحدة)", transportPerson:"انقل شخصًا إلى الموقع المحدد (مرة واحدة)", escapeCar:"استقل سيارة فتطاردك الشرطة ثم اهرب إلى الموقع المحدد", stealCar:"اسرق سيارة ثم قدها إلى الموقع المحدد (مرة واحدة)", silentPursuit:"اتبع السيارة دون اقتراب أو ابتعاد شديد", surveillance:"ابقَ داخل الدائرة 30 ثانية دون قتل أو شرطة", plantBomb:"اذهب للموقع وازرع القنبلة ثم اهرب لخط النهاية", meeting:"تحدث إلى الشخص في الموقع المحدد", theft:"اسرق الغرض (ثبّت 20 ثانية، اترك إذا اقترب أحد)", deliverLoot:"تحقق من حمل الغرض المحدد وسلّمه" };
+const QUEST_DESC_EN = { deliverShipment:"Deliver 1 shipment to the marked location", killTarget:"Eliminate the gangster marked on the map (1 time)", transportPerson:"Transport a person to the marked location (1 time)", escapeCar:"Police will pursue once you enter a car; escape to the marked location", stealCar:"Steal a car and drive it to the marked location (1 time)", silentPursuit:"Follow the car without getting too close or too far", surveillance:"Stay inside circle 30s without kills or police", plantBomb:"Go to location, plant bomb, then escape to finish line", meeting:"Talk to the person at the marked location", theft:"Steal the item (hold 20s, release if someone approaches)", deliverLoot:"Check carrying specified item and deliver" };
+function questDefaultTitle(type, lang){ if(lang==='en') return QUEST_DEFAULTS_EN[type]||type; return QUEST_DEFAULTS_AR[type]||type; }
+function questDefaultDesc(type, lang){ if(lang==='en') return QUEST_DESC_EN[type]||""; return QUEST_DESC_AR[type]||""; }
 
 // ================ STATE ================
 const editor = {
@@ -341,14 +1753,28 @@ const editor = {
   tiles: [], buildingColors: [], buildingHeights: [], buildingShapes: [], buildingRotations: [],
   specialBuildings: [],
   spawnPoint: { x: 30, y: 30 },
-  missionGivers: [],
+  missionGivers: [], // legacy (kept for migration)
   spammers: [],
   zones: [],
   curTile: 4, curTool: 'brush',
   bldH: 2, bldC: '#808080', bldShape: 0, bldRot: 0,
   shopT: '🔫 Ammu-Nation', shopC: '#cc8844', shopRot: 0,
   selMission: -1,
-  missionType: 'taxi'
+  missionType: 'deliverShipment',
+  // Quest system (11 types now: 5 original + 6 new)
+  quests: [], // {id, category:'main'|'side', type, start:{x,y}, end:{x,y}, title:{ar,en}, desc:{ar,en}, reward, icon, order, params:{itemName, meetingAr, meetingEn}}
+  questCategory: 'main',
+  questTitleAr: '',
+  questTitleEn: '',
+  questDescAr: '',
+  questDescEn: '',
+  questReward: 400,
+  questItemName: '',
+  questMeetingAr: '',
+  questMeetingEn: '',
+  pendingQuest: null, // {category,type,start:{x,y}, title,desc,reward,icon}
+  selQuest: -1, // index in quests
+  questIdCounter: 1
 };
 
 let drawGrid = true;
@@ -375,7 +1801,7 @@ function initMap(cols, rows) {
   editor.cols = cols; editor.rows = rows;
   editor.tiles = []; editor.buildingColors = []; editor.buildingHeights = []; editor.buildingShapes = []; editor.buildingRotations = [];
   editor.specialBuildings = []; editor.missionGivers = []; editor.spammers = [];
-  editor.selMission = -1;
+  editor.quests = []; editor.pendingQuest = null; editor.selQuest = -1; editor.selMission = -1; editor.questIdCounter = 1;
   editor.spawnPoint = { x: Math.floor(cols/2), y: Math.floor(rows/2) };
   for (let y = 0; y < rows; y++) {
     editor.tiles[y] = []; editor.buildingColors[y] = []; editor.buildingHeights[y] = []; editor.buildingShapes[y]=[]; editor.buildingRotations[y]=[];
@@ -411,8 +1837,90 @@ function loadMap(data) {
     if (data.spawnPoint) console.warn("[editor] Invalid spawnPoint in map data, falling back to center:", data.spawnPoint);
     editor.spawnPoint = { x:Math.floor(editor.cols/2), y:Math.floor(editor.rows/2) };
   }
-  editor.missionGivers = (data.missionGivers||[]).filter(m => m.type !== 'spammer');
+  // New quest system: handle data.quests (two-point) else migrate legacy missionGivers
+  editor.quests = [];
+  editor.pendingQuest = null;
+  editor.selQuest = -1;
+  editor.questIdCounter = 1;
+  if(Array.isArray(data.quests) && data.quests.length>0){
+    // Normalize quests from new schema
+    data.quests.forEach((q, idx)=>{
+      const type=q.type||'taxi';
+      const category=q.category==="side" ? "side":"main";
+      const icon=q.icon||MISSION_ICONS[type]||'⭐';
+      const start=q.start || (typeof q.x==="number" ? {x:q.x,y:q.y} : {x:0,y:0});
+      const end=q.end || (q.endX!=null ? {x:q.endX,y:q.endY} : {x:start.x+4,y:start.y});
+      let title=q.title; if(!title) title={ar:questDefaultTitle(type,'ar'), en:questDefaultTitle(type,'en')}; else if(typeof title==="string") title={ar:title,en:title};
+      let desc=q.desc; if(!desc) desc={ar:questDefaultDesc(type,'ar'), en:questDefaultDesc(type,'en')}; else if(typeof desc==="string") desc={ar:desc,en:desc};
+      const extra = {};
+      const rawItem = (q.params && q.params.itemName) || q.itemName || "";
+      const rawMAr = (q.params && q.params.meetingAr) || q.meetingAr || "";
+      const rawMEn = (q.params && q.params.meetingEn) || q.meetingEn || "";
+      if(rawItem) extra.itemName = String(rawItem).trim();
+      if(rawMAr) extra.meetingAr = String(rawMAr).trim();
+      if(rawMEn) extra.meetingEn = String(rawMEn).trim();
+      editor.quests.push({
+        id: q.id || `q_${category}_${idx}_${type}`,
+        category, type, icon,
+        reward: (typeof q.reward==="number" ? q.reward : (MISSION_REWARDS_DEFAULT[type]||300)),
+        order: (typeof q.order==="number" ? q.order : idx),
+        start: {x:Math.floor(start.x), y:Math.floor(start.y)},
+        end: {x:Math.floor(end.x), y:Math.floor(end.y)},
+        title, desc,
+        params: Object.keys(extra).length ? extra : undefined,
+        itemName: extra.itemName,
+        meetingAr: extra.meetingAr,
+        meetingEn: extra.meetingEn
+      });
+    });
+    // sort mains by order
+    editor.quests.sort((a,b)=>{ if(a.category!==b.category) return a.category==="main" ? -1:1; return (a.order||0)-(b.order||0); });
+    // assign sequential order for mains to keep stable
+    let mOrder=0; editor.quests.forEach(q=>{ if(q.category==="main") q.order=mOrder++; });
+    const maxId = editor.quests.reduce((m,q)=>{ const n=parseInt((q.id.split('_').pop()||"0")); return isNaN(n)?m:Math.max(m,n); },0);
+    editor.questIdCounter = maxId+1 + editor.quests.length;
+    // keep legacy missionGivers empty (will be rebuilt on export)
+    editor.missionGivers = [];
+  } else {
+    // legacy: missionGivers array of single points -> migrate to two-point quests (main)
+    const legacy = (data.missionGivers||[]).filter(m => m.type !== 'spammer');
+    legacy.forEach((m, idx)=>{
+      const type=m.type||'taxi';
+      const icon=m.icon||MISSION_ICONS[type]||'⭐';
+      const sx=Math.floor(m.x), sy=Math.floor(m.y);
+      // try to find explicit end if legacy had start/end
+      let ex=sx+4, ey=sy;
+      if(m.start && m.end && typeof m.start.x==="number"){ ex=Math.floor(m.end.x); ey=Math.floor(m.end.y); }
+      else if(typeof m.endX==="number"){ ex=Math.floor(m.endX); ey=Math.floor(m.endY); }
+      if(!Number.isFinite(ex)) ex=sx+4;
+      if(!Number.isFinite(ey)) ey=sy;
+      // Clamp inside map
+      ex=Math.max(0,Math.min(editor.cols-1,ex)); ey=Math.max(0,Math.min(editor.rows-1,ey));
+      let title=m.title; if(!title) title={ar:questDefaultTitle(type,'ar'), en:questDefaultTitle(type,'en')}; else if(typeof title==="string") title={ar:title,en:title};
+      let desc=m.desc; if(!desc) desc={ar:questDefaultDesc(type,'ar'), en:questDefaultDesc(type,'en')}; else if(typeof desc==="string") desc={ar:desc,en:desc};
+      const extraLegacy = {};
+      const rawItemL = (m.params && m.params.itemName) || m.itemName || "";
+      const rawMArL = (m.params && m.params.meetingAr) || m.meetingAr || "";
+      const rawMEnL = (m.params && m.params.meetingEn) || m.meetingEn || "";
+      if(rawItemL) extraLegacy.itemName = String(rawItemL).trim();
+      if(rawMArL) extraLegacy.meetingAr = String(rawMArL).trim();
+      if(rawMEnL) extraLegacy.meetingEn = String(rawMEnL).trim();
+      editor.quests.push({
+        id:`q_main_${idx}_${type}_${sx}_${sy}`,
+        category:'main', type, icon, reward: MISSION_REWARDS_DEFAULT[type]||300, order:idx,
+        start:{x:sx,y:sy}, end:{x:ex,y:ey}, title, desc,
+        params: Object.keys(extraLegacy).length ? extraLegacy : undefined,
+        itemName: extraLegacy.itemName,
+        meetingAr: extraLegacy.meetingAr,
+        meetingEn: extraLegacy.meetingEn
+      });
+    });
+    editor.missionGivers = [];
+  }
   editor.spammers = (data.missionGivers||[]).filter(m => m.type === 'spammer').map(m => ({ x:m.x, y:m.y }));
+  // Also handle spammers in quests? keep separate
+  // Also handle data.spammers if present (future)
+  if(Array.isArray(data.spammers)) editor.spammers = data.spammers.map(s=>({x:Math.floor(s.x), y:Math.floor(s.y)}));
   editor.zones = data.zones || [{ name:'City', x1:0, y1:0, x2:editor.cols-1, y2:editor.rows-1, pal:'downtown' }];
   editor.selMission = -1;
   for (let y = 0; y < editor.rows; y++) {
@@ -463,8 +1971,35 @@ function buildMapObject() {
   const bH = editor.buildingHeights.map(r=>r.map(h=>h||null));
   const bS = editor.buildingShapes.map(r=>r.map(c=>c===null?null:c));
   const bR = editor.buildingRotations.map(r=>r.map(c=>c===null?0:c));
+  // Build quests export (new system)
+  const questsOut = editor.quests.map((q, idx)=>{
+    const extra = {};
+    const itm = (q.params && q.params.itemName) || q.itemName || "";
+    const mAr = (q.params && q.params.meetingAr) || q.meetingAr || "";
+    const mEn = (q.params && q.params.meetingEn) || q.meetingEn || "";
+    if(itm) extra.itemName = String(itm).trim();
+    if(mAr) extra.meetingAr = String(mAr).trim();
+    if(mEn) extra.meetingEn = String(mEn).trim();
+    return {
+      id: q.id,
+      category: q.category,
+      type: q.type,
+      icon: q.icon || MISSION_ICONS[q.type]||'⭐',
+      reward: (typeof q.reward==="number" ? q.reward : (MISSION_REWARDS_DEFAULT[q.type]||300)),
+      order: (typeof q.order==="number" ? q.order : idx),
+      start: {x: Math.floor(q.start.x), y: Math.floor(q.start.y)},
+      end: {x: Math.floor(q.end.x), y: Math.floor(q.end.y)},
+      title: {ar: (q.title&&q.title.ar)||questDefaultTitle(q.type,'ar'), en: (q.title&&q.title.en)||questDefaultTitle(q.type,'en')},
+      desc:  {ar: (q.desc&&q.desc.ar)||questDefaultDesc(q.type,'ar'), en: (q.desc&&q.desc.en)||questDefaultDesc(q.type,'en')},
+      params: Object.keys(extra).length ? extra : undefined,
+      itemName: extra.itemName,
+      meetingAr: extra.meetingAr,
+      meetingEn: extra.meetingEn
+    };
+  });
+  // Backward-compat legacy missionGivers flat (start points only + spammers)
   const allMG = [
-    ...editor.missionGivers.map(m=>({ x:m.x, y:m.y, type:m.type, icon:m.icon||MISSION_ICONS[m.type]||'⭐' })),
+    ...questsOut.map(q=>({ x:q.start.x, y:q.start.y, type:q.type, icon:q.icon, category:q.category, title:q.title, desc:q.desc, reward:q.reward, start:q.start, end:q.end, id:q.id, order:q.order })),
     ...editor.spammers.map(s=>({ x:s.x, y:s.y, type:'spammer', icon:'💀' }))
   ];
   // Ensure spawnPoint is always a valid tile coordinate - never emit null
@@ -483,7 +2018,9 @@ function buildMapObject() {
     buildingColors: bC, buildingHeights: bH, buildingShapes: bS, buildingRotations: bR,
     specialBuildings: editor.specialBuildings,
     spawnPoint: outSpawn,
-    missionGivers: allMG,
+    missionGivers: allMG, // legacy
+    quests: questsOut,
+    spammers: editor.spammers,
     zones: editor.zones
   };
 }
@@ -501,8 +2038,8 @@ function selectTile(t) {
   document.querySelectorAll('[data-tile]').forEach(b => b.classList.toggle('active', +b.dataset.tile===t));
   document.getElementById('buildingProps').style.display = t===3?'block':'none';
   document.getElementById('shopProps').style.display = t===6?'block':'none';
-  document.getElementById('missionProps').style.display = t===7?'block':'none';
-  const names = {0:'Water',1:'Road',2:'Sand',3:'Building',4:'Grass',5:'Parking',6:'Shop',7:'Mission',8:'Spammer'};
+  document.getElementById('missionProps').style.display = t===8?'block':'none';
+  const names = {0:'Water',1:'Road',2:'Sand',3:'Building',4:'Grass',5:'Parking',6:'Shop',7:'Pavement',8:'Mission',9:'Spammer'};
   setStatus('Tile: '+ (names[t]||t));
 }
 
@@ -559,6 +2096,113 @@ canvas.addEventListener('wheel', e => {
 }, {passive:false});
 canvas.addEventListener('contextmenu', e=>e.preventDefault());
 
+// ================ QUEST HELPERS ================
+function updateQuestHint(){
+  const h = document.getElementById('questPendingHint');
+  if(!h) return;
+  if(editor.pendingQuest){
+    const cat = editor.pendingQuest.category;
+    const col = cat==="main" ? "#ffd700" : "#c084fc";
+    const catLabel = cat==="main" ? "🟡 MAIN" : "🟣 SIDE";
+    h.style.display="block";
+    h.style.borderColor = cat==="main" ? "rgba(255,215,0,0.3)" : "rgba(168,85,247,0.35)";
+    h.style.color = col;
+    h.innerHTML = `⏳ ${catLabel} <b>${editor.pendingQuest.type}</b> — Start at (${editor.pendingQuest.start.x},${editor.pendingQuest.start.y}) selected.<br>Now <b>click End point</b> (green) to finish this quest.`;
+  } else {
+    h.style.display="none";
+  }
+}
+function onQuestTypeChange(){
+  const t=document.getElementById('missionT').value;
+  editor.missionType=t;
+  const reward=MISSION_REWARDS_DEFAULT[t]||300;
+  editor.questReward=reward;
+  const qr=document.getElementById('questReward');
+  if(qr) qr.value=reward;
+  // auto-fill titles if empty
+  if(!editor.questTitleAr) { document.getElementById('questTitleAr').value=questDefaultTitle(t,'ar'); editor.questTitleAr=questDefaultTitle(t,'ar'); }
+  if(!editor.questTitleEn) { document.getElementById('questTitleEn').value=questDefaultTitle(t,'en'); editor.questTitleEn=questDefaultTitle(t,'en'); }
+  if(!editor.questDescAr) { document.getElementById('questDescAr').value=questDefaultDesc(t,'ar'); editor.questDescAr=questDefaultDesc(t,'ar'); }
+  if(!editor.questDescEn) { document.getElementById('questDescEn').value=questDefaultDesc(t,'en'); editor.questDescEn=questDefaultDesc(t,'en'); }
+  updateQuestExtraVisibility();
+  if(editor.pendingQuest){ editor.pendingQuest.type=t; editor.pendingQuest.icon=MISSION_ICONS[t]||'⭐'; updateQuestHint(); render(); }
+}
+function updateQuestExtraVisibility(){
+  const t=editor.missionType;
+  const itemRow=document.getElementById('extraItemNameRow');
+  const meetingRow=document.getElementById('extraMeetingRow');
+  const container=document.getElementById('questExtraParams');
+  let show=false;
+  if(t==='theft' || t==='deliverLoot'){
+    if(itemRow) itemRow.style.display='flex';
+    show=true;
+  } else { if(itemRow) itemRow.style.display='none'; }
+  if(t==='meeting'){
+    if(meetingRow) meetingRow.style.display='block';
+    show=true;
+  } else { if(meetingRow) meetingRow.style.display='none'; }
+  if(container) container.style.display= show ? 'block' : 'none';
+}
+function updateQuestExtraVisibility(){
+  const t=editor.missionType;
+  const itemRow=document.getElementById('extraItemNameRow');
+  const meetingRow=document.getElementById('extraMeetingRow');
+  const container=document.getElementById('questExtraParams');
+  let show=false;
+  if(t==='theft' || t==='deliverLoot'){
+    if(itemRow) itemRow.style.display='flex';
+    show=true;
+  } else { if(itemRow) itemRow.style.display='none'; }
+  if(t==='meeting'){
+    if(meetingRow) meetingRow.style.display='block';
+    show=true;
+  } else { if(meetingRow) meetingRow.style.display='none'; }
+  if(container) container.style.display= show ? 'block' : 'none';
+}
+function syncToolbarFromQuest(q){
+  if(!q) return;
+  editor.questCategory=q.category; editor.missionType=q.type;
+  editor.questTitleAr=q.title.ar||""; editor.questTitleEn=q.title.en||"";
+  editor.questDescAr=q.desc.ar||""; editor.questDescEn=q.desc.en||"";
+  editor.questReward=q.reward;
+  editor.questItemName= (q.params && q.params.itemName) || q.itemName || "";
+  editor.questMeetingAr= (q.params && q.params.meetingAr) || q.meetingAr || "";
+  editor.questMeetingEn= (q.params && q.params.meetingEn) || q.meetingEn || "";
+  const catEl=document.getElementById('questCategory'); if(catEl) catEl.value=q.category;
+  const typeEl=document.getElementById('missionT'); if(typeEl) typeEl.value=q.type;
+  const tAr=document.getElementById('questTitleAr'); if(tAr) tAr.value=q.title.ar||"";
+  const tEn=document.getElementById('questTitleEn'); if(tEn) tEn.value=q.title.en||"";
+  const dAr=document.getElementById('questDescAr'); if(dAr) dAr.value=q.desc.ar||"";
+  const dEn=document.getElementById('questDescEn'); if(dEn) dEn.value=q.desc.en||"";
+  const rew=document.getElementById('questReward'); if(rew) rew.value=q.reward;
+  const itemEl=document.getElementById('questItemName'); if(itemEl) itemEl.value=editor.questItemName;
+  const mArEl=document.getElementById('questMeetingAr'); if(mArEl) mArEl.value=editor.questMeetingAr;
+  const mEnEl=document.getElementById('questMeetingEn'); if(mEnEl) mEnEl.value=editor.questMeetingEn;
+  updateQuestExtraVisibility();
+}
+function onDialogTypeChange(){
+  const t=document.getElementById('qdType').value;
+  const itemRow=document.getElementById('qdItemRow');
+  const meetingRow=document.getElementById('qdMeetingRow');
+  if(t==='theft' || t==='deliverLoot'){ if(itemRow) itemRow.style.display='flex'; } else { if(itemRow) itemRow.style.display='none'; }
+  if(t==='meeting'){ if(meetingRow) meetingRow.style.display='block'; } else { if(meetingRow) meetingRow.style.display='none'; }
+}
+function cancelPendingQuest(){
+  editor.pendingQuest=null;
+  updateQuestHint();
+  setStatus("Pending quest canceled");
+  render();
+}
+function findQuestAt(tx, ty){
+  for(let i=0;i<editor.quests.length;i++){
+    const q=editor.quests[i];
+    if((q.start.x===tx && q.start.y===ty) || (q.end.x===tx && q.end.y===ty)) return i;
+  }
+  return -1;
+}
+function findQuestStartAt(tx, ty){ for(let i=0;i<editor.quests.length;i++){ const q=editor.quests[i]; if(q.start.x===tx && q.start.y===ty) return i; } return -1; }
+function findQuestEndAt(tx, ty){ for(let i=0;i<editor.quests.length;i++){ const q=editor.quests[i]; if(q.end.x===tx && q.end.y===ty) return i; } return -1; }
+
 // ================ PAINT ================
 function paint(tx, ty, tile) {
   tile = tile !== undefined ? tile : editor.curTile;
@@ -592,14 +2236,92 @@ function paint(tx, ty, tile) {
         }
       }
     }
-  } else if (tile === 7) {
-    // Place mission giver
-    editor.tiles[ty][tx] = editor.tiles[ty][tx] || T.PARK; // don't overwrite meaningful tile
-    const type = editor.missionType || 'taxi';
-    if (!editor.missionGivers.some(m=>m.x===tx&&m.y===ty))
-      editor.missionGivers.push({x:tx, y:ty, type, icon:MISSION_ICONS[type]||'⭐'});
-    refreshUI();
   } else if (tile === 8) {
+    // Two-point quest placement (Start -> End)
+    // If clicking an existing quest start/end, select it for editing
+    const existingIdx = findQuestAt(tx, ty);
+    if(existingIdx>=0 && !editor.pendingQuest){
+      editor.selQuest = existingIdx;
+      refreshUI();
+      render();
+      // open edit dialog for quick tweak
+      // don't create new quest, just select
+      setStatus(`Selected quest #${existingIdx+1} (${editor.quests[existingIdx].category}) — click elsewhere for new, or edit/delete`);
+      return;
+    }
+    // If we have a pending quest waiting for End, this click is End
+    if(editor.pendingQuest){
+      // Validate end not overlapping start of same quest? allow but warn
+      if(editor.pendingQuest.start.x===tx && editor.pendingQuest.start.y===ty){
+        setStatus("⚠️ End point cannot be same as Start — pick a different tile");
+        return;
+      }
+      // Check not overlapping another quest start/end (allow but keep unique)
+      const other = findQuestAt(tx, ty);
+      if(other>=0){
+        setStatus("⚠️ Tile already used by another quest — choose another End");
+        return;
+      }
+      // Fill bilingual fields fallback if empty
+      const type = editor.pendingQuest.type;
+      const titleAr = editor.questTitleAr && editor.questTitleAr.trim() ? editor.questTitleAr.trim() : questDefaultTitle(type,'ar');
+      const titleEn = editor.questTitleEn && editor.questTitleEn.trim() ? editor.questTitleEn.trim() : questDefaultTitle(type,'en');
+      const descAr = editor.questDescAr && editor.questDescAr.trim() ? editor.questDescAr.trim() : questDefaultDesc(type,'ar');
+      const descEn = editor.questDescEn && editor.questDescEn.trim() ? editor.questDescEn.trim() : questDefaultDesc(type,'en');
+      const reward = editor.questReward || MISSION_REWARDS_DEFAULT[type]||300;
+      const icon = MISSION_ICONS[type]||'⭐';
+      const category = editor.pendingQuest.category;
+      const start = editor.pendingQuest.start;
+      const end = {x:tx, y:ty};
+      const order = category==="main" ? editor.quests.filter(q=>q.category==="main").length : editor.quests.filter(q=>q.category==="side").length;
+      const id = `q_${category}_${editor.questIdCounter++}_${type}_${start.x}_${start.y}`;
+      // Extra params for new 6 types
+      const itemName = (editor.questItemName||'').trim();
+      const meetingAr = (editor.questMeetingAr||'').trim();
+      const meetingEn = (editor.questMeetingEn||'').trim();
+      const params = {};
+      if(itemName) params.itemName = itemName;
+      if(meetingAr) params.meetingAr = meetingAr;
+      if(meetingEn) params.meetingEn = meetingEn;
+      // Also store meeting message as title/desc fallback if title is default? But keep params separate
+      editor.quests.push({
+        id, category, type, icon, reward, order,
+        start, end,
+        title: {ar:titleAr, en:titleEn},
+        desc: {ar:descAr, en:descEn},
+        params: Object.keys(params).length ? params : undefined,
+        itemName: itemName||undefined,
+        meetingAr: meetingAr||undefined,
+        meetingEn: meetingEn||undefined
+      });
+      editor.pendingQuest = null;
+      editor.selQuest = editor.quests.length-1;
+      updateQuestHint();
+      refreshUI();
+      render();
+      setStatus(`✅ Quest added: ${category} ${type} Start(${start.x},${start.y}) → End(${end.x},${end.y})`);
+      return;
+    }
+    // No pending → this click is Start of new quest
+    const type = editor.missionType || 'taxi';
+    const category = editor.questCategory || 'main';
+    // Check tile not already used
+    if(findQuestAt(tx,ty)>=0){
+      setStatus("⚠️ Tile already has a quest point");
+      return;
+    }
+    // Validate not overlapping spammer/spawn? allow
+    editor.pendingQuest = { category, type, start:{x:tx,y:ty}, icon: MISSION_ICONS[type]||'⭐' };
+    // Ensure toolbar fields are initialized with defaults if empty
+    if(!editor.questTitleAr) { const v=questDefaultTitle(type,'ar'); editor.questTitleAr=v; document.getElementById('questTitleAr').value=v; }
+    if(!editor.questTitleEn) { const v=questDefaultTitle(type,'en'); editor.questTitleEn=v; document.getElementById('questTitleEn').value=v; }
+    if(!editor.questDescAr) { const v=questDefaultDesc(type,'ar'); editor.questDescAr=v; document.getElementById('questDescAr').value=v; }
+    if(!editor.questDescEn) { const v=questDefaultDesc(type,'en'); editor.questDescEn=v; document.getElementById('questDescEn').value=v; }
+    if(!editor.questReward) { editor.questReward = MISSION_REWARDS_DEFAULT[type]||300; document.getElementById('questReward').value=editor.questReward; }
+    updateQuestHint();
+    render();
+    setStatus(`📍 Start (${tx},${ty}) selected for ${category} ${type} — now click End point`);
+  } else if (tile === 9) {
     // Place spammer
     editor.tiles[ty][tx] = editor.tiles[ty][tx] || T.PARK;
     if (!editor.spammers.some(s=>s.x===tx&&s.y===ty))
@@ -613,6 +2335,29 @@ function paint(tx, ty, tile) {
 }
 
 function erase(tx, ty) {
+  // If erasing a quest start/end, remove the whole quest (both points)
+  let questIdx = findQuestAt(tx, ty);
+  if(questIdx>=0){
+    const q=editor.quests[questIdx];
+    editor.quests.splice(questIdx,1);
+    if(editor.selQuest===questIdx) editor.selQuest=-1;
+    else if(editor.selQuest>questIdx) editor.selQuest--;
+    // also clear pending if it was that quest's start
+    if(editor.pendingQuest && editor.pendingQuest.start.x===tx && editor.pendingQuest.start.y===ty){
+      editor.pendingQuest=null; updateQuestHint();
+    }
+    // Reassign orders for mains to keep sequence
+    let mOrder=0; editor.quests.forEach(qq=>{ if(qq.category==="main") qq.order=mOrder++; });
+    refreshUI(); render();
+    setStatus(`🗑 Quest removed: ${q.category} ${q.type} #${questIdx+1} Start(${q.start.x},${q.start.y}) End(${q.end.x},${q.end.y})`);
+    return;
+  }
+  // If pending quest start matches this tile, cancel it
+  if(editor.pendingQuest && editor.pendingQuest.start.x===tx && editor.pendingQuest.start.y===ty){
+    editor.pendingQuest=null; updateQuestHint(); render();
+    setStatus(`Pending quest start at (${tx},${ty}) cleared`);
+    return;
+  }
   // Handle shop (T.SPECIAL) 2x2 block first - erase whole shop
   if(editor.tiles[ty]?.[tx]===T.SPECIAL){
     const sb = editor.specialBuildings.find(s=>s.x===tx&&s.y===ty);
@@ -652,6 +2397,7 @@ function erase(tx, ty) {
         }
         editor.specialBuildings = editor.specialBuildings.filter(s=> !(s.x>=ox && s.x<ox+2 && s.y>=oy && s.y<oy+2 && s.name===shopName));
         editor.missionGivers = editor.missionGivers.filter(m=>!(Math.floor(m.x)===tx&&Math.floor(m.y)===ty));
+        // also remove any quest at that tile (already handled) and spammers
         editor.spammers = editor.spammers.filter(s=>!(Math.floor(s.x)===tx&&Math.floor(s.y)===ty));
         if (editor.spawnPoint && editor.spawnPoint.x===tx && editor.spawnPoint.y===ty) {
           editor.spawnPoint = { x: Math.floor(editor.cols/2), y: Math.floor(editor.rows/2) };
@@ -669,6 +2415,12 @@ function erase(tx, ty) {
   }
   editor.missionGivers = editor.missionGivers.filter(m=>!(Math.floor(m.x)===tx&&Math.floor(m.y)===ty));
   editor.spammers = editor.spammers.filter(s=>!(Math.floor(s.x)===tx&&Math.floor(s.y)===ty));
+  // extra quest cleanup if start/end shared tile (safety)
+  const qAt = findQuestAt(tx, ty);
+  if(qAt>=0){
+    editor.quests.splice(qAt,1);
+    let mOrder=0; editor.quests.forEach(qq=>{ if(qq.category==="main") qq.order=mOrder++; });
+  }
   if (editor.spawnPoint && editor.spawnPoint.x===tx && editor.spawnPoint.y===ty) {
     // Reset to center instead of null so export never loses spawn data
     editor.spawnPoint = { x: Math.floor(editor.cols/2), y: Math.floor(editor.rows/2) };
@@ -878,36 +2630,174 @@ function rotateShopSelected(dir){
   setStatus(`Rotated shop ${shopName} at (${ox},${oy}) to ${newRot*90}°`);
 }
 
-// ================ MISSIONS ================
-function refreshMissionList() {
+// ================ QUESTS (two-point main/side) ================
+function refreshMissionList(){
+  // legacy hidden list kept for compat — show quests count if editor wants
   const el = document.getElementById('missionList');
-  el.innerHTML = '';
-  editor.missionGivers.forEach((m, i) => {
-    const d = document.createElement('div');
-    d.className = 'mi' + (i===editor.selMission?' selected':'');
-    d.innerHTML = `<span class="mi-num">#${i+1}</span><span class="mi-type">${m.icon||'⭐'} ${m.type}</span><span class="mi-pos">(${m.x},${m.y})</span><span class="mi-del">✖</span>`;
-    d.querySelector('.mi-del').onclick = e => { e.stopPropagation(); editor.missionGivers.splice(i,1); if(editor.selMission>=editor.missionGivers.length)editor.selMission=-1; refreshUI(); render(); };
-    d.onclick = () => { editor.selMission=i; refreshMissionList(); };
-    el.appendChild(d);
-  });
-  document.getElementById('missionCount').textContent = editor.missionGivers.length;
+  if(el){
+    el.innerHTML='';
+    const mains = editor.quests.filter(q=>q.category==='main');
+    const sides = editor.quests.filter(q=>q.category==='side');
+    const mc=document.getElementById('missionCount'); if(mc) mc.textContent = mains.length+sides.length;
+  }
+  refreshQuestLists();
 }
-
-function moveMission(dir) {
-  const i = editor.selMission;
-  if (i<0 || i>=editor.missionGivers.length) return;
-  const j = i+dir;
-  if (j<0 || j>=editor.missionGivers.length) return;
-  [editor.missionGivers[i], editor.missionGivers[j]] = [editor.missionGivers[j], editor.missionGivers[i]];
-  editor.selMission = j;
-  refreshMissionList(); render();
+function refreshQuestLists(){
+  const mainEl=document.getElementById('mainQuestList');
+  const sideEl=document.getElementById('sideQuestList');
+  const mains = editor.quests.filter(q=>q.category==='main').sort((a,b)=>(a.order||0)-(b.order||0));
+  const sides = editor.quests.filter(q=>q.category==='side');
+  // Main
+  if(mainEl){
+    mainEl.innerHTML='';
+    mains.forEach((q, idx)=>{
+      const globalIdx = editor.quests.indexOf(q);
+      const sel = globalIdx===editor.selQuest;
+      const d=document.createElement('div');
+      d.className='mi' + (sel?' selected':'');
+      d.style.borderColor = q.category==="main" ? "rgba(255,215,0,0.25)" : "rgba(168,85,247,0.25)";
+      d.innerHTML=`<span class="mi-num" style="color:#ffd700">#${idx+1}</span><span class="mi-type">${q.icon||'⭐'} ${q.title&&(q.title.ar||q.title.en)||questDefaultTitle(q.type,'ar')} <span style="color:#999;font-size:10px">${q.type}</span></span><span class="mi-pos" title="Start→End">(${q.start.x},${q.start.y})→(${q.end.x},${q.end.y})</span><span class="mi-del">✖</span>`;
+      d.querySelector('.mi-del').onclick = e=>{ e.stopPropagation(); editor.quests.splice(globalIdx,1); if(editor.selQuest===globalIdx) editor.selQuest=-1; else if(editor.selQuest>globalIdx) editor.selQuest--; let mo=0; editor.quests.forEach(qq=>{ if(qq.category==='main') qq.order=mo++; }); refreshUI(); render(); };
+      d.onclick = ()=>{ editor.selQuest=globalIdx; const qq=editor.quests[globalIdx]; if(qq) syncToolbarFromQuest(qq); refreshQuestLists(); render(); };
+      d.ondblclick = ()=> openQuestDialog(globalIdx);
+      mainEl.appendChild(d);
+    });
+    if(!mains.length) mainEl.innerHTML='<div style="color:rgba(255,255,255,0.2);font-size:11px">No main quests — add with Mission brush (yellow, sequential)</div>';
+    document.getElementById('mainQuestCount').textContent=mains.length;
+  }
+  if(sideEl){
+    sideEl.innerHTML='';
+    sides.forEach((q)=>{
+      const globalIdx = editor.quests.indexOf(q);
+      const sel = globalIdx===editor.selQuest;
+      const d=document.createElement('div');
+      d.className='mi' + (sel?' selected':'');
+      d.style.borderColor="rgba(168,85,247,0.25)";
+      d.innerHTML=`<span class="mi-num" style="color:#c084fc">●</span><span class="mi-type">${q.icon||'⭐'} ${q.title&&(q.title.ar||q.title.en)||questDefaultTitle(q.type,'ar')} <span style="color:#999;font-size:10px">${q.type}</span></span><span class="mi-pos">(${q.start.x},${q.start.y})→(${q.end.x},${q.end.y})</span><span class="mi-del">✖</span>`;
+      d.querySelector('.mi-del').onclick = e=>{ e.stopPropagation(); editor.quests.splice(globalIdx,1); if(editor.selQuest===globalIdx) editor.selQuest=-1; else if(editor.selQuest>globalIdx) editor.selQuest--; refreshUI(); render(); };
+      d.onclick = ()=>{ editor.selQuest=globalIdx; const qq=editor.quests[globalIdx]; if(qq) syncToolbarFromQuest(qq); refreshQuestLists(); render(); };
+      d.ondblclick = ()=> openQuestDialog(globalIdx);
+      sideEl.appendChild(d);
+    });
+    if(!sides.length) sideEl.innerHTML='<div style="color:rgba(255,255,255,0.2);font-size:11px">No side quests — purple dots, all visible</div>';
+    document.getElementById('sideQuestCount').textContent=sides.length;
+  }
+  // update legacy count if present
+  const mc=document.getElementById('missionCount'); if(mc) mc.textContent=editor.quests.length;
 }
-
-function removeSelectedMission() {
-  const i = editor.selMission;
-  if (i<0 || i>=editor.missionGivers.length) return;
-  editor.missionGivers.splice(i,1);
-  editor.selMission = -1;
+// Backwards compat wrappers
+function moveMission(dir){ moveQuest('main',dir); }
+function removeSelectedMission(){ removeSelectedQuest(); }
+function moveQuest(category, dir){
+  if(category==='main'){
+    const mains = editor.quests.filter(q=>q.category==='main').sort((a,b)=>(a.order||0)-(b.order||0));
+    const selGlobal = editor.selQuest;
+    if(selGlobal<0) return;
+    const selQuest = editor.quests[selGlobal];
+    if(!selQuest || selQuest.category!=='main') return;
+    const curPos = mains.indexOf(selQuest);
+    const j = curPos + dir;
+    if(j<0 || j>=mains.length) return;
+    // swap order values
+    const other = mains[j];
+    const tmp = selQuest.order;
+    selQuest.order = other.order;
+    other.order = tmp;
+    // re-sort quests array so iteration order matches visual? Keep original array but update orders
+    editor.quests.sort((a,b)=>{
+      if(a.category!==b.category) return a.category==="main"?-1:1;
+      if(a.category==="main") return (a.order||0)-(b.order||0);
+      return 0;
+    });
+    // after sort, find new index of moved quest
+    editor.selQuest = editor.quests.indexOf(selQuest);
+    refreshQuestLists(); render();
+  }
+}
+function removeSelectedQuest(){
+  const i = editor.selQuest;
+  if(i<0 || i>=editor.quests.length) return;
+  editor.quests.splice(i,1);
+  editor.selQuest=-1;
+  let mo=0; editor.quests.forEach(q=>{ if(q.category==="main") q.order=mo++; });
+  refreshUI(); render();
+}
+function openQuestDialog(globalIdx){
+  if(globalIdx<0 || globalIdx>=editor.quests.length) return;
+  const q=editor.quests[globalIdx];
+  editor.selQuest=globalIdx;
+  document.getElementById('qdCategory').value=q.category;
+  document.getElementById('qdType').value=q.type;
+  document.getElementById('qdReward').value=q.reward;
+  document.getElementById('qdTitleAr').value=q.title.ar||"";
+  document.getElementById('qdTitleEn').value=q.title.en||"";
+  document.getElementById('qdDescAr').value=q.desc.ar||"";
+  document.getElementById('qdDescEn').value=q.desc.en||"";
+  const item = (q.params && q.params.itemName) || q.itemName || "";
+  const mAr = (q.params && q.params.meetingAr) || q.meetingAr || "";
+  const mEn = (q.params && q.params.meetingEn) || q.meetingEn || "";
+  const qdItem = document.getElementById('qdItemName'); if(qdItem) qdItem.value=item;
+  const qdMAr = document.getElementById('qdMeetingAr'); if(qdMAr) qdMAr.value=mAr;
+  const qdMEn = document.getElementById('qdMeetingEn'); if(qdMEn) qdMEn.value=mEn;
+  document.getElementById('qdStartX').value=q.start.x;
+  document.getElementById('qdStartY').value=q.start.y;
+  document.getElementById('qdEndX').value=q.end.x;
+  document.getElementById('qdEndY').value=q.end.y;
+  document.getElementById('questDialog').style.display='flex';
+  onDialogTypeChange();
+  refreshQuestLists();
+}
+function saveQuestDialog(){
+  const i=editor.selQuest;
+  if(i<0 || i>=editor.quests.length) return;
+  const q=editor.quests[i];
+  const cat=document.getElementById('qdCategory').value;
+  const type=document.getElementById('qdType').value;
+  const reward=+document.getElementById('qdReward').value||300;
+  const titleAr=document.getElementById('qdTitleAr').value.trim() || questDefaultTitle(type,'ar');
+  const titleEn=document.getElementById('qdTitleEn').value.trim() || questDefaultTitle(type,'en');
+  const descAr=document.getElementById('qdDescAr').value.trim() || questDefaultDesc(type,'ar');
+  const descEn=document.getElementById('qdDescEn').value.trim() || questDefaultDesc(type,'en');
+  const sx=+document.getElementById('qdStartX').value;
+  const sy=+document.getElementById('qdStartY').value;
+  const ex=+document.getElementById('qdEndX').value;
+  const ey=+document.getElementById('qdEndY').value;
+  const itemName=(document.getElementById('qdItemName')?.value||'').trim();
+  const meetingAr=(document.getElementById('qdMeetingAr')?.value||'').trim();
+  const meetingEn=(document.getElementById('qdMeetingEn')?.value||'').trim();
+  if(sx<0||sx>=editor.cols||sy<0||sy>=editor.rows||ex<0||ex>=editor.cols||ey<0||ey>=editor.rows){ alert("Start/End out of bounds"); return; }
+  if(sx===ex && sy===ey){ alert("Start and End cannot be same tile"); return; }
+  q.category=cat; q.type=type; q.icon=MISSION_ICONS[type]||'⭐'; q.reward=reward;
+  q.title={ar:titleAr,en:titleEn}; q.desc={ar:descAr,en:descEn};
+  q.start={x:sx,y:sy}; q.end={x:ex,y:ey};
+  q.itemName = itemName || undefined;
+  q.meetingAr = meetingAr || undefined;
+  q.meetingEn = meetingEn || undefined;
+  q.params = {};
+  if(itemName) q.params.itemName=itemName;
+  if(meetingAr) q.params.meetingAr=meetingAr;
+  if(meetingEn) q.params.meetingEn=meetingEn;
+  if(!Object.keys(q.params).length) q.params=undefined;
+  let mo=0; editor.quests.forEach(qq=>{ if(qq.category==="main") qq.order=mo++; });
+  editor.quests.sort((a,b)=>{ if(a.category!==b.category) return a.category==="main"?-1:1; if(a.category==="main") return (a.order||0)-(b.order||0); return 0; });
+  closeDialog('questDialog');
+  // sync toolbar
+  document.getElementById('questCategory').value=q.category;
+  document.getElementById('missionT').value=q.type;
+  document.getElementById('questTitleAr').value=q.title.ar;
+  document.getElementById('questTitleEn').value=q.title.en;
+  document.getElementById('questDescAr').value=q.desc.ar;
+  document.getElementById('questDescEn').value=q.desc.en;
+  document.getElementById('questReward').value=q.reward;
+  refreshUI(); render();
+}
+function deleteQuestFromDialog(){
+  const i=editor.selQuest;
+  if(i<0||i>=editor.quests.length) return;
+  editor.quests.splice(i,1);
+  let mo=0; editor.quests.forEach(q=>{ if(q.category==="main") q.order=mo++; });
+  editor.selQuest=-1;
+  closeDialog('questDialog');
   refreshUI(); render();
 }
 
@@ -1035,9 +2925,14 @@ function resizeMap() {
   editor.buildingRotations.length = newRows;
   editor.cols = newCols;
   editor.rows = newRows;
-  // Remove out-of-bounds special buildings, missions, spammers
+  // Remove out-of-bounds special buildings, quests, spammers
   editor.specialBuildings = editor.specialBuildings.filter(s => s.x < newCols && s.y < newRows);
   editor.missionGivers = editor.missionGivers.filter(m => m.x < newCols && m.y < newRows);
+  editor.quests = editor.quests.filter(q => q.start.x < newCols && q.start.y < newRows && q.end.x < newCols && q.end.y < newRows);
+  // pending quest check
+  if(editor.pendingQuest && (editor.pendingQuest.start.x >= newCols || editor.pendingQuest.start.y >= newRows)){
+    editor.pendingQuest=null; updateQuestHint();
+  }
   editor.spammers = editor.spammers.filter(s => s.x < newCols && s.y < newRows);
   if (editor.spawnPoint) {
     if (editor.spawnPoint.x >= newCols || editor.spawnPoint.y >= newRows)
@@ -1310,8 +3205,16 @@ function render() {
           break;
         }
         case T.SIDEWALK: {
+          // Sand - constant sandy yellow
           const a = TILE_ASSETS[T.SIDEWALK];
           if (a.img && a.img.complete) ctx.drawImage(a.img, px, py, TS, TS);
+          else { ctx.fillStyle='#e8d4a0'; ctx.fillRect(px,py,TS,TS); }
+          break;
+        }
+        case T.PAVEMENT: {
+          const a = TILE_ASSETS[T.PAVEMENT];
+          if (a.img && a.img.complete) ctx.drawImage(a.img, px, py, TS, TS);
+          else { ctx.fillStyle='#9e9e9e'; ctx.fillRect(px,py,TS,TS); }
           break;
         }
         case T.BUILDING:
@@ -1483,18 +3386,119 @@ function render() {
     ctx.fillText('SPAWN', spx, spy-14);
   }
 
-  // Mission givers
-  for (const m of editor.missionGivers) {
-    const mx=m.x*TS+TS/2, my=m.y*TS+TS/2;
-    ctx.fillStyle='#ffd700'; ctx.shadowColor='#ffd700'; ctx.shadowBlur=14;
-    ctx.beginPath(); ctx.arc(mx,my,7,0,Math.PI*2); ctx.fill();
+  // Quests (two-point main yellow sequential / side purple)
+  // Draw connecting line first (behind markers)
+  for(const q of editor.quests){
+    const isSelected = editor.quests.indexOf(q)===editor.selQuest;
+    const sx=q.start.x*TS+TS/2, sy=q.start.y*TS+TS/2;
+    const ex=q.end.x*TS+TS/2, ey=q.end.y*TS+TS/2;
+    // line: yellow dash for main, purple for side
+    ctx.save();
+    ctx.strokeStyle = q.category==="main" ? "rgba(255,215,0,0.45)" : "rgba(168,85,247,0.45)";
+    ctx.lineWidth = isSelected ? 2.5 : 1.5;
+    ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey); ctx.stroke();
+    ctx.setLineDash([]);
+    // arrow head at end
+    const ang=Math.atan2(ey - sy, ex - sx);
+    ctx.fillStyle = q.category==="main" ? "#ffd700" : "#a855f7";
+    ctx.beginPath();
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - Math.cos(ang - Math.PI/6)*8, ey - Math.sin(ang - Math.PI/6)*8);
+    ctx.lineTo(ex - Math.cos(ang + Math.PI/6)*8, ey - Math.sin(ang + Math.PI/6)*8);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  // If pending quest, draw line from start to cursor
+  if(editor.pendingQuest){
+    const sx=editor.pendingQuest.start.x*TS+TS/2, sy=editor.pendingQuest.start.y*TS+TS/2;
+    const ex=mTile.tx*TS+TS/2, ey=mTile.ty*TS+TS/2;
+    const isMain = editor.pendingQuest.category==="main";
+    ctx.save();
+    ctx.strokeStyle = isMain ? "rgba(255,215,0,0.85)" : "rgba(168,85,247,0.85)";
+    ctx.lineWidth=2; ctx.setLineDash([6,4]);
+    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey); ctx.stroke();
+    ctx.setLineDash([]);
+    // pending end ghost
+    ctx.globalAlpha=0.55;
+    ctx.fillStyle = isMain ? "#ffd700" : "#a855f7";
+    ctx.beginPath(); ctx.arc(ex,ey,7,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+    ctx.restore();
+  }
+  // Draw quest markers (start + end)
+  for(const q of editor.quests){
+    const isSelected = editor.quests.indexOf(q)===editor.selQuest;
+    const isMain = q.category==="main";
+    const sx=q.start.x*TS+TS/2, sy=q.start.y*TS+TS/2;
+    const ex=q.end.x*TS+TS/2, ey=q.end.y*TS+TS/2;
+    // Start marker
+    ctx.save();
+    const startColor = isMain ? "#ffd700" : "#a855f7";
+    const pulse = 0.7 + Math.sin(Date.now()/300 + q.start.x*0.3)*0.3;
+    ctx.shadowColor = startColor;
+    ctx.shadowBlur = isSelected ? 20 : 14;
+    ctx.fillStyle = startColor;
+    ctx.globalAlpha = pulse * (isSelected?1:0.95);
+    ctx.beginPath(); ctx.arc(sx,sy, isSelected?9:7,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0; ctx.globalAlpha=1;
+    // inner icon
+    ctx.fillStyle="#fff"; ctx.font='9px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(q.icon||'⭐', sx, sy+0.5);
+    // label: order for main, dot for side + title snippet
+    const labelW = Math.min(90, ((q.title&&(q.title.ar||q.title.en))||questDefaultTitle(q.type,'ar')).length*6 + 12);
+    ctx.fillStyle='rgba(0,0,0,0.65)';
+    const mains = editor.quests.filter(x=>x.category==='main').sort((a,b)=>(a.order||0)-(b.order||0));
+    const numText = isMain ? `#${(mains.indexOf(q)+1)}` : '●';
+    ctx.font='bold 7px Arial';
+    // badge above start
+    ctx.fillRect(sx - labelW/2, sy - 20, labelW, 11);
+    ctx.fillStyle = isMain ? '#ffd700' : '#c084fc';
+    ctx.fillText(numText + ' ' + ((q.title&&(q.title.ar||q.title.en))||questDefaultTitle(q.type,'ar')).substring(0,10), sx, sy - 13);
+    // End marker (green)
+    ctx.shadowColor='#22c55e'; ctx.shadowBlur=isSelected?16:10;
+    ctx.fillStyle='#22c55e';
+    ctx.beginPath(); ctx.arc(ex,ey, isSelected?7:5,0,Math.PI*2); ctx.fill();
     ctx.shadowBlur=0;
-    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(mx-9,my-19,18,12);
-    ctx.fillStyle='#ffd700'; ctx.font='bold 7px Arial'; ctx.textAlign='center';
-    const idx = editor.missionGivers.indexOf(m);
-    ctx.fillText('#'+(idx+1), mx, my-10);
-    ctx.fillStyle='#fff'; ctx.font='8px Arial';
-    ctx.fillText(m.icon||'⭐', mx, my+3);
+    ctx.fillStyle='#fff'; ctx.font='7px Arial'; ctx.textAlign='center';
+    ctx.fillText('🏁', ex, ey+0.5);
+    // end badge
+    ctx.fillStyle='rgba(0,0,0,0.55)';
+    ctx.fillRect(ex - 10, ey - 18, 20, 10);
+    ctx.fillStyle='#4ade80'; ctx.font='bold 6px Arial';
+    ctx.fillText('END', ex, ey - 11);
+    // selected ring
+    if(isSelected){
+      ctx.strokeStyle = isMain ? '#ffd700' : '#a855f7';
+      ctx.lineWidth=2; ctx.setLineDash([4,3]);
+      ctx.beginPath(); ctx.arc(sx,sy,13,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(ex,ey,11,0,Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+  // Also draw legacy pending start ghost if no quests yet but pending
+  if(editor.pendingQuest){
+    const sx=editor.pendingQuest.start.x*TS+TS/2, sy=editor.pendingQuest.start.y*TS+TS/2;
+    const isMain = editor.pendingQuest.category==="main";
+    ctx.save();
+    ctx.fillStyle = isMain ? "#ffd700" : "#a855f7";
+    ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur=18;
+    ctx.beginPath(); ctx.arc(sx,sy,8,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#fff'; ctx.font='bold 8px Arial'; ctx.textAlign='center';
+    ctx.fillText(editor.pendingQuest.icon||'⭐', sx, sy+0.5);
+    ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(sx-22, sy-20, 44, 11);
+    ctx.fillStyle=isMain?'#ffd700':'#c084fc'; ctx.font='bold 7px Arial';
+    ctx.fillText('START', sx, sy-13);
+    ctx.restore();
+  }
+  // Legacy missionGivers ghost (if any remain after migration, show as yellow tiny)
+  if(editor.missionGivers && editor.missionGivers.length){
+    for(const m of editor.missionGivers){
+      const mx=m.x*TS+TS/2, my=m.y*TS+TS/2;
+      ctx.fillStyle='rgba(255,215,0,0.25)'; ctx.beginPath(); ctx.arc(mx,my,4,0,Math.PI*2); ctx.fill();
+    }
   }
 
   // Spammers
@@ -1552,6 +3556,146 @@ document.addEventListener('keydown', e => {
   else if (e.key === '7') { editor.bldShape=1; document.getElementById('bldShape').value=1; setStatus('Shape: 2'); render(); }
   else if (e.key === '8') { editor.bldShape=2; document.getElementById('bldShape').value=2; setStatus('Shape: 3'); render(); }
 });
+
+
+// ===== PATCHES AFTER ORIGINAL SCRIPT =====
+(function(){
+ // Enhance selectTile to auto-expand inspector groups and update filter
+ const _origSelectTile = window.selectTile;
+ window.selectTile = function(t){
+   if(typeof _origSelectTile==='function') _origSelectTile(t);
+   // Auto-expand relevant inspector groups when tile selected
+   const bProps = document.getElementById('buildingProps');
+   const sProps = document.getElementById('shopProps');
+   const mProps = document.getElementById('missionProps');
+   try{
+     if(t===3 && bProps){
+       bProps.style.display='block';
+       bProps.classList.remove('collapsed');
+     }
+     if(t===6 && sProps){
+       sProps.style.display='block';
+       sProps.classList.remove('collapsed');
+     }
+     if(t===8 && mProps){
+       mProps.style.display='block';
+       mProps.classList.remove('collapsed');
+     }
+     updateBottomStatus();
+   }catch{}
+   // also ensure tile palette active state already handled by orig
+   // Update leftSearch filter? not needed
+ };
+
+ // Enhance setTool to sync viewport toolbar
+ const _origSetTool = window.setTool;
+ window.setTool = function(t){
+   if(typeof _origSetTool==='function') _origSetTool(t);
+   // Sync viewport toolbar active states (they also have data-tool)
+   document.querySelectorAll('#canvasWrap .viewport-toolbar [data-tool]').forEach(b=>{
+     b.classList.toggle('active', b.getAttribute('data-tool')===t);
+   });
+   // also left panel buttons already toggled via querySelectorAll
+ };
+
+ // Enhance setStatus
+ const _origSetStatus = window.setStatus;
+ window.setStatus = function(msg){
+   if(typeof _origSetStatus==='function') _origSetStatus(msg);
+   const b = document.getElementById('bottomStatusText');
+   if(b) b.textContent = msg;
+   try{ updateBottomStatus(); }catch{}
+ };
+
+ // Enhance render to also update bottom status zoom
+ const _origRender = window.render;
+ if(typeof _origRender==='function'){
+   window.render = function(){
+     const r = _origRender.apply(this, arguments);
+     try{
+       updateBottomStatus();
+       const mt = window.mTile;
+       if(mt && typeof mt.tx==='number') updateBottomCoords(mt.tx, mt.ty);
+     }catch{}
+     return r;
+   }
+ }
+
+ // Sync canvas mouse move to bottom coords
+ const canvas = document.getElementById('editorCanvas');
+ if(canvas){
+   canvas.addEventListener('mousemove', e=>{
+     try{
+       const m = window.getMouse ? window.getMouse(e) : null;
+       if(m) updateBottomCoords(m.tx, m.ty);
+     }catch{}
+   });
+ }
+
+ // Initial language apply after prefs loaded
+ try{
+   setTimeout(()=>{
+     loadEditorPrefs();
+     applyEditorLang(editorLang);
+     updateBottomStatus();
+   }, 200);
+ }catch{}
+
+ // Refresh tile count
+ try{
+   const tc=document.getElementById('tileCount');
+   if(tc) tc.textContent = document.querySelectorAll('#tilePalette .tool-btn').length;
+ }catch{}
+
+ // Expose helpers globally
+ window.toggleSection = toggleSection;
+ window.toggleAllSections = toggleAllSections;
+ window.filterLeftPanel = filterLeftPanel;
+ window.filterRightPanel = filterRightPanel;
+ window.filterQuestList = filterQuestList;
+ window.filterSpammerList = filterSpammerList;
+ window.clearAllSpammers = clearAllSpammers;
+ window.resetBuildingDefaults = resetBuildingDefaults;
+ window.saveEditorPrefs = saveEditorPrefs;
+ window.loadEditorPrefs = loadEditorPrefs;
+ window.updateBottomStatus = updateBottomStatus;
+ window.updateBottomCoords = updateBottomCoords;
+ window.toggleEditorLang = toggleEditorLang;
+ window.applyEditorLang = applyEditorLang;
+ window.tEditor = tEditor;
+
+ // Handle large quest lists: if > 50 items, show virtual hint and limit height
+ const _origRefreshQuestLists = window.refreshQuestLists;
+ if(typeof _origRefreshQuestLists==='function'){
+   window.refreshQuestLists = function(){
+     const r = _origRefreshQuestLists.apply(this, arguments);
+     // Apply current filters after refresh
+     try{
+       const mq = document.getElementById('mainQuestSearch')?.value || '';
+       const sq = document.getElementById('sideQuestSearch')?.value || '';
+       if(mq) filterQuestList('main', mq);
+       if(sq) filterQuestList('side', sq);
+       const sp = document.getElementById('spammerSearch')?.value || '';
+       if(sp) filterSpammerList(sp);
+       updateBottomStatus();
+     }catch{}
+     return r;
+   }
+ }
+ const _origRefreshSpammerList = window.refreshSpammerList;
+ if(typeof _origRefreshSpammerList==='function'){
+   window.refreshSpammerList = function(){
+     const r = _origRefreshSpammerList.apply(this, arguments);
+     try{
+       const sp = document.getElementById('spammerSearch')?.value || '';
+       if(sp) filterSpammerList(sp);
+     }catch{}
+     return r;
+   }
+ }
+
+})();
+
 </script>
 </body>
 </html>

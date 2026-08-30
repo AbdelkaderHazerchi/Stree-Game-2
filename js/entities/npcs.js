@@ -1,15 +1,15 @@
 // ======================== NPCS ========================
 // Extracted from game.js:51600, 51602, 51799-51845, 52990-53161, 53658-53739 - no logic changed
-import { CFG, T, WEAPONS } from "../core/config.js?v=16";
-import { getTile } from "../map/mapUtils.js?v=15";
-import { isWalkable } from "./vehicles.js?v=15";
-import { player } from "./player.js?v=15";
-import { currentMission } from "../missions/missionState.js?v=15";
-import { showNotification } from "../ui/hud.js?v=15";
-import { updateHUD } from "../ui/hud.js?v=15";
+import { CFG, T, WEAPONS } from "../core/config.js?v=25";
+import { getTile } from "../map/mapUtils.js?v=25";
+import { isWalkable } from "./vehicles.js?v=25";
+import { player } from "./player.js?v=25";
+import { currentMission } from "../missions/missionState.js?v=25";
+import { showNotification } from "../ui/hud.js?v=25";
+import { updateHUD } from "../ui/hud.js?v=25";
 // AI helpers moved to js/ai/ - re-export for compatibility (no logic change)
-import { updateGangs } from "../ai/gangs.js?v=15";
-import { findPath } from "../ai/pathfinding.js?v=15";
+import { updateGangs } from "../ai/gangs.js?v=25";
+import { findPath } from "../ai/pathfinding.js?v=25";
 export { updateGangs, findPath };
 
 export let npcs = [];
@@ -104,6 +104,10 @@ export function updateNPCs() {
 
 export function killNPC(index) {
   const npc = npcs[index];
+  // Surveillance: any kill fails the mission
+  if (currentMission && currentMission.type === "surveillance") {
+    currentMission.data.surveillanceKilled = true;
+  }
   if (npc.type === "civilian") {
     const moneyDrop = 10 + Math.floor(Math.random() * 30);
     spawnLoot(npc.x, npc.y, "money", moneyDrop);
@@ -133,7 +137,7 @@ export function killNPC(index) {
       showNotification("📦 عصابة قتل! حصلت على ذخيرة بندقية");
     }
     player.wanted = Math.min(5, player.wanted + 1);
-    if (currentMission && currentMission.type === "killGang") {
+    if (currentMission && (currentMission.type === "killGang" || currentMission.type === "killTarget")) {
       currentMission.data.killCount = (currentMission.data.killCount || 0) + 1;
     }
   }

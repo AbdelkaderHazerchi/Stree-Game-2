@@ -1,6 +1,6 @@
 // ======================== INPUT STATE ========================
 // Extracted from game.js:122-147, 52586-52592, 52643-52645, 52712-52730 - no logic changed
-import { canvas, W, H, zoom, cam, ZOOM_MIN, ZOOM_MAX, setZoom } from "../core/canvas.js?v=15";
+import { canvas, W, H, zoom, cam, ZOOM_MIN, ZOOM_MAX, setZoom } from "../core/canvas.js?v=25";
 
 export const act = {
   up: false,
@@ -41,10 +41,17 @@ export let worldMouseX = 0,
 export let mouseX = 0,
   mouseY = 0;
 
+export let mouseLeftDown = false;
+export let mouseRightDown = false;
+export let isAiming = false;
+
 export function setWorldMouseX(v) { worldMouseX = v; }
 export function setWorldMouseY(v) { worldMouseY = v; }
 export function setMouseX(v) { mouseX = v; }
 export function setMouseY(v) { mouseY = v; }
+export function setMouseLeftDown(v) { mouseLeftDown = v; }
+export function setMouseRightDown(v) { mouseRightDown = v; isAiming = v; }
+export function setIsAiming(v) { isAiming = v; }
 
 canvas.addEventListener("mousemove", (e) => {
   const rect = canvas.getBoundingClientRect();
@@ -60,8 +67,43 @@ canvas.addEventListener("wheel", (e) => {
   setZoom(newZoom);
 }, { passive: false });
 
-canvas.addEventListener("mousedown", () => {
-  // handled via handleShoot in keyboard.js - kept for compatibility
+canvas.addEventListener("mousedown", (e) => {
+  if (e.button === 0) {
+    mouseLeftDown = true;
+    e.preventDefault();
+  } else if (e.button === 2) {
+    mouseRightDown = true;
+    isAiming = true;
+    e.preventDefault();
+  }
+});
+window.addEventListener("mousedown", (e) => {
+  if (e.button === 0) mouseLeftDown = true;
+  else if (e.button === 2) {
+    mouseRightDown = true;
+    isAiming = true;
+  }
+});
+canvas.addEventListener("mouseup", (e) => {
+  if (e.button === 0) mouseLeftDown = false;
+  else if (e.button === 2) {
+    mouseRightDown = false;
+    isAiming = false;
+  }
+});
+canvas.addEventListener("mouseleave", () => {
+});
+window.addEventListener("mouseup", (e) => {
+  if (e.button === 0) mouseLeftDown = false;
+  else if (e.button === 2) {
+    mouseRightDown = false;
+    isAiming = false;
+  }
+});
+window.addEventListener("blur", () => {
+  mouseLeftDown = false;
+  mouseRightDown = false;
+  isAiming = false;
 });
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 

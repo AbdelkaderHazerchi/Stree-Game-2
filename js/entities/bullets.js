@@ -1,14 +1,14 @@
 // ======================== BULLETS ========================
 // Extracted from game.js:51602, 53532-53656 - shooting fns moved to js/combat/shooting.js - no logic changed
-import { CFG, T } from "../core/config.js?v=16";
-import { getTile } from "../map/mapUtils.js?v=15";
-import { player } from "./player.js?v=15";
-import { npcs, killNPC, spawnLoot } from "./npcs.js?v=15";
-import { vehicles, explodeVehicle } from "./vehicles.js?v=15";
-import { police } from "./police.js?v=15";
-import { currentMission } from "../missions/missionState.js?v=15";
-import { showNotification, updateWantedUI } from "../ui/hud.js?v=15";
-import { playerDie } from "./player.js?v=15";
+import { CFG, T } from "../core/config.js?v=25";
+import { getTile } from "../map/mapUtils.js?v=25";
+import { player } from "./player.js?v=25";
+import { npcs, killNPC, spawnLoot } from "./npcs.js?v=25";
+import { vehicles, explodeVehicle } from "./vehicles.js?v=25";
+import { police } from "./police.js?v=25";
+import { currentMission } from "../missions/missionState.js?v=25";
+import { showNotification, updateWantedUI } from "../ui/hud.js?v=25";
+import { playerDie } from "./player.js?v=25";
 
 export let bullets = [];
 export function clearBullets(){ bullets.length = 0; }
@@ -129,6 +129,9 @@ export function updateBullets() {
                 8 + Math.floor(Math.random() * 10),
               );
             showNotification("💀 شرطي قتل!");
+            if (currentMission && currentMission.type === "surveillance") {
+              currentMission.data.surveillanceKilled = true;
+            }
             if (currentMission && currentMission.type === "killPolice") {
               currentMission.data.killCount = (currentMission.data.killCount || 0) + 1;
             }

@@ -8,7 +8,7 @@ export const SETTINGS = {
     left: "a",
     right: "d",
     enterExit: "e",
-    shoot: " ",
+    shoot: "mouseleft",
     horn: "f",
     cancelMission: "m",
     pause: "escape",
@@ -34,8 +34,12 @@ try {
     for (const k of Object.keys(SETTINGS.keyboard)) {
       if (typeof saved[k] === "string" && saved[k].length > 0) SETTINGS.keyboard[k] = saved[k].toLowerCase();
     }
+    // Migration: old saves used space for shoot, now left mouse
+    if (saved.shoot === " " || saved.shoot === "space") SETTINGS.keyboard.shoot = "mouseleft";
   }
 } catch {}
+// Ensure shoot is mouseleft if still space (first run or corrupted)
+if (SETTINGS.keyboard.shoot === " " || SETTINGS.keyboard.shoot === "space") SETTINGS.keyboard.shoot = "mouseleft";
 try {
   const lang = localStorage.getItem(LANG_KEY);
   if (lang === "ar" || lang === "en") SETTINGS.language = lang;
@@ -104,6 +108,8 @@ export const KEY_NAMES = {
   arrowleft: "←",
   arrowright: "→",
   " ": "␣",
+  mouseleft: "LMB",
+  mouseright: "RMB",
   escape: "ESC",
   enter: "Enter",
   tab: "Tab",

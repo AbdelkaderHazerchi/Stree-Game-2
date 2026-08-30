@@ -1,11 +1,11 @@
 // ======================== HUD ========================
 // Extracted from game.js:52742-52749, 53772-53800 - i18n integrated
-import { CFG, WEAPONS } from "../core/config.js?v=16";
-import { healthFill, moneySpan, ammoSpan, wantedEl, notifEl, weaponNameEl, ammoMaxEl } from "../core/domRefs.js?v=15";
-import { player } from "../entities/player.js?v=15";
-import { cam, W, H, zoom } from "../core/canvas.js?v=15";
-import { worldMouseX, worldMouseY, mouseX, mouseY, setWorldMouseX, setWorldMouseY } from "../input/inputState.js?v=15";
-import { t, getWeaponName } from "./i18n.js?v=16";
+import { CFG, WEAPONS } from "../core/config.js?v=25";
+import { healthFill, moneySpan, ammoSpan, wantedEl, notifEl, weaponNameEl, ammoMaxEl } from "../core/domRefs.js?v=25";
+import { player } from "../entities/player.js?v=25";
+import { cam, W, H, zoom } from "../core/canvas.js?v=25";
+import { worldMouseX, worldMouseY, mouseX, mouseY, setWorldMouseX, setWorldMouseY } from "../input/inputState.js?v=25";
+import { t, getWeaponName } from "./i18n.js?v=25";
 
 export function updateCamera() {
   if (!player) return;
@@ -50,4 +50,54 @@ export function showNotification(msg) {
   setTimeout(() => {
     notifEl.style.opacity = 0;
   }, 2000);
+}
+
+export function updateSuspicionUI(suspicion, dist, minD, maxD, theftHold, theftDuration){
+  const container = document.getElementById("suspicionContainer");
+  const fill = document.getElementById("suspicionFill");
+  const val = document.getElementById("suspicionValue");
+  const theftEl = document.getElementById("theftProgress");
+  if(!container || !fill) return;
+  // Show container if suspicion relevant or theft progress
+  const showSuspicion = typeof suspicion==="number" && suspicion>0.5;
+  const showTheft = typeof theftHold==="number" && typeof theftDuration==="number" && theftDuration>0;
+  if(showSuspicion || showTheft){
+    container.style.display = "block";
+  } else {
+    // Hide if no active suspicion and no theft in progress (but keep visible if theftHold>0)
+    if((!showTheft || theftHold===0) && suspicion<1){
+      container.style.display = "none";
+      return;
+    }
+    if(suspicion<1 && !showTheft) { container.style.display="none"; return; }
+    container.style.display="block";
+  }
+  if(typeof suspicion==="number"){
+    const pct = Math.max(0, Math.min(100, suspicion));
+    fill.style.width = pct + "%";
+    if(val) val.textContent = Math.round(pct) + "%";
+    if(pct>80) fill.style.background = "linear-gradient(90deg, #ff3366, #ff0000)";
+    else if(pct>50) fill.style.background = "linear-gradient(90deg, #ffaa00, #ff3366)";
+    else fill.style.background = "linear-gradient(90deg, #ffcc00, #ff8800)";
+  }
+  if(theftEl){
+    if(showTheft){
+      theftEl.style.display = "block";
+      const sec = (theftHold/1000).toFixed(1);
+      const total = (theftDuration/1000).toFixed(0);
+      theftEl.textContent = `Hold Space: ${sec} / ${total}s` + (typeof dist==="number" ? ` | Dist: ${Math.round(dist)}` : "");
+      // Also update suspicion label
+      const label = document.getElementById("suspicionLabel");
+      if(label) label.textContent = "🦹 Theft Progress";
+    } else {
+      theftEl.style.display = "none";
+      const label = document.getElementById("suspicionLabel");
+      if(label) label.textContent = "👁️ Suspicion";
+    }
+  }
+}
+
+export function hideSuspicionUI(){
+  const c=document.getElementById("suspicionContainer");
+  if(c) c.style.display="none";
 }

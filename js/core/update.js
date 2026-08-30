@@ -1,31 +1,31 @@
 // ======================== UPDATE ========================
 // Extracted from game.js:52751-52888 - no logic changed
-import { CFG, T } from "./config.js?v=16";
-import { G } from "./config.js?v=16";
-import { gameState, setGameState } from "./state.js?v=15";
-import { player } from "../entities/player.js?v=15";
-import { vehicles, isWalkable, isOnRoad, updateExplosions } from "../entities/vehicles.js?v=15";
-import { npcs, lootItems } from "../entities/npcs.js?v=15";
-import { police } from "../entities/police.js?v=15";
-import { getTile } from "../map/mapUtils.js?v=15";
-import { specialBuildings } from "../map/mapState.js?v=15";
-import { act, actJust } from "../input/inputState.js?v=15";
-import { actionJust, actionHeld } from "../input/keyboard.js?v=15";
-import { updateInput } from "../input/keyboard.js?v=15";
-import { closeInventory, toggleInventory, switchWeapon, switchWeaponSlot } from "../ui/inventory.js?v=15";
-import { handleEnterExit, handleHorn, cancelMission } from "../input/keyboard.js?v=15";
-import { fireWeapon } from "../combat/shooting.js?v=15";
-import { updateNPCs } from "../entities/npcs.js?v=15";
-import { updateGangs } from "../ai/gangs.js?v=15";
-import { updatePolice } from "../entities/police.js?v=15";
-import { updateBullets } from "../entities/bullets.js?v=15";
-import { updateLoot } from "../entities/npcs.js?v=15";
-import { updateTraffic } from "../ai/traffic.js?v=15";
-import { updateCamera, updateHUD, updateWantedUI } from "../ui/hud.js?v=15";
-import { currentMission, missionGivers, usingSequentialMissions } from "../missions/missionState.js?v=15";
-import { updateMission, startMission, getActiveMissionGiver } from "../missions/missionSystem.js?v=15";
-import { showPauseMenu } from "../ui/menu.js?v=15";
-import { SHOPS, setNearShopName } from "../ui/shop.js?v=15";
+import { CFG, T } from "./config.js?v=25";
+import { G } from "./config.js?v=25";
+import { gameState, setGameState } from "./state.js?v=25";
+import { player } from "../entities/player.js?v=25";
+import { vehicles, isWalkable, isOnRoad, updateExplosions } from "../entities/vehicles.js?v=25";
+import { npcs, lootItems } from "../entities/npcs.js?v=25";
+import { police } from "../entities/police.js?v=25";
+import { getTile } from "../map/mapUtils.js?v=25";
+import { specialBuildings } from "../map/mapState.js?v=25";
+import { act, actJust, isAiming, worldMouseX, worldMouseY } from "../input/inputState.js?v=25";
+import { actionJust, actionHeld } from "../input/keyboard.js?v=25";
+import { updateInput } from "../input/keyboard.js?v=25";
+import { closeInventory, toggleInventory, switchWeapon, switchWeaponSlot } from "../ui/inventory.js?v=25";
+import { handleEnterExit, handleHorn, cancelMission } from "../input/keyboard.js?v=25";
+import { fireWeapon } from "../combat/shooting.js?v=25";
+import { updateNPCs } from "../entities/npcs.js?v=25";
+import { updateGangs } from "../ai/gangs.js?v=25";
+import { updatePolice } from "../entities/police.js?v=25";
+import { updateBullets } from "../entities/bullets.js?v=25";
+import { updateLoot } from "../entities/npcs.js?v=25";
+import { updateTraffic } from "../ai/traffic.js?v=25";
+import { updateCamera, updateHUD, updateWantedUI } from "../ui/hud.js?v=25";
+import { currentMission, missionGivers, usingSequentialMissions, quests } from "../missions/missionState.js?v=25";
+import { updateMission, startMission, getActiveMissionGiver, getVisibleStartGivers } from "../missions/missionSystem.js?v=25";
+import { showPauseMenu } from "../ui/menu.js?v=25";
+import { SHOPS, setNearShopName } from "../ui/shop.js?v=25";
 
 export function update() {
   if (!player || !player.alive) return;
@@ -104,9 +104,22 @@ export function update() {
   // Mission
   updateMission();
 
-  // Check mission givers proximity
+  // Check quest/mission givers proximity — two-point: capture Start to activate, HUD shows content, End appears (green) to complete
   if (!currentMission) {
-    if (usingSequentialMissions) {
+    // Use new quest-aware visibility: mains sequential yellow, sides purple all visible
+    if(quests && quests.length>0){
+      const visibles = getVisibleStartGivers();
+      for(const mg of visibles){
+        const dist = Math.hypot(player.x - mg.x, player.y - mg.y);
+        if(dist < 60){
+          // Start via questId (preferred) — preserves bilingual title/desc
+          if(mg.questId) startMission(mg.questId);
+          else startMission(mg.type);
+          // mg.taken will be set inside startMission, but also ensure status
+          break;
+        }
+      }
+    } else if (usingSequentialMissions) {
       const activeMg = getActiveMissionGiver();
       if (activeMg) {
         const dist = Math.hypot(player.x - activeMg.x, player.y - activeMg.y);
@@ -186,7 +199,7 @@ export function updatePlayer() {
     let speedMul = 1.0;
     if (stx >= 0 && stx < CFG.COLS && sty >= 0 && sty < CFG.ROWS) {
       const stile = getTile(stx, sty);
-      if (stile === T.SIDEWALK) speedMul = 0.9;
+      if (stile === T.SIDEWALK || stile === T.PAVEMENT) speedMul = 0.9;
       else if (stile === T.PARK) speedMul = 0.75;
     }
     const surfaceSpeed = v.speed * speedMul;
@@ -231,10 +244,21 @@ export function updatePlayer() {
       const len = Math.hypot(dx, dy);
       dx /= len;
       dy /= len;
-      player.angle = Math.atan2(dy, dx);
+      // When aiming, face mouse; otherwise face movement direction
+      if (isAiming && player.onFoot && player.alive) {
+        const mdx = worldMouseX - player.x;
+        const mdy = worldMouseY - player.y;
+        if (Math.hypot(mdx, mdy) > 5) player.angle = Math.atan2(mdy, mdx);
+      } else {
+        player.angle = Math.atan2(dy, dx);
+      }
 
-      const nx = player.x + dx * player.speed;
-      const ny = player.y + dy * player.speed;
+      // Aiming slows walking speed by 2.5x while right mouse is held (on foot)
+      const aiming = isAiming && player.onFoot && player.alive;
+      const effectiveSpeed = aiming ? player.speed / 2.5 : player.speed;
+
+      const nx = player.x + dx * effectiveSpeed;
+      const ny = player.y + dy * effectiveSpeed;
 
       if (isWalkable(nx, ny)) {
         player.x = nx;
@@ -243,6 +267,13 @@ export function updatePlayer() {
         player.x = nx;
       } else if (isWalkable(player.x, ny)) {
         player.y = ny;
+      }
+    } else if (isAiming && player.onFoot && player.alive) {
+      // Even when not moving, keep player facing mouse while aiming
+      const dxm = worldMouseX - player.x;
+      const dym = worldMouseY - player.y;
+      if (Math.hypot(dxm, dym) > 5) {
+        player.angle = Math.atan2(dym, dxm);
       }
     }
   }

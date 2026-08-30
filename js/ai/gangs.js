@@ -1,8 +1,8 @@
 // ======================== GANGS AI ========================
 // Extracted from game.js:53023-53074 - no logic changed
-import { isWalkable } from "../entities/vehicles.js?v=15";
-import { npcs } from "../entities/npcs.js?v=15";
-import { shootBullet } from "../combat/shooting.js?v=15";
+import { isWalkable } from "../entities/vehicles.js?v=25";
+import { npcs } from "../entities/npcs.js?v=25";
+import { shootBullet } from "../combat/shooting.js?v=25";
 
 export function updateGangs() {
   for (const npc of npcs) {

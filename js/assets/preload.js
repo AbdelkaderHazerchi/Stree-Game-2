@@ -1,7 +1,7 @@
 // ======================== PRELOAD ASSETS ========================
 // Extracted from game.js:390-423 - no logic changed
-import { TILE_ASSETS, ROAD_CROSSWALK_IMG, SAND_IMG } from "./tileAssets.js?v=15";
-import { VEHICLE_ASSETS, EXPLOSION_ASSET } from "./vehicleAssets.js?v=15";
+import { TILE_ASSETS, ROAD_CROSSWALK_IMG, SAND_IMG, PAVEMENT_IMG } from "./tileAssets.js?v=25";
+import { VEHICLE_ASSETS, EXPLOSION_ASSET } from "./vehicleAssets.js?v=25";
 
 export function preloadAssets() {
   return Promise.all([
@@ -25,6 +25,12 @@ export function preloadAssets() {
       SAND_IMG.img.onload = resolve;
       SAND_IMG.img.onerror = resolve;
       SAND_IMG.img.src = SAND_IMG.src;
+    }),
+    new Promise((resolve) => {
+      PAVEMENT_IMG.img = new Image();
+      PAVEMENT_IMG.img.onload = resolve;
+      PAVEMENT_IMG.img.onerror = resolve;
+      PAVEMENT_IMG.img.src = PAVEMENT_IMG.src;
     }),
     ...VEHICLE_ASSETS.map(
       (a) =>

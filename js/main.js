@@ -3,58 +3,58 @@
 // Barrel imports all modules to preserve original load order and side-effects
 
 // Core
-import { CFG, T, G, SAVE_KEY, applyDifficulty, DIFFICULTY_PRESETS } from "./core/config.js?v=16";
-import { canvas, ctx, W, H, zoom, miniCanvas, miniCtx, resizeCanvas } from "./core/canvas.js?v=15";
-import * as DomRefs from "./core/domRefs.js?v=15";
-import { gameState, gameOver, currentSaveName, setGameState } from "./core/state.js?v=15";
-import { gameLoop, initGame, introVideo } from "./core/gameLoop.js?v=15";
+import { CFG, T, G, SAVE_KEY, applyDifficulty, DIFFICULTY_PRESETS } from "./core/config.js?v=25";
+import { canvas, ctx, W, H, zoom, miniCanvas, miniCtx, resizeCanvas } from "./core/canvas.js?v=25";
+import * as DomRefs from "./core/domRefs.js?v=25";
+import { gameState, gameOver, currentSaveName, setGameState } from "./core/state.js?v=25";
+import { gameLoop, initGame, introVideo } from "./core/gameLoop.js?v=25";
 
 // Assets
-import { TILE_ASSETS, ROAD_CROSSWALK_IMG, SAND_IMG } from "./assets/tileAssets.js?v=15";
-import { VEHICLE_ASSETS } from "./assets/vehicleAssets.js?v=15";
-import { preloadAssets } from "./assets/preload.js?v=15";
+import { TILE_ASSETS, ROAD_CROSSWALK_IMG, SAND_IMG } from "./assets/tileAssets.js?v=25";
+import { VEHICLE_ASSETS } from "./assets/vehicleAssets.js?v=25";
+import { preloadAssets } from "./assets/preload.js?v=25";
 
 // Map
-import { MAP_DATA, LS_ZONES } from "./map/mapData.js?v=15";
-import { map, buildings, specialBuildings, buildingColor, buildingHeight, PALETTES } from "./map/mapState.js?v=15";
-import { getTile, setTile, computeTile, loadFullMap } from "./map/mapUtils.js?v=15";
-import { initMap, loadMapFromData, generateBuildingColors, generateMap, placeSpecial, LS_CITY_POLYGON, LS_HARBOR_BAY, getZone } from "./map/mapGenerator.js?v=15";
+import { MAP_DATA, LS_ZONES } from "./map/mapData.js?v=25";
+import { map, buildings, specialBuildings, buildingColor, buildingHeight, PALETTES } from "./map/mapState.js?v=25";
+import { getTile, setTile, computeTile, loadFullMap } from "./map/mapUtils.js?v=25";
+import { initMap, loadMapFromData, generateBuildingColors, generateMap, placeSpecial, LS_CITY_POLYGON, LS_HARBOR_BAY, getZone } from "./map/mapGenerator.js?v=25";
 
 // Entities
-import { player, createPlayer, playerDie, respawnPlayer } from "./entities/player.js?v=15";
-import { vehicles, VEHICLE_TYPES, spawnVehicles, isOnRoad, isWalkable } from "./entities/vehicles.js?v=15";
-import { npcs, lootItems, spawnNPCs, updateNPCs, killNPC, AMMO_TYPES } from "./entities/npcs.js?v=15";
-import { police, updatePolice } from "./entities/police.js?v=15";
-import { bullets, updateBullets } from "./entities/bullets.js?v=15";
+import { player, createPlayer, playerDie, respawnPlayer } from "./entities/player.js?v=25";
+import { vehicles, VEHICLE_TYPES, spawnVehicles, isOnRoad, isWalkable } from "./entities/vehicles.js?v=25";
+import { npcs, lootItems, spawnNPCs, updateNPCs, killNPC, AMMO_TYPES } from "./entities/npcs.js?v=25";
+import { police, updatePolice } from "./entities/police.js?v=25";
+import { bullets, updateBullets } from "./entities/bullets.js?v=25";
 
 // Missions
-import { missionGivers, currentMission, allMissions } from "./missions/missionState.js?v=15";
-import { generateMissions, startMission, updateMission } from "./missions/missionSystem.js?v=15";
+import { missionGivers, currentMission, allMissions } from "./missions/missionState.js?v=25";
+import { generateMissions, startMission, updateMission } from "./missions/missionSystem.js?v=25";
 
 // Combat
-import { getCurrentWeapon, shootBullet, fireWeapon } from "./combat/shooting.js?v=15";
+import { getCurrentWeapon, shootBullet, fireWeapon } from "./combat/shooting.js?v=25";
 
 // AI
-import { findPath } from "./ai/pathfinding.js?v=15";
-import { updateGangs } from "./ai/gangs.js?v=15";
-import { updateTraffic, pickRandomDest, chooseBestDir } from "./ai/traffic.js?v=15";
+import { findPath } from "./ai/pathfinding.js?v=25";
+import { updateGangs } from "./ai/gangs.js?v=25";
+import { updateTraffic, pickRandomDest, chooseBestDir } from "./ai/traffic.js?v=25";
 
 // Input
-import { SETTINGS, KEY_NAMES, setLanguage, setDifficulty } from "./input/settings.js?v=16";
-import { act, actJust, actPrev, keys, worldMouseX } from "./input/inputState.js?v=15";
-import { updateInput, actionHeld, rebindKey, openSettings, closeSettings, resetKeybinds, buildKeybindList, keyDisplay } from "./input/keyboard.js?v=16";
-import { touchHold, initTouchControls } from "./input/touch.js?v=15";
-import { t, applyI18n, translations } from "./ui/i18n.js?v=16";
+import { SETTINGS, KEY_NAMES, setLanguage, setDifficulty } from "./input/settings.js?v=25";
+import { act, actJust, actPrev, keys, worldMouseX } from "./input/inputState.js?v=25";
+import { updateInput, actionHeld, rebindKey, openSettings, closeSettings, resetKeybinds, buildKeybindList, keyDisplay } from "./input/keyboard.js?v=25";
+import { touchHold, initTouchControls } from "./input/touch.js?v=25";
+import { t, applyI18n, translations } from "./ui/i18n.js?v=25";
 
 // UI
-import { updateHUD, updateWantedUI, showNotification, updateCamera } from "./ui/hud.js?v=15";
-import { toggleInventory, renderInventory } from "./ui/inventory.js?v=15";
-import { renderMinimap } from "./ui/minimap.js?v=15";
-import { getSaves, saveGame, startNewGame, populateSaveSlots, showPauseMenu, hidePauseMenu, showMainMenu } from "./ui/menu.js?v=15";
-import { SHOPS, openShop } from "./ui/shop.js?v=15";
+import { updateHUD, updateWantedUI, showNotification, updateCamera } from "./ui/hud.js?v=25";
+import { toggleInventory, renderInventory } from "./ui/inventory.js?v=25";
+import { renderMinimap } from "./ui/minimap.js?v=25";
+import { getSaves, saveGame, startNewGame, populateSaveSlots, showPauseMenu, hidePauseMenu, showMainMenu } from "./ui/menu.js?v=25";
+import { SHOPS, openShop } from "./ui/shop.js?v=25";
 
 // Render
-import { render } from "./render/renderer.js?v=15";
+import { render } from "./render/renderer.js?v=25";
 
 // Expose settings globals for legacy inline handlers (fixes ReferenceError)
 if (typeof window !== "undefined") {

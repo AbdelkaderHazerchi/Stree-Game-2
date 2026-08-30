@@ -1,6 +1,6 @@
 // ======================== I18N ========================
 // Provides ar/en translations for Street Game 2
-import { SETTINGS } from "../input/settings.js?v=16";
+import { SETTINGS } from "../input/settings.js?v=25";
 
 export const translations = {
   ar: {
@@ -53,6 +53,13 @@ export const translations = {
     "hud.ammo": "🔫",
     "hud.noMission": "🎯 لا توجد مهمة نشطة",
     "hud.goYellow": "اذهب إلى النقاط الصفراء على الخريطة لبدء مهمة",
+    "hud.goYellowMain": "اذهب إلى النقطة الصفراء لبدء المهمة الرئيسية",
+    "hud.goPurpleSide": "اذهب إلى النقاط البنفسجية للمهمات الجانبية",
+    "hud.questActive": "🎯 مهمة نشطة",
+    "hud.questProgress": "التقدم",
+    "hud.questDropOff": "🏁 اذهب إلى نقطة التسليم الخضراء لإنهاء المهمة",
+    "hud.allMainsDone": "🏆 جميع المهام الرئيسية مكتملة!",
+    "hud.mainsDoneDesc": "أحسنت! أكملت جميع المهام الرئيسية",
     "hud.controls": "تحريك | دخول/خروج | إطلاق نار | بوق | إلغاء مهمة | حقيبة | سلاح | إخفاء/إظهار الواجهة | تخطي الفيديو",
     "hud.skipHint": "⏩ اضغط F4 لتخطي الفيديو",
     "hud.notification.health": "استعادة الصحة",
@@ -120,7 +127,8 @@ export const translations = {
     // Controls help short
     "controls.move": "تحريك",
     "controls.enterExit": "دخول/خروج",
-    "controls.shoot": "إطلاق نار",
+    "controls.shoot": "إطلاق",
+    "controls.aim": "تصويب",
     "controls.horn": "بوق",
     "controls.cancel": "إلغاء مهمة",
     "controls.inventory": "حقيبة",
@@ -183,6 +191,13 @@ export const translations = {
     "hud.ammo": "🔫",
     "hud.noMission": "🎯 No active mission",
     "hud.goYellow": "Go to yellow dots on map to start a mission",
+    "hud.goYellowMain": "Go to yellow marker to start main mission",
+    "hud.goPurpleSide": "Go to purple dots for side quests",
+    "hud.questActive": "🎯 Active mission",
+    "hud.questProgress": "Progress",
+    "hud.questDropOff": "🏁 Go to green drop-off to finish",
+    "hud.allMainsDone": "🏆 All main missions complete!",
+    "hud.mainsDoneDesc": "Great job! No more main quests",
     "hud.controls": "Move | Enter/Exit | Shoot | Horn | Cancel | Inventory | Weapon | Toggle UI | Skip Video",
     "hud.skipHint": "⏩ Press F4 to skip video",
     "hud.notification.health": "Health restored",
@@ -244,6 +259,7 @@ export const translations = {
     "controls.move": "Move",
     "controls.enterExit": "Enter/Exit",
     "controls.shoot": "Shoot",
+    "controls.aim": "Aim",
     "controls.horn": "Horn",
     "controls.cancel": "Cancel Mission",
     "controls.inventory": "Inventory",
@@ -322,9 +338,9 @@ export function applyI18n() {
     const ch = document.getElementById("controlsHelp");
     if (ch) {
       if (lang === "en") {
-        ch.innerHTML = `<span>WASD</span> ${t("controls.move")} | <span>E</span> ${t("controls.enterExit")} | <span>Space</span> ${t("controls.shoot")}<br><span>F</span> ${t("controls.horn")} | <span>M</span> ${t("controls.cancel")} | <span>I</span> ${t("controls.inventory")} | <span>1-5</span> ${t("controls.weapon")}<br><span>F2</span> ${t("controls.toggleUI")} | <span>F4</span> ${t("controls.skip")}`;
+        ch.innerHTML = `<span>WASD</span> ${t("controls.move")} | <span>E</span> ${t("controls.enterExit")} | <span>Left Click</span> ${t("controls.shoot")} | <span>Right Hold</span> ${t("controls.aim")}<br><span>F</span> ${t("controls.horn")} | <span>M</span> ${t("controls.cancel")} | <span>I</span> ${t("controls.inventory")} | <span>1-5</span> ${t("controls.weapon")}<br><span>F2</span> ${t("controls.toggleUI")} | <span>F4</span> ${t("controls.skip")}`;
       } else {
-        ch.innerHTML = `<span>WASD</span> ${t("controls.move")} | <span>E</span> ${t("controls.enterExit")} | <span>مسافة</span> ${t("controls.shoot")}<br><span>F</span> ${t("controls.horn")} | <span>M</span> ${t("controls.cancel")} | <span>I</span> ${t("controls.inventory")} | <span>1-5</span> ${t("controls.weapon")}<br><span>F2</span> ${t("controls.toggleUI")} | <span>F4</span> ${t("controls.skip")}`;
+        ch.innerHTML = `<span>WASD</span> ${t("controls.move")} | <span>E</span> ${t("controls.enterExit")} | <span>زر يسار</span> ${t("controls.shoot")} | <span>زر يمين مطول</span> ${t("controls.aim")}<br><span>F</span> ${t("controls.horn")} | <span>M</span> ${t("controls.cancel")} | <span>I</span> ${t("controls.inventory")} | <span>1-5</span> ${t("controls.weapon")}<br><span>F2</span> ${t("controls.toggleUI")} | <span>F4</span> ${t("controls.skip")}`;
       }
     }
   } catch {}

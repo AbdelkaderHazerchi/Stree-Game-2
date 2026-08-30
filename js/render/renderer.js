@@ -1,21 +1,24 @@
 // ======================== RENDER ========================
 // Extracted from game.js:53803-54453 - no logic changed
-import { CFG, T } from "../core/config.js?v=16";
-import { ctx, W, H, zoom, cam, miniCtx } from "../core/canvas.js?v=15";
-import { getTile } from "../map/mapUtils.js?v=15";
-import { TILE_ASSETS, ROAD_CROSSWALK_IMG, SAND_IMG } from "../assets/tileAssets.js?v=15";
-import { VEHICLE_ASSETS, EXPLOSION_ASSET } from "../assets/vehicleAssets.js?v=15";
-import { LS_ZONES } from "../map/mapData.js?v=15";
-import { VEHICLE_TYPES, vehicles, explosions, EXPLOSION_SIZE, EXPLOSION_DURATION } from "../entities/vehicles.js?v=15";
-import { player } from "../entities/player.js?v=15";
-import { npcs, lootItems } from "../entities/npcs.js?v=15";
-import { police } from "../entities/police.js?v=15";
-import { bullets } from "../entities/bullets.js?v=15";
-import { buildingColor, buildingHeight, buildingShape, buildingRotation, specialBuildings, buildings } from "../map/mapState.js?v=15";
-import { missionGivers, currentMission, usingSequentialMissions } from "../missions/missionState.js?v=15";
-import { getActiveMissionGiver } from "../missions/missionSystem.js?v=15";
-import { getNearShopName } from "../ui/shop.js?v=15";
-import { renderMinimap } from "../ui/minimap.js?v=15";
+import { CFG, T, G } from "../core/config.js?v=25";
+import { ctx, W, H, zoom, cam, miniCtx } from "../core/canvas.js?v=25";
+import { getTile } from "../map/mapUtils.js?v=25";
+import { TILE_ASSETS, ROAD_CROSSWALK_IMG, SAND_IMG } from "../assets/tileAssets.js?v=25";
+import { VEHICLE_ASSETS, EXPLOSION_ASSET } from "../assets/vehicleAssets.js?v=25";
+import { LS_ZONES } from "../map/mapData.js?v=25";
+import { VEHICLE_TYPES, vehicles, explosions, EXPLOSION_SIZE, EXPLOSION_DURATION } from "../entities/vehicles.js?v=25";
+import { player } from "../entities/player.js?v=25";
+import { npcs, lootItems } from "../entities/npcs.js?v=25";
+import { police } from "../entities/police.js?v=25";
+import { bullets } from "../entities/bullets.js?v=25";
+import { buildingColor, buildingHeight, buildingShape, buildingRotation, specialBuildings, buildings } from "../map/mapState.js?v=25";
+import { missionGivers, currentMission, usingSequentialMissions, quests } from "../missions/missionState.js?v=25";
+import { getActiveMissionGiver, getVisibleStartGivers, getActiveEndGiver } from "../missions/missionSystem.js?v=25";
+import { SETTINGS } from "../input/settings.js?v=25";
+import { getNearShopName } from "../ui/shop.js?v=25";
+import { renderMinimap } from "../ui/minimap.js?v=25";
+import { isAiming, worldMouseX, worldMouseY } from "../input/inputState.js?v=25";
+import { gameState } from "../core/state.js?v=25";
 
 console.log("RENDERER v6 2x2 fix adjacent disappearance", Date.now());
  // ======================== LOW BUILDING (<=3 floors) HELPERS ========================
@@ -315,22 +318,25 @@ export function render() {
           break;
         }
         case T.SIDEWALK: {
-          const isBeach = [
-            [x - 1, y],
-            [x + 1, y],
-            [x, y - 1],
-            [x, y + 1],
-          ].some(
-            ([nx, ny]) =>
-              nx >= 0 &&
-              ny >= 0 &&
-              nx < CFG.COLS &&
-              ny < CFG.ROWS &&
-              getTile(nx, ny) === T.WATER,
-          );
-          const img = isBeach ? SAND_IMG : TILE_ASSETS[T.SIDEWALK];
+          // Sand - constant sandy yellow (#e8d4a0) - no environment tint
+          const img = TILE_ASSETS[T.SIDEWALK];
           if (img.img && img.img.complete)
             ctx.drawImage(img.img, px, py, CFG.TILE, CFG.TILE);
+          // Fallback constant fill if image not loaded
+          else {
+            ctx.fillStyle = "#e8d4a0";
+            ctx.fillRect(px, py, CFG.TILE, CFG.TILE);
+          }
+          break;
+        }
+        case T.PAVEMENT: {
+          const a = TILE_ASSETS[T.PAVEMENT];
+          if (a.img && a.img.complete)
+            ctx.drawImage(a.img, px, py, CFG.TILE, CFG.TILE);
+          else {
+            ctx.fillStyle = "#8a8a8a";
+            ctx.fillRect(px, py, CFG.TILE, CFG.TILE);
+          }
           break;
         }
         case T.BUILDING:
@@ -489,46 +495,127 @@ export function render() {
     }
   }
 
-  // Draw mission givers (pulsing yellow dots with name)
-  const _mgsToDraw = usingSequentialMissions
-    ? getActiveMissionGiver()
-      ? [getActiveMissionGiver()]
-      : []
-    : missionGivers.filter((mg) => !mg.taken);
+  // Draw quest givers — Main yellow sequential, Side purple dots (spec)
+  const _mgsToDraw = (quests && quests.length>0)
+    ? getVisibleStartGivers()
+    : (usingSequentialMissions ? (getActiveMissionGiver()? [getActiveMissionGiver()] : []) : missionGivers.filter((mg) => !mg.taken));
 
   for (const mg of _mgsToDraw) {
+    const isSide = mg.category==="side";
+    const baseColor = isSide ? "#a855f7" : "#ffd700";
     const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
     // Glow
-    ctx.shadowColor = "#ffd700";
-    ctx.shadowBlur = 20;
-    ctx.fillStyle = `rgba(255, 215, 0, ${pulse})`;
+    ctx.shadowColor = baseColor;
+    ctx.shadowBlur = isSide ? 18 : 20;
+    ctx.fillStyle = isSide ? `rgba(168, 85, 247, ${pulse})` : `rgba(255, 215, 0, ${pulse})`;
     ctx.beginPath();
-    ctx.arc(mg.x, mg.y, 14, 0, Math.PI * 2);
+    ctx.arc(mg.x, mg.y, isSide ? 12 : 14, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
     // Inner dot
     ctx.fillStyle = "#fff";
     ctx.beginPath();
-    ctx.arc(mg.x, mg.y, 6, 0, Math.PI * 2);
+    ctx.arc(mg.x, mg.y, isSide ? 5 : 6, 0, Math.PI * 2);
     ctx.fill();
-    // Label background
+    // Side quests get purple dot inner ring for minimap parity
+    if(isSide){
+      ctx.strokeStyle="rgba(168,85,247,0.45)"; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(mg.x, mg.y, 8,0,Math.PI*2); ctx.stroke();
+    }
+    // Label background — bilingual title
+    const lang = (SETTINGS && SETTINGS.language==="en") ? "en":"ar";
+    let displayName = mg.mission.name;
+    let displayIcon = mg.mission.icon||"⭐";
+    if(mg.title && typeof mg.title==="object"){
+      displayName = (lang==="en" ? (mg.title.en||mg.title.ar) : (mg.title.ar||mg.title.en)) || displayName;
+    }
+    if(mg.icon) displayIcon = mg.icon;
+    // also handle quest title bilingual
+    if(mg.questId){
+      // find quest for richer bilingual
+      const qq = quests.find(q=>q.id===mg.questId);
+      if(qq && qq.title){
+        displayName = (lang==="en" ? (qq.title.en||qq.title.ar) : (qq.title.ar||qq.title.en)) || displayName;
+        displayIcon = qq.icon || displayIcon;
+      }
+    }
+    const labelText = `${displayIcon} ${displayName}`;
     ctx.fillStyle = "rgba(0,0,0,0.8)";
-    const tw = mg.mission.icon.length * 8 + 16;
+    const tw = Math.max(28, labelText.length * 6.5 + 12);
     ctx.fillRect(mg.x - tw / 2, mg.y - 28, tw, 16);
     // Label text
-    ctx.fillStyle = "#ffd700";
+    ctx.fillStyle = isSide ? "#c084fc" : "#ffd700";
     ctx.font = "bold 10px Arial";
     ctx.textAlign = "center";
-    ctx.fillText(`${mg.mission.icon} ${mg.mission.name}`, mg.x, mg.y - 16);
+    ctx.fillText(labelText, mg.x, mg.y - 16);
     // Reward
     ctx.fillStyle = "#aaa";
     ctx.font = "8px Arial";
-    ctx.fillText(`$${mg.mission.reward}`, mg.x, mg.y + 30);
+    const reward = mg.mission.reward ?? mg.reward ?? "";
+    if(reward) ctx.fillText(`$${reward}`, mg.x, mg.y + 30);
+  }
+  // Active quest End marker (green) — appears immediately after capturing Start (spec: second point appears)
+  const activeEnd = (typeof getActiveEndGiver==="function") ? getActiveEndGiver() : null;
+  if(activeEnd && currentMission && !currentMission.completed && !currentMission.failed){
+    const ex=activeEnd.x, ey=activeEnd.y;
+    const epulse = Math.sin(Date.now()/350)*0.25+0.75;
+    ctx.save();
+    ctx.shadowColor="#22c55e"; ctx.shadowBlur=18;
+    ctx.fillStyle=`rgba(34,197,94,${epulse})`;
+    ctx.beginPath(); ctx.arc(ex,ey,16,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0;
+    ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(ex,ey,6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle="#22c55e"; ctx.font="bold 9px Arial"; ctx.textAlign="center";
+    ctx.fillText("🏁", ex, ey+3);
+    ctx.fillStyle="rgba(0,0,0,0.7)"; ctx.fillRect(ex-24, ey-26, 48, 12);
+    ctx.fillStyle="#4ade80"; ctx.font="bold 7px Arial";
+    const isEn = SETTINGS && SETTINGS.language==="en";
+    ctx.fillText(isEn ? "DROP-OFF" : "التسليم", ex, ey-18);
+    // dashed line from player to end when active
+    const pTarget = player ? (player.inVehicle || player) : null;
+    if(pTarget){
+      ctx.strokeStyle=`rgba(34,197,94,${0.35*epulse})`; ctx.lineWidth=2; ctx.setLineDash([7,6]);
+      ctx.beginPath(); ctx.moveTo(pTarget.x, pTarget.y); ctx.lineTo(ex,ey); ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.restore();
   }
 
   // Draw mission checkpoints
   if (currentMission && !currentMission.completed && !currentMission.failed) {
     const stage = currentMission.stages[currentMission.stage];
+    // New mission extra visuals inserted before generic checkpoint
+    if(currentMission.type==="surveillance" && currentMission.data.surveillanceCenter){
+      const c = currentMission.data.surveillanceCenter;
+      const r = currentMission.data.surveillanceRadius || 110;
+      ctx.save();
+      ctx.strokeStyle = "rgba(0, 200, 255, 0.55)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8,6]);
+      ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(0, 200, 255, 0.08)";
+      ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#00ccff";
+      ctx.beginPath(); ctx.arc(c.x, c.y, 4, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+    if(currentMission.type==="silentPursuit" && currentMission.data.silentTarget){
+      const tv = currentMission.data.silentTarget;
+      if(tv){
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 215, 0, 0.9)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6,4]);
+        ctx.strokeRect(tv.x - 18, tv.y - 10, 36, 20);
+        ctx.setLineDash([]);
+        ctx.fillStyle = "rgba(0,0,0,0.7)";
+        ctx.fillRect(tv.x - 22, tv.y - 22, 44, 12);
+        ctx.fillStyle = "#ffd700";
+        ctx.font = "bold 7px Arial"; ctx.textAlign="center";
+        ctx.fillText("TARGET", tv.x, tv.y - 14);
+        ctx.restore();
+      }
+    }
     if (stage && stage.x) {
       const pulse = Math.sin(Date.now() / 400) * 0.3 + 0.7;
       ctx.fillStyle = `rgba(0, 255, 100, ${pulse})`;
@@ -654,6 +741,26 @@ export function render() {
     );
     ctx.fill();
 
+    // Highlight quest NPCs (meeting, killTarget, transport)
+    if(npc.isQuestTarget){
+      ctx.strokeStyle = "#ff3366";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, -6, 16, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = "rgba(255,51,102,0.15)";
+      ctx.beginPath(); ctx.arc(0, -6, 16, 0, Math.PI*2); ctx.fill();
+    }
+    if(npc.isQuestPerson){
+      ctx.strokeStyle = "#44ffaa";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, -6, 14, 0, Math.PI*2); ctx.stroke();
+    }
+    if(npc.isMeetingNpc){
+      ctx.strokeStyle = "#ffd700";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, -6, 15, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = "rgba(255,215,0,0.12)";
+      ctx.beginPath(); ctx.arc(0, -6, 15, 0, Math.PI*2); ctx.fill();
+    }
     ctx.restore();
   }
 
@@ -962,6 +1069,66 @@ export function render() {
       ctx.font = "9px Arial";
       ctx.textAlign = "center";
       ctx.fillText("🚗 أنت", 0, -v.h / 2 - 8);
+      ctx.restore();
+    }
+  }
+
+  // Aiming line — right mouse hold, shows exact fire direction, slows walking 2.5x
+  if (isAiming && player && player.alive && player.onFoot && gameState === G.PLAYING) {
+    const startX = player.x;
+    const startY = player.y;
+    const dx = worldMouseX - startX;
+    const dy = worldMouseY - startY;
+    const dist = Math.hypot(dx, dy);
+    if (dist > 5) {
+      const angle = Math.atan2(dy, dx);
+      const length = Math.min(dist, 600);
+      const endX = startX + Math.cos(angle) * length;
+      const endY = startY + Math.sin(angle) * length;
+
+      // Outer glow
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,0,0.9)";
+      ctx.lineWidth = 2.2 / zoom;
+      ctx.setLineDash([8 / zoom, 6 / zoom]);
+      ctx.lineDashOffset = -(Date.now() / 60) % (14 / zoom);
+      ctx.shadowColor = "#ffff00";
+      ctx.shadowBlur = 8 / zoom;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.shadowBlur = 0;
+
+      // Inner core line
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.lineWidth = 0.9 / zoom;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+
+      // Endpoint dot
+      ctx.fillStyle = "#ffff00";
+      ctx.shadowColor = "#ffff00";
+      ctx.shadowBlur = 6 / zoom;
+      ctx.beginPath();
+      ctx.arc(endX, endY, 4 / zoom, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(endX, endY, 1.6 / zoom, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Start circle
+      ctx.strokeStyle = "rgba(255,255,0,0.5)";
+      ctx.lineWidth = 1 / zoom;
+      ctx.beginPath();
+      ctx.arc(startX, startY, 9 / zoom, 0, Math.PI * 2);
+      ctx.stroke();
+
       ctx.restore();
     }
   }

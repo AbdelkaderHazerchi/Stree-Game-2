@@ -1,9 +1,9 @@
 // ======================== MAP UTILS ========================
 // Extracted from game.js:477-520 - no logic changed
-import { CFG } from "../core/config.js?v=16";
-import { T } from "../core/config.js?v=16";
-import { map, buildingColor, buildingHeight } from "./mapState.js?v=15";
-import { generateBuildingColors } from "./mapGenerator.js?v=15";
+import { CFG } from "../core/config.js?v=25";
+import { T } from "../core/config.js?v=25";
+import { map, buildingColor, buildingHeight } from "./mapState.js?v=25";
+import { generateBuildingColors } from "./mapGenerator.js?v=25";
 
 export function getTile(x, y) {
   if (x < 0 || x >= CFG.COLS || y < 0 || y >= CFG.ROWS) return T.WATER;
@@ -30,8 +30,8 @@ export function computeTile(x, y) {
   if (my < 0) my += cycle;
   if (mx < roadW || my < roadW) {
     if (mx < roadW && my < roadW) return T.ROAD;
-    if (mx < roadW) return mx === 0 || mx === roadW - 1 ? T.SIDEWALK : T.ROAD;
-    return my === 0 || my === roadW - 1 ? T.SIDEWALK : T.ROAD;
+    if (mx < roadW) return mx === 0 || mx === roadW - 1 ? T.PAVEMENT : T.ROAD;
+    return my === 0 || my === roadW - 1 ? T.PAVEMENT : T.ROAD;
   }
   return T.BUILDING;
 }

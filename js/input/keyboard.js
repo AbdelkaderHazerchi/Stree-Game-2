@@ -1,23 +1,23 @@
 // ======================== KEYBOARD INPUT ========================
 // Extracted from game.js:148-354, 52603-52710 - no logic changed
-import { SETTINGS, KEY_NAMES, saveKeybinds, resetKeybindsStorage } from "./settings.js?v=16";
-import { t } from "../ui/i18n.js?v=16";
-import { act, actJust, actPrev, keys } from "./inputState.js?v=15";
-import { touchHold, touchEdge, touchJoyX, touchJoyY, touchAimAngle, shootTouchId, setTouchAimAngle } from "./touch.js?v=15";
-import { CFG } from "../core/config.js?v=16";
-import { G } from "../core/config.js?v=16";
-import { gameState } from "../core/state.js?v=15";
-import { player } from "../entities/player.js?v=15";
-import { vehicles } from "../entities/vehicles.js?v=15";
-import { currentMission } from "../missions/missionState.js?v=15";
-import { failMission } from "../missions/missionSystem.js?v=15";
-import { SHOPS, openShop } from "../ui/shop.js?v=15";
-import { showNotification } from "../ui/hud.js?v=15";
-import { fireWeapon } from "../combat/shooting.js?v=15";
-import { getNearShopName } from "../ui/shop.js?v=15";
-import { showPauseMenu } from "../ui/menu.js?v=15";
+import { SETTINGS, KEY_NAMES, saveKeybinds, resetKeybindsStorage } from "./settings.js?v=25";
+import { t } from "../ui/i18n.js?v=25";
+import { act, actJust, actPrev, keys, mouseLeftDown, isAiming } from "./inputState.js?v=25";
+import { touchHold, touchEdge, touchJoyX, touchJoyY, touchAimAngle, shootTouchId, setTouchAimAngle } from "./touch.js?v=25";
+import { CFG } from "../core/config.js?v=25";
+import { G } from "../core/config.js?v=25";
+import { gameState } from "../core/state.js?v=25";
+import { player } from "../entities/player.js?v=25";
+import { vehicles } from "../entities/vehicles.js?v=25";
+import { currentMission } from "../missions/missionState.js?v=25";
+import { failMission } from "../missions/missionSystem.js?v=25";
+import { SHOPS, openShop } from "../ui/shop.js?v=25";
+import { showNotification } from "../ui/hud.js?v=25";
+import { fireWeapon } from "../combat/shooting.js?v=25";
+import { getNearShopName } from "../ui/shop.js?v=25";
+import { showPauseMenu } from "../ui/menu.js?v=25";
 // Inventory moved to js/ui/inventory.js - re-export for compatibility (no logic change)
-import { toggleInventory, closeInventory, switchWeapon, switchWeaponSlot, renderInventory } from "../ui/inventory.js?v=15";
+import { toggleInventory, closeInventory, switchWeapon, switchWeaponSlot, renderInventory } from "../ui/inventory.js?v=25";
 export { toggleInventory, closeInventory, switchWeapon, switchWeaponSlot, renderInventory };
 
 export function updateInput() {
@@ -45,7 +45,8 @@ export function updateInput() {
   act.left = keys[k.left] || keys["arrowleft"];
   act.right = keys[k.right] || keys["arrowright"];
   if (keys[k.enterExit]) act.enterExit = true;
-  if (keys[k.shoot]) act.shoot = true;
+  // Shooting now via left mouse button (space no longer fires)
+  if (mouseLeftDown) act.shoot = true;
   if (keys[k.horn]) act.horn = true;
   if (keys[k.cancelMission]) act.cancelMission = true;
   if (keys[k.pause]) act.pause = true;
@@ -220,8 +221,17 @@ export function buildKeybindList() {
     btn.className = "menu-btn secondary";
     btn.dataset.action = action;
     btn.style.cssText = "padding:6px 14px;font-size:12px;min-width:88px;margin:0;justify-content:center;flex-shrink:0";
-    btn.textContent = keyDisplay(key);
-    btn.addEventListener("click", () => rebindKey(action));
+    // Shoot is now fixed to left mouse - not rebindable via keyboard
+    if (action === "shoot") {
+      btn.textContent = SETTINGS.language === "en" ? "Left Click" : "زر يسار";
+      btn.disabled = true;
+      btn.style.opacity = "0.7";
+      btn.style.cursor = "default";
+      btn.title = SETTINGS.language === "en" ? "Fixed to Left Mouse Button" : "ثابت على زر الفأرة الأيسر";
+    } else {
+      btn.textContent = keyDisplay(key);
+      btn.addEventListener("click", () => rebindKey(action));
+    }
 
     row.appendChild(labelSpan);
     row.appendChild(btn);
@@ -276,7 +286,7 @@ export function resetKeybinds() {
     left: "a",
     right: "d",
     enterExit: "e",
-    shoot: " ",
+    shoot: "mouseleft",
     horn: "f",
     cancelMission: "m",
     pause: "escape",

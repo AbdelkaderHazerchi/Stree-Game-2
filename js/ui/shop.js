@@ -1,11 +1,11 @@
 // ======================== SHOP ========================
 // Extracted from game.js:54848-55168 - no logic changed
-import { CFG } from "../core/config.js?v=16";
-import { player, respawnPlayer } from "../entities/player.js?v=15";
-import { vehicles, VEHICLE_TYPES, isOnRoad } from "../entities/vehicles.js?v=15";
-import { police, clearPolice } from "../entities/police.js?v=15";
-import { showNotification, updateHUD, updateWantedUI } from "./hud.js?v=15";
-import { overlay, overlayBtn } from "../core/domRefs.js?v=15";
+import { CFG } from "../core/config.js?v=25";
+import { player, respawnPlayer } from "../entities/player.js?v=25";
+import { vehicles, VEHICLE_TYPES, isOnRoad } from "../entities/vehicles.js?v=25";
+import { police, clearPolice } from "../entities/police.js?v=25";
+import { showNotification, updateHUD, updateWantedUI } from "./hud.js?v=25";
+import { overlay, overlayBtn } from "../core/domRefs.js?v=25";
 
 export const SHOPS = {
   "🔫 Ammu-Nation": {

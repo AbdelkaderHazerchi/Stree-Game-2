@@ -1,16 +1,16 @@
 // ======================== POLICE ========================
 // Extracted from game.js:51601, 53162-53531 - no logic changed
-import { CFG, T } from "../core/config.js?v=16";
-import { getTile } from "../map/mapUtils.js?v=15";
-import { player } from "./player.js?v=15";
-import { vehicles } from "./vehicles.js?v=15";
-import { isWalkable, isOnRoad } from "./vehicles.js?v=15";
-import { shootBullet } from "../combat/shooting.js?v=15";
-import { findPath } from "../ai/pathfinding.js?v=15";
-import { updateWantedUI } from "../ui/hud.js?v=15";
-import { playerDie } from "./player.js?v=15";
+import { CFG, T } from "../core/config.js?v=25";
+import { getTile } from "../map/mapUtils.js?v=25";
+import { player } from "./player.js?v=25";
+import { vehicles } from "./vehicles.js?v=25";
+import { isWalkable, isOnRoad } from "./vehicles.js?v=25";
+import { shootBullet } from "../combat/shooting.js?v=25";
+import { findPath } from "../ai/pathfinding.js?v=25";
+import { updateWantedUI } from "../ui/hud.js?v=25";
+import { playerDie } from "./player.js?v=25";
 // Traffic helpers moved to js/ai/traffic.js - re-export for compatibility
-import { pickRandomDest, chooseBestDir, updateTraffic } from "../ai/traffic.js?v=15";
+import { pickRandomDest, chooseBestDir, updateTraffic } from "../ai/traffic.js?v=25";
 export { pickRandomDest, chooseBestDir, updateTraffic };
 
 export let police = [];

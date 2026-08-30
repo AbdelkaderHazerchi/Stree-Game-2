@@ -1,20 +1,20 @@
 // ======================== MENU & SAVE ========================
 // Extracted from game.js:54587-54847 - no logic changed
-import { CFG, G, SAVE_KEY } from "../core/config.js?v=16";
-import { gameState, setGameState, currentSaveName, setCurrentSaveName } from "../core/state.js?v=15";
-import { player, createPlayer, setPlayer } from "../entities/player.js?v=15";
-import { police, clearPolice } from "../entities/police.js?v=15";
-import { currentMission, missionsCompleted, setMissionsCompleted } from "../missions/missionState.js?v=15";
-import { startMission } from "../missions/missionSystem.js?v=15";
-import { updateMissionUI } from "../missions/missionSystem.js?v=15";
-import { updateWantedUI, updateHUD, showNotification } from "./hud.js?v=15";
-import { overlay } from "../core/domRefs.js?v=15";
-import { buildings } from "../map/mapState.js?v=15";
-import { initMap } from "../map/mapGenerator.js?v=15";
-import { loadFullMap } from "../map/mapUtils.js?v=15";
-import { cam } from "../core/canvas.js?v=15";
-import { SETTINGS } from "../input/settings.js?v=16";
-import { t } from "./i18n.js?v=16";
+import { CFG, G, SAVE_KEY } from "../core/config.js?v=25";
+import { gameState, setGameState, currentSaveName, setCurrentSaveName } from "../core/state.js?v=25";
+import { player, createPlayer, setPlayer } from "../entities/player.js?v=25";
+import { police, clearPolice } from "../entities/police.js?v=25";
+import { currentMission, missionsCompleted, setMissionsCompleted, quests, questStatus, activeQuestId, mainQuestIndex, setQuestStatus, setActiveQuestId, setMainQuestIndex, setQuests, setMainQuests, setSideQuests } from "../missions/missionState.js?v=25";
+import { startMission, generateMissions } from "../missions/missionSystem.js?v=25";
+import { updateMissionUI } from "../missions/missionSystem.js?v=25";
+import { updateWantedUI, updateHUD, showNotification } from "./hud.js?v=25";
+import { overlay } from "../core/domRefs.js?v=25";
+import { buildings } from "../map/mapState.js?v=25";
+import { initMap } from "../map/mapGenerator.js?v=25";
+import { loadFullMap } from "../map/mapUtils.js?v=25";
+import { cam } from "../core/canvas.js?v=25";
+import { SETTINGS } from "../input/settings.js?v=25";
+import { t } from "./i18n.js?v=25";
 
 function ensurePlayer() {
   // Check imported binding first, then window fallback, then create
@@ -95,6 +95,9 @@ export function createSaveData(name) {
     };
   }
   const v = p.inVehicle;
+  // Serialize quest state
+  const qStatusObj = {};
+  try { if(questStatus instanceof Map) questStatus.forEach((v,k)=> qStatusObj[k]=v); } catch {}
   return {
     id: Date.now(),
     name: name,
@@ -107,6 +110,11 @@ export function createSaveData(name) {
     missionType: currentMission ? currentMission.type : null,
     missionStage: currentMission ? currentMission.stage : 0,
     missionName: currentMission ? currentMission.name : null,
+    // New quest persistence
+    questId: currentMission ? (currentMission.questId || (currentMission.quest && currentMission.quest.id) || null) : null,
+    activeQuestId: activeQuestId || null,
+    mainQuestIndex: (typeof mainQuestIndex==="number" ? mainQuestIndex : 0),
+    questStatus: qStatusObj,
     missionsCompleted: missionsCompleted,
     weapons: p.weapons,
     currentWeapon: p.currentWeapon,
@@ -138,9 +146,39 @@ export function applySaveData(data) {
   if (!p.weapons || !p.weapons.length) p.weapons = ["pistol"];
   if (p.currentWeapon === undefined) p.currentWeapon = 0;
   if (!p.ammo) p.ammo = { pistol: 30, smg: 0, rifle: 0, shotgun: 0 };
-  if (data.missionType) {
-    startMission(data.missionType);
-    if (currentMission) currentMission.stage = data.missionStage || 0;
+  // Restore quest system if present — regenerate then apply status
+  try{
+    if(data.questStatus || data.activeQuestId || typeof data.mainQuestIndex==="number"){
+      // Ensure quests are generated (if not already)
+      if(!quests || quests.length===0){
+        try { generateMissions(); } catch(e){ console.warn("generateMissions in load failed", e); }
+      }
+      // Restore status map
+      const newMap = new Map();
+      if(data.questStatus && typeof data.questStatus==="object"){
+        Object.entries(data.questStatus).forEach(([k,v])=> newMap.set(k, v));
+      } else if(questStatus instanceof Map){
+        questStatus.forEach((v,k)=> newMap.set(k,v));
+      }
+      setQuestStatus(newMap);
+      if(typeof data.mainQuestIndex==="number") setMainQuestIndex(data.mainQuestIndex);
+      if(data.activeQuestId) setActiveQuestId(data.activeQuestId);
+      // If save had active quest, try to restart it
+      if(data.questId){
+        // Prefer questId
+        startMission(data.questId);
+      } else if(data.missionType){
+        startMission(data.missionType);
+      }
+      if (currentMission && typeof data.missionStage==="number") currentMission.stage = data.missionStage || 0;
+    } else if (data.missionType) {
+      startMission(data.missionType);
+      if (currentMission) currentMission.stage = data.missionStage || 0;
+    }
+  } catch(e){ console.warn("quest restore failed", e);
+    if (data.missionType) {
+      try{ startMission(data.missionType); if (currentMission) currentMission.stage = data.missionStage || 0; } catch{}
+    }
   }
   updateWantedUI();
   updateHUD();
@@ -210,6 +248,11 @@ export function startNewGame(name) {
   let p = fresh;
   clearPolice();
   setMissionsCompleted(0);
+  // Reset quest system to initial (first main available, all sides available)
+  try{
+    // Regenerate from current map data to ensure fresh questStatus
+    generateMissions();
+  } catch(e){ console.warn("generateMissions in startNewGame failed", e); }
   // Reset camera to player immediately (avoid cam at 0,0)
   try {
     cam.x = p.x;

@@ -1,14 +1,14 @@
 // ======================== MINIMAP ========================
 // Extracted from game.js:54454-54575 - no logic changed
-import { CFG, T } from "../core/config.js?v=16";
-import { miniCtx, miniCanvas, cam, W, H, zoom } from "../core/canvas.js?v=15";
-import { getTile } from "../map/mapUtils.js?v=15";
-import { LS_ZONES } from "../map/mapData.js?v=15";
-import { specialBuildings } from "../map/mapState.js?v=15";
-import { player } from "../entities/player.js?v=15";
-import { police } from "../entities/police.js?v=15";
-import { missionGivers, currentMission, usingSequentialMissions } from "../missions/missionState.js?v=15";
-import { getActiveMissionGiver } from "../missions/missionSystem.js?v=15";
+import { CFG, T } from "../core/config.js?v=25";
+import { miniCtx, miniCanvas, cam, W, H, zoom } from "../core/canvas.js?v=25";
+import { getTile } from "../map/mapUtils.js?v=25";
+import { LS_ZONES } from "../map/mapData.js?v=25";
+import { specialBuildings } from "../map/mapState.js?v=25";
+import { player } from "../entities/player.js?v=25";
+import { police } from "../entities/police.js?v=25";
+import { missionGivers, currentMission, usingSequentialMissions, quests } from "../missions/missionState.js?v=25";
+import { getActiveMissionGiver, getVisibleStartGivers, getActiveEndGiver } from "../missions/missionSystem.js?v=25";
 
 export function renderMinimap() {
   const mc = miniCtx;
@@ -64,7 +64,11 @@ export function renderMinimap() {
         mc.fillStyle = "#555560";
         mc.fillRect(px, py, s, s);
       } else if (tile === T.SIDEWALK) {
-        mc.fillStyle = "#d4bc7a";
+        // Sand - constant sandy yellow
+        mc.fillStyle = "#e8d4a0";
+        mc.fillRect(px, py, s, s);
+      } else if (tile === T.PAVEMENT) {
+        mc.fillStyle = "#9e9e9e";
         mc.fillRect(px, py, s, s);
       } else if (tile === T.SPECIAL) {
         const sb = specialBuildings.find((b) => b.x === x && b.y === y);
@@ -98,24 +102,37 @@ export function renderMinimap() {
   mc.arc(p.x * scale, p.y * scale, 3, 0, Math.PI * 2);
   mc.fill();
 
-  // Mission givers
-  const _minimapMgs = usingSequentialMissions
-    ? getActiveMissionGiver()
-      ? [getActiveMissionGiver()]
-      : []
-    : missionGivers.filter((mg) => !mg.taken);
-
+  // Quests: Main (yellow sequential) & Side (purple dots) - spec compliant
+  const _minimapMgs = (quests && quests.length>0) ? getVisibleStartGivers() : (usingSequentialMissions ? (getActiveMissionGiver()? [getActiveMissionGiver()] : []) : missionGivers.filter((mg) => !mg.taken));
   for (const mg of _minimapMgs) {
-    mc.fillStyle = "#ffd700";
+    const isSide = mg.category==="side";
+    mc.fillStyle = isSide ? "#a855f7" : "#ffd700";
+    // purple dots slightly larger per spec
     mc.beginPath();
-    mc.arc(mg.x * scale, mg.y * scale, 2, 0, Math.PI * 2);
+    mc.arc(mg.x * scale, mg.y * scale, isSide ? 2.2 : 2, 0, Math.PI * 2);
     mc.fill();
+    // side purple gets subtle outer glow on minimap
+    if(isSide){
+      mc.fillStyle = "rgba(168,85,247,0.35)";
+      mc.beginPath(); mc.arc(mg.x*scale, mg.y*scale, 3.5,0,Math.PI*2); mc.fill();
+    }
   }
-
-  // Mission objective
+  // Active quest End marker (green) appears immediately after capturing first (spec)
+  const activeEnd = getActiveEndGiver && getActiveEndGiver();
+  if(activeEnd){
+    mc.fillStyle = "#22c55e";
+    mc.beginPath();
+    mc.arc(activeEnd.x * scale, activeEnd.y * scale, 2.5, 0, Math.PI*2);
+    mc.fill();
+    mc.strokeStyle="rgba(34,197,94,0.8)"; mc.lineWidth=1;
+    mc.beginPath(); mc.arc(activeEnd.x*scale, activeEnd.y*scale, 4,0,Math.PI*2); mc.stroke();
+  }
+  // Also show regular mission objective if not quest end
   if (currentMission && !currentMission.completed && !currentMission.failed) {
     const stage = currentMission.stages[currentMission.stage];
-    if (stage && stage.x) {
+    // Don't double-draw if stage is the quest end (already drawn as green above)
+    const isQuestEndStage = stage && stage.isQuestEnd;
+    if (stage && stage.x && !isQuestEndStage) {
       mc.fillStyle = "#00ff64";
       mc.beginPath();
       mc.arc(stage.x * scale, stage.y * scale, 3, 0, Math.PI * 2);

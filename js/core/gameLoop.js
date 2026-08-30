@@ -1,22 +1,22 @@
 // ======================== GAME LOOP ========================
 // Extracted from game.js:55391-55438 - no logic changed
-import { G } from "./config.js?v=16";
-import { gameState, gameOver, setGameOver } from "./state.js?v=15";
-import { preloadAssets } from "../assets/preload.js?v=15";
-import { initMap } from "../map/mapGenerator.js?v=15";
-import { loadFullMap } from "../map/mapUtils.js?v=15";
-import { player, createPlayer, setPlayer } from "../entities/player.js?v=15";
-import { spawnVehicles } from "../entities/vehicles.js?v=15";
-import { spawnNPCs } from "../entities/npcs.js?v=15";
-import { generateMissions } from "../missions/missionSystem.js?v=15";
-import { updateWantedUI, updateHUD } from "../ui/hud.js?v=15";
-import { updateMissionUI } from "../missions/missionSystem.js?v=15";
-import { initTouchControls } from "../input/touch.js?v=15";
-import { showMainMenu } from "../ui/menu.js?v=15";
-import { invPanel } from "./domRefs.js?v=15";
-import { render } from "../render/renderer.js?v=15";
-import { update } from "./update.js?v=15";
-import { cam } from "./canvas.js?v=15";
+import { G } from "./config.js?v=25";
+import { gameState, gameOver, setGameOver } from "./state.js?v=25";
+import { preloadAssets } from "../assets/preload.js?v=25";
+import { initMap } from "../map/mapGenerator.js?v=25";
+import { loadFullMap } from "../map/mapUtils.js?v=25";
+import { player, createPlayer, setPlayer } from "../entities/player.js?v=25";
+import { spawnVehicles } from "../entities/vehicles.js?v=25";
+import { spawnNPCs } from "../entities/npcs.js?v=25";
+import { generateMissions } from "../missions/missionSystem.js?v=25";
+import { updateWantedUI, updateHUD } from "../ui/hud.js?v=25";
+import { updateMissionUI } from "../missions/missionSystem.js?v=25";
+import { initTouchControls } from "../input/touch.js?v=25";
+import { showMainMenu } from "../ui/menu.js?v=25";
+import { invPanel } from "./domRefs.js?v=25";
+import { render } from "../render/renderer.js?v=25";
+import { update } from "./update.js?v=25";
+import { cam } from "./canvas.js?v=25";
 
 export function gameLoop() {
   if (gameState === G.PLAYING && !gameOver && player && player.alive) {

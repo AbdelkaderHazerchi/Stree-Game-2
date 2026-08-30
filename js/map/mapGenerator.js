@@ -1,9 +1,9 @@
 // ======================== MAP GENERATOR ========================
 // Extracted from game.js:50933-50974 + 50976-51015 + 51215-51595 - no logic changed
-import { CFG, T } from "../core/config.js?v=16";
-import { map, buildings, specialBuildings, buildingColor, buildingHeight, buildingShape, buildingRotation, PALETTES, setMap, setBuildings, setSpecialBuildings, setBuildingColor, setBuildingHeight, setBuildingShape, setBuildingRotation, setSpawnPoint, getSpawnPoint, getSpawnPixel } from "./mapState.js?v=15";
-import { MAP_DATA, LS_ZONES } from "./mapData.js?v=15";
-import { getTile } from "./mapUtils.js?v=15";
+import { CFG, T } from "../core/config.js?v=25";
+import { map, buildings, specialBuildings, buildingColor, buildingHeight, buildingShape, buildingRotation, PALETTES, setMap, setBuildings, setSpecialBuildings, setBuildingColor, setBuildingHeight, setBuildingShape, setBuildingRotation, setSpawnPoint, getSpawnPoint, getSpawnPixel } from "./mapState.js?v=25";
+import { MAP_DATA, LS_ZONES } from "./mapData.js?v=25";
+import { getTile } from "./mapUtils.js?v=25";
 
 export function initMap() {
   if (MAP_DATA) {
@@ -18,13 +18,36 @@ export function initMap() {
   if (typeof window !== "undefined") {
     window._mapSpawnPoint = { x: validated.x * CFG.TILE + CFG.TILE / 2, y: validated.y * CFG.TILE + CFG.TILE / 2 };
     window._mapMissionGivers = null;
+    window._mapQuests = null;
   }
 }
 
 export function loadMapFromData(data) {
   CFG.COLS = data.cols || CFG.COLS;
   CFG.ROWS = data.rows || CFG.ROWS;
-  setMap(data.tiles);
+  // Clone tiles to avoid mutating original data
+  const tilesCopy = data.tiles ? data.tiles.map(row => [...row]) : [];
+  // Migration: make sand constant sandy yellow, pavement distinct
+  // Old maps have SIDEWALK (2) for both road sidewalks (pavement) and beach sand.
+  // Detect old maps (no PAVEMENT yet) and convert non-beach SIDEWALK to PAVEMENT
+  const hasPavement = tilesCopy.some(row => row.includes(T.PAVEMENT));
+  if (!hasPavement) {
+    for (let y = 0; y < tilesCopy.length; y++) {
+      for (let x = 0; x < (tilesCopy[y]||[]).length; x++) {
+        if (tilesCopy[y][x] === T.SIDEWALK) {
+          const isBeach = [
+            [x-1,y],[x+1,y],[x,y-1],[x,y+1]
+          ].some(([nx,ny]) => nx>=0 && ny>=0 && nx<CFG.COLS && ny<CFG.ROWS && tilesCopy[ny]?.[nx] === T.WATER);
+          if (!isBeach) {
+            // Road sidewalk / inland pavement - convert to PAVEMENT (gray) to keep sand only at beach
+            // Sand remains SIDEWALK (2) which now renders as constant sandy yellow
+            tilesCopy[y][x] = T.PAVEMENT;
+          }
+        }
+      }
+    }
+  }
+  setMap(tilesCopy);
   if (data.buildingColors) {
     setBuildingColor(data.buildingColors.map((r) =>
       r.map((c) => (c === null ? undefined : c)),
@@ -78,11 +101,36 @@ export function loadMapFromData(data) {
     if (typeof window !== "undefined") window._mapSpawnPoint = { x: spawnPixelX, y: spawnPixelY };
   }
 
-  // Store map-defined mission givers for sequential loading
+  // Store map-defined quests (new two-point system) + legacy fallback
   if (typeof window !== "undefined") {
-    if (Array.isArray(data.missionGivers) && data.missionGivers.length > 0) {
+    // New quests array (two-point, bilingual)
+    if (Array.isArray(data.quests) && data.quests.length > 0) {
+      window._mapQuests = data.quests;
+      // Also expose legacy for backward compat derived from quests start points
+      window._mapMissionGivers = data.quests.map(q=>({ x: (q.start&&q.start.x)||q.x, y: (q.start&&q.start.y)||q.y, type:q.type, icon:q.icon, category:q.category, title:q.title, desc:q.desc, reward:q.reward, start:q.start, end:q.end, id:q.id, order:q.order }));
+    } else if (Array.isArray(data.missionGivers) && data.missionGivers.length > 0) {
+      // Migrate legacy flat missionGivers to quests (main, auto end offset)
+      const legacyQuests = data.missionGivers.filter(m=>m.type!=="spammer").map((m, idx)=>{
+        const sx=Math.floor(m.x), sy=Math.floor(m.y);
+        const type=m.type||"taxi";
+        // if legacy already had start/end (from newer editor but stored as missionGivers), preserve
+        const start = m.start ? {x:Math.floor(m.start.x), y:Math.floor(m.start.y)} : {x:sx,y:sy};
+        const end = m.end ? {x:Math.floor(m.end.x), y:Math.floor(m.end.y)} : {x: Math.min(CFG.COLS-1, sx+4), y: sy};
+        return {
+          id: m.id||`q_main_${idx}_${type}_${sx}_${sy}`,
+          category: m.category||"main",
+          type, icon: m.icon||"⭐",
+          reward: m.reward||300,
+          order: m.order||idx,
+          start, end,
+          title: m.title||{ar:type,en:type},
+          desc: m.desc||{ar:"",en:""}
+        };
+      });
+      window._mapQuests = legacyQuests;
       window._mapMissionGivers = data.missionGivers;
     } else {
+      window._mapQuests = null;
       window._mapMissionGivers = null;
     }
   }
@@ -246,7 +294,7 @@ export function normalizeBuildingsTo2x2() {
  * Searches in expanding squares up to radius 12.
  */
 export function findNearestWalkableSpawn(tx, ty) {
-  const walkable = new Set([T.ROAD, T.SIDEWALK, T.PARK, T.PARKING]);
+  const walkable = new Set([T.ROAD, T.SIDEWALK, T.PAVEMENT, T.PARK, T.PARKING]);
   // Quick check origin
   const originTile = getTile(tx, ty);
   if (walkable.has(originTile)) return { x: tx, y: ty };
@@ -275,6 +323,7 @@ export { getSpawnPoint, getSpawnPixel };
 export function exportMapJSON() {
   const sp = getSpawnPoint();
   const mg = (typeof window !== "undefined" && window._mapMissionGivers) ? window._mapMissionGivers : [];
+  const qs = (typeof window !== "undefined" && window._mapQuests) ? window._mapQuests : [];
   return JSON.stringify({
     cols: CFG.COLS,
     rows: CFG.ROWS,
@@ -286,6 +335,7 @@ export function exportMapJSON() {
     specialBuildings: specialBuildings,
     spawnPoint: sp ? { x: sp.x, y: sp.y } : { x: Math.floor(CFG.COLS / 2), y: Math.floor(CFG.ROWS / 2) },
     missionGivers: mg,
+    quests: qs,
     zones: LS_ZONES,
   });
 }
@@ -403,10 +453,10 @@ export function generateMap() {
               ? T.ROAD
               : mx < roadW
                 ? mx === 0 || mx === roadW - 1
-                  ? T.SIDEWALK
+                  ? T.PAVEMENT
                   : T.ROAD
                 : my === 0 || my === roadW - 1
-                  ? T.SIDEWALK
+                  ? T.PAVEMENT
                   : T.ROAD;
         } else {
           map[y][x] = T.PARK;
@@ -420,9 +470,9 @@ export function generateMap() {
         if (mx < roadW && my < roadW) {
           map[y][x] = T.ROAD;
         } else if (mx < roadW) {
-          map[y][x] = mx === 0 || mx === roadW - 1 ? T.SIDEWALK : T.ROAD;
+          map[y][x] = mx === 0 || mx === roadW - 1 ? T.PAVEMENT : T.ROAD;
         } else {
-          map[y][x] = my === 0 || my === roadW - 1 ? T.SIDEWALK : T.ROAD;
+          map[y][x] = my === 0 || my === roadW - 1 ? T.PAVEMENT : T.ROAD;
         }
         continue;
       }

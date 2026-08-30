@@ -1,16 +1,16 @@
 // NOTE: cross-module globals (police, lootItems, currentMission, closeInventory, updateWantedUI) will be wired in js/main.js - logic unchanged
 // ======================== PLAYER ========================
 // Extracted from game.js:51598, 51609-51647, 53742-53769 - no logic changed
-import { CFG } from "../core/config.js?v=16";
-import { overlay, overlayTitle, overlayMsg, overlayBtn } from "../core/domRefs.js?v=15";
-import { police, clearPolice } from "./police.js?v=15";
-import { lootItems, clearLoot } from "./npcs.js?v=15";
-import { currentMission, setCurrentMission } from "../missions/missionState.js?v=15";
-import { updateWantedUI } from "../ui/hud.js?v=15";
-import { closeInventory } from "../ui/inventory.js?v=15";
-import { getSpawnPoint, getSpawnPixel } from "../map/mapState.js?v=15";
-import { cam } from "../core/canvas.js?v=15";
-import { t } from "../ui/i18n.js?v=16";
+import { CFG } from "../core/config.js?v=25";
+import { overlay, overlayTitle, overlayMsg, overlayBtn } from "../core/domRefs.js?v=25";
+import { police, clearPolice } from "./police.js?v=25";
+import { lootItems, clearLoot } from "./npcs.js?v=25";
+import { currentMission, setCurrentMission } from "../missions/missionState.js?v=25";
+import { updateWantedUI } from "../ui/hud.js?v=25";
+import { closeInventory } from "../ui/inventory.js?v=25";
+import { getSpawnPoint, getSpawnPixel } from "../map/mapState.js?v=25";
+import { cam } from "../core/canvas.js?v=25";
+import { t } from "../ui/i18n.js?v=25";
 
 export let player;
 export function setPlayer(v) { player = v; }

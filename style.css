@@ -205,6 +205,12 @@ canvas {
     gap: 4px;
 }
 
+/* Quest category styling for HUD */
+#missionBox.mission-main { border-color: rgba(255,215,0,0.35); box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 18px rgba(255,215,0,0.12); }
+#missionBox.mission-side { border-color: rgba(168,85,247,0.45); box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1), 0 0 18px rgba(168,85,247,0.14); }
+#missionBox.mission-main #missionTitle { color:#ffd700; text-shadow: 0 0 8px rgba(255,215,0,0.35); }
+#missionBox.mission-side #missionTitle { color:#c084fc; text-shadow: 0 0 8px rgba(168,85,247,0.35); }
+
 /* === الخريطة المصغرة === */
 #minimap {
     position: absolute;
