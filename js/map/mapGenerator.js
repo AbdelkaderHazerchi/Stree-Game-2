@@ -1,9 +1,9 @@
 // ======================== MAP GENERATOR ========================
 // Extracted from game.js:50933-50974 + 50976-51015 + 51215-51595 - no logic changed
-import { CFG, T } from "../core/config.js?v=25";
-import { map, buildings, specialBuildings, buildingColor, buildingHeight, buildingShape, buildingRotation, PALETTES, setMap, setBuildings, setSpecialBuildings, setBuildingColor, setBuildingHeight, setBuildingShape, setBuildingRotation, setSpawnPoint, getSpawnPoint, getSpawnPixel } from "./mapState.js?v=25";
-import { MAP_DATA, LS_ZONES } from "./mapData.js?v=25";
-import { getTile } from "./mapUtils.js?v=25";
+import { CFG, T } from "../core/config.js?v=26";
+import { map, buildings, specialBuildings, buildingColor, buildingHeight, buildingShape, buildingRotation, PALETTES, setMap, setBuildings, setSpecialBuildings, setBuildingColor, setBuildingHeight, setBuildingShape, setBuildingRotation, setSpawnPoint, getSpawnPoint, getSpawnPixel } from "./mapState.js?v=26";
+import { MAP_DATA, LS_ZONES } from "./mapData.js?v=26";
+import { getTile } from "./mapUtils.js?v=26";
 
 export function initMap() {
   if (MAP_DATA) {
@@ -203,7 +203,7 @@ export function generateBuildingColors() {
         const zone = getZone(x, y);
         const palette = zone >= 0 ? PALETTES[LS_ZONES[zone].pal] : PALETTES.suburb;
         const color = palette[Math.floor(Math.random() * palette.length)];
-        const h = 1 + Math.floor(Math.random() * 3);
+        const h = 1 + Math.floor(Math.random() * 5);
         const shape = Math.floor(Math.random() * 3); // 0,1,2  - selectable by number in editor
         const rot = Math.floor(Math.random() * 4); // 0-3 => 0°,90°,180°,270°
         for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
@@ -220,7 +220,7 @@ export function generateBuildingColors() {
         const zone = getZone(x, y);
         const palette = zone >= 0 ? PALETTES[LS_ZONES[zone].pal] : PALETTES.suburb;
         const color = palette[Math.floor(Math.random() * palette.length)];
-        const h = 1 + Math.floor(Math.random() * 3);
+        const h = 1 + Math.floor(Math.random() * 5);
         const shape = Math.floor(Math.random() * 3);
         const rot = Math.floor(Math.random() * 4);
         newColor[y][x] = color;
@@ -748,10 +748,10 @@ export function generateMap() {
           const zone = getZone(x, y);
           const palette = zone >= 0 ? PALETTES[LS_ZONES[zone].pal] : PALETTES.suburb;
           const color = palette[Math.floor(Math.random() * palette.length)];
-          let height = 1 + Math.floor(Math.random() * 3);
-          if (zone === 1) height = 2 + Math.floor(Math.random() * 3);
-          else if (zone === 4) height = 1 + Math.floor(Math.random() * 3);
-          else if (zone === 5 || zone === 6) height = 1 + Math.floor(Math.random() * 2);
+          let height = 1 + Math.floor(Math.random() * 5);
+          if (zone === 1) height = 3 + Math.floor(Math.random() * 3);
+          else if (zone === 4) height = 1 + Math.floor(Math.random() * 4);
+          else if (zone === 5 || zone === 6) height = 1 + Math.floor(Math.random() * 3);
           const shape = Math.floor(Math.random()*3);
           const rot = Math.floor(Math.random()*4);
           for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
@@ -767,10 +767,10 @@ export function generateMap() {
           const zone = getZone(x, y);
           const palette = zone >= 0 ? PALETTES[LS_ZONES[zone].pal] : PALETTES.suburb;
           const color = palette[Math.floor(Math.random() * palette.length)];
-          let height = 1 + Math.floor(Math.random() * 3);
-          if (zone === 1) height = 2 + Math.floor(Math.random() * 3);
-          else if (zone === 4) height = 1 + Math.floor(Math.random() * 3);
-          else if (zone === 5 || zone === 6) height = 1 + Math.floor(Math.random() * 2);
+          let height = 1 + Math.floor(Math.random() * 5);
+          if (zone === 1) height = 3 + Math.floor(Math.random() * 3);
+          else if (zone === 4) height = 1 + Math.floor(Math.random() * 4);
+          else if (zone === 5 || zone === 6) height = 1 + Math.floor(Math.random() * 3);
           const shape = Math.floor(Math.random()*3);
           const rot = Math.floor(Math.random()*4);
           buildingColor[y][x] = color;
@@ -813,19 +813,35 @@ export function generateMap() {
   }
 }
 
-export function placeSpecial(bx, by, color, name, size) {
+export function placeSpecial(bx, by, color, name, size, design=null) {
+  // design: "old" (classic) or "new" (striped as in images) - only for car, binco, casino, general store
+  let effectiveDesign = design;
+  if(effectiveDesign===null){
+    const n = (name||"").toLowerCase();
+    const eligible = n.includes("car") || n.includes("سيارات") || n.includes("showroom") || n.includes("binco") || n.includes("clothing") || n.includes("casino") || n.includes("كازينو") || n.includes("caligula") || n.includes("general");
+    if(eligible){
+      // randomly pick old/new for variety, but keep old as default for backward compat 50/50
+      effectiveDesign = Math.random() < 0.5 ? "new" : "old";
+    } else {
+      effectiveDesign = "old";
+    }
+  }
   for (let dy = 0; dy < size; dy++) {
     for (let dx = 0; dx < size; dx++) {
       const px = bx + dx;
       const py = by + dy;
       if (px < CFG.COLS - 2 && py < CFG.ROWS - 2) {
         map[py][px] = T.SPECIAL;
-        specialBuildings.push({
+        const entry = {
           x: px,
           y: py,
           color,
           name,
-        });
+        };
+        if(effectiveDesign && effectiveDesign !== "old") entry.design = effectiveDesign;
+        // also store as shopDesign for editor compat
+        if(effectiveDesign && effectiveDesign !== "old") entry.shopDesign = effectiveDesign;
+        specialBuildings.push(entry);
       }
     }
   }

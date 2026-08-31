@@ -1,23 +1,23 @@
 // ======================== GAME LOOP ========================
 // Extracted from game.js:55391-55438 - no logic changed
-import { G } from "./config.js?v=25";
-import { gameState, gameOver, setGameOver } from "./state.js?v=25";
-import { preloadAssets } from "../assets/preload.js?v=25";
-import { initMap } from "../map/mapGenerator.js?v=25";
-import { loadFullMap } from "../map/mapUtils.js?v=25";
-import { player, createPlayer, setPlayer } from "../entities/player.js?v=25";
-import { spawnVehicles } from "../entities/vehicles.js?v=25";
-import { spawnNPCs } from "../entities/npcs.js?v=25";
-import { generateMissions } from "../missions/missionSystem.js?v=25";
-import { updateWantedUI, updateHUD } from "../ui/hud.js?v=25";
-import { updateMissionUI } from "../missions/missionSystem.js?v=25";
-import { initTouchControls } from "../input/touch.js?v=25";
-import { showMainMenu } from "../ui/menu.js?v=25";
-import { invPanel } from "./domRefs.js?v=25";
-import { render } from "../render/renderer.js?v=25";
-import { update } from "./update.js?v=25";
-import { cam } from "./canvas.js?v=25";
-import { initSounds, updateCityMusic, updateMenuMusic, pauseCityMusic, updateDrivingSound } from "../audio/sounds.js?v=25";
+import { G } from "./config.js?v=26";
+import { gameState, gameOver, setGameOver } from "./state.js?v=26";
+import { preloadAssets } from "../assets/preload.js?v=26";
+import { initMap } from "../map/mapGenerator.js?v=26";
+import { loadFullMap } from "../map/mapUtils.js?v=26";
+import { player, createPlayer, setPlayer } from "../entities/player.js?v=26";
+import { spawnVehicles } from "../entities/vehicles.js?v=26";
+import { spawnNPCs } from "../entities/npcs.js?v=26";
+import { generateMissions } from "../missions/missionSystem.js?v=26";
+import { updateWantedUI, updateHUD } from "../ui/hud.js?v=26";
+import { updateMissionUI } from "../missions/missionSystem.js?v=26";
+import { initTouchControls } from "../input/touch.js?v=26";
+import { showMainMenu } from "../ui/menu.js?v=26";
+import { invPanel } from "./domRefs.js?v=26";
+import { render } from "../render/renderer.js?v=26";
+import { update } from "./update.js?v=26";
+import { cam } from "./canvas.js?v=26";
+import { initSounds, updateCityMusic, updateMenuMusic, pauseCityMusic, updateDrivingSound } from "../audio/sounds.js?v=26";
 
 export function gameLoop() {
   // City music: loops only during gameplay (not menu/pause)

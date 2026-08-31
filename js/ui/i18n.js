@@ -1,6 +1,6 @@
 // ======================== I18N ========================
 // Provides ar/en translations for Street Game 2
-import { SETTINGS } from "../input/settings.js?v=25";
+import { SETTINGS } from "../input/settings.js?v=26";
 
 export const translations = {
   ar: {

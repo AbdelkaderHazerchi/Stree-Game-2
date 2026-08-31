@@ -1,24 +1,24 @@
 // ======================== RENDER ========================
 // Extracted from game.js:53803-54453 - no logic changed
-import { CFG, T, G } from "../core/config.js?v=25";
-import { ctx, W, H, zoom, cam, miniCtx } from "../core/canvas.js?v=25";
-import { getTile } from "../map/mapUtils.js?v=25";
-import { TILE_ASSETS, ROAD_CROSSWALK_IMG, SAND_IMG } from "../assets/tileAssets.js?v=25";
-import { VEHICLE_ASSETS, EXPLOSION_ASSET } from "../assets/vehicleAssets.js?v=25";
-import { LS_ZONES } from "../map/mapData.js?v=25";
-import { VEHICLE_TYPES, vehicles, explosions, EXPLOSION_SIZE, EXPLOSION_DURATION } from "../entities/vehicles.js?v=25";
-import { player } from "../entities/player.js?v=25";
-import { npcs, lootItems } from "../entities/npcs.js?v=25";
-import { police } from "../entities/police.js?v=25";
-import { bullets } from "../entities/bullets.js?v=25";
-import { buildingColor, buildingHeight, buildingShape, buildingRotation, specialBuildings, buildings } from "../map/mapState.js?v=25";
-import { missionGivers, currentMission, usingSequentialMissions, quests } from "../missions/missionState.js?v=25";
-import { getActiveMissionGiver, getVisibleStartGivers, getActiveEndGiver } from "../missions/missionSystem.js?v=25";
-import { SETTINGS } from "../input/settings.js?v=25";
-import { getNearShopName } from "../ui/shop.js?v=25";
-import { renderMinimap } from "../ui/minimap.js?v=25";
-import { isAiming, worldMouseX, worldMouseY } from "../input/inputState.js?v=25";
-import { gameState } from "../core/state.js?v=25";
+import { CFG, T, G } from "../core/config.js?v=26";
+import { ctx, W, H, zoom, cam, miniCtx } from "../core/canvas.js?v=26";
+import { getTile } from "../map/mapUtils.js?v=26";
+import { TILE_ASSETS, ROAD_CROSSWALK_IMG, SAND_IMG, SHOP_BUILDING_1_IMG } from "../assets/tileAssets.js?v=26";
+import { VEHICLE_ASSETS, EXPLOSION_ASSET } from "../assets/vehicleAssets.js?v=26";
+import { LS_ZONES } from "../map/mapData.js?v=26";
+import { VEHICLE_TYPES, vehicles, explosions, EXPLOSION_SIZE, EXPLOSION_DURATION } from "../entities/vehicles.js?v=26";
+import { player } from "../entities/player.js?v=26";
+import { npcs, lootItems } from "../entities/npcs.js?v=26";
+import { police } from "../entities/police.js?v=26";
+import { bullets } from "../entities/bullets.js?v=26";
+import { buildingColor, buildingHeight, buildingShape, buildingRotation, specialBuildings, buildings } from "../map/mapState.js?v=26";
+import { missionGivers, currentMission, usingSequentialMissions, quests } from "../missions/missionState.js?v=26";
+import { getActiveMissionGiver, getVisibleStartGivers, getActiveEndGiver } from "../missions/missionSystem.js?v=26";
+import { SETTINGS } from "../input/settings.js?v=26";
+import { getNearShopName } from "../ui/shop.js?v=26";
+import { renderMinimap } from "../ui/minimap.js?v=26";
+import { isAiming, worldMouseX, worldMouseY } from "../input/inputState.js?v=26";
+import { gameState } from "../core/state.js?v=26";
 
 console.log("RENDERER v6 2x2 fix adjacent disappearance", Date.now());
  // ======================== LOW BUILDING (<=3 floors) HELPERS ========================
@@ -37,6 +37,13 @@ function lightenHex(hex, amt) {
   const ng = Math.round(g + (255 - g) * amt);
   const nb = Math.round(b + (255 - b) * amt);
   return rgbToHex(Math.min(255, nr), Math.min(255, ng), Math.min(255, nb));
+}
+function darkenHex(hex, amt) {
+  const { r, g, b } = hexToRgb(hex);
+  const nr = Math.round(r * (1 - amt));
+  const ng = Math.round(g * (1 - amt));
+  const nb = Math.round(b * (1 - amt));
+  return rgbToHex(nr, ng, nb);
 }
 function hashTile(x, y) {
   let h = (x * 374761393) ^ (y * 668265263);
@@ -131,6 +138,402 @@ function drawLowBuilding(px, py, col, tx, ty, h, span = 1, shapeOverride=null, r
     ctx.fillStyle = doorDark;
     ctx.fillRect(tx2, ty2, smallW, smallH);
   }
+  if(needsRestore) ctx.restore();
+}
+// ======================== 4-STORY & 5-STORY BUILDINGS (New Shapes) ========================
+// Replaces old generic tall building block (removed building_detail.svg usage)
+// Designs match provided reference images: 4-story = split windows, 5-story = full windows
+function drawFourStoryBuilding(px, py, col, tx, ty, span, shapeOverride, rotOverride){
+  const S = CFG.TILE * span;
+  const rot = ((rotOverride||0)%4+4)%4;
+  let needsRestore=false;
+  let ox=px, oy=py;
+  if(rot!==0){
+    const cx=px+S/2, cy=py+S/2;
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(rot*Math.PI/2);
+    ctx.translate(-S/2,-S/2);
+    ox=0; oy=0;
+    needsRestore=true;
+  }
+  const borderCol = lightenHex(col, 0.20);
+  const wallCol = col;
+  const roofCol = "#1E2026";
+  const winCol = "#1A2F4A";
+  const acWhite = "#E6EAF0";
+  const acGray = "#8D8F93";
+  const acBlack = "#070A0F";
+  const outerBorder = Math.max(3, Math.round(S*0.04));
+  ctx.fillStyle = borderCol;
+  ctx.fillRect(ox, oy, S, S);
+  const innerX = ox + outerBorder;
+  const innerY = oy + outerBorder;
+  const innerW = S - outerBorder*2;
+  const innerH = S - outerBorder*2;
+  const roofH = Math.round(innerH * 0.48);
+  const wallH = innerH - roofH;
+  const wallY = innerY + roofH;
+  ctx.fillStyle = roofCol;
+  ctx.fillRect(innerX, innerY, innerW, roofH);
+  ctx.fillStyle = wallCol;
+  ctx.fillRect(innerX, wallY, innerW, wallH);
+  const sepH = Math.max(2, Math.round(S*0.012));
+  ctx.fillStyle = borderCol;
+  ctx.fillRect(innerX, wallY - Math.floor(sepH/2), innerW, sepH);
+  const floorCount = 4;
+  const topMargin = Math.round(wallH*0.06);
+  const doorH = Math.round(wallH*0.13);
+  const doorW = Math.round(innerW*0.14);
+  const doorMargin = Math.round(wallH*0.04);
+  const usableH = wallH - topMargin - doorH - doorMargin - Math.round(wallH*0.03);
+  const winH = Math.round(usableH * 0.18);
+  const winGapV = Math.round(usableH * 0.06);
+  const totalWinH = floorCount*winH + (floorCount-1)*winGapV;
+  const startY = wallY + topMargin + Math.max(0, Math.floor((usableH - totalWinH)/2));
+  const sideMargin = Math.round(innerW*0.07);
+  const midGap = Math.round(innerW*0.06);
+  const winW = Math.round((innerW - sideMargin*2 - midGap)/2);
+  const leftX = innerX + sideMargin;
+  const rightX = leftX + winW + midGap;
+  ctx.fillStyle = winCol;
+  for(let i=0;i<floorCount;i++){
+    const y = startY + i*(winH+winGapV);
+    ctx.fillRect(leftX, y, winW, winH);
+    ctx.fillRect(rightX, y, winW, winH);
+    ctx.fillStyle = "rgba(255,255,255,0.04)";
+    ctx.fillRect(leftX, y, winW, 1);
+    ctx.fillRect(rightX, y, winW, 1);
+    ctx.fillStyle = winCol;
+  }
+  const doorX = innerX + (innerW - doorW)/2;
+  const doorY = innerY + innerH - doorH - Math.round(wallH*0.03);
+  ctx.fillStyle = "#0F1115";
+  ctx.fillRect(doorX, doorY, doorW, doorH);
+  const acW = Math.round(innerW * 0.11);
+  const acH = Math.round(roofH * 0.20);
+  const acGapX = Math.round(innerW * 0.016);
+  const acGapY = Math.round(roofH * 0.08);
+  let variant;
+  if(shapeOverride!==null && shapeOverride!==undefined) variant = ((shapeOverride%3)+3)%3;
+  else variant = ((tx + ty) % 2);
+  if(variant===0){
+    const totalAcW = 4*acW + 3*acGapX;
+    const totalAcH = 2*acH + acGapY;
+    const acStartX = innerX + (innerW - totalAcW)/2;
+    const acStartY = innerY + (roofH - totalAcH)/2;
+    for(let r=0;r<2;r++){
+      for(let c=0;c<4;c++){
+        const ax = acStartX + c*(acW+acGapX);
+        const ay = acStartY + r*(acH+acGapY);
+        ctx.fillStyle = acWhite; ctx.fillRect(ax, ay, acW, acH);
+        ctx.fillStyle = acGray; ctx.fillRect(ax, ay + acH*0.70, acW, acH*0.30);
+        ctx.fillStyle = acBlack; ctx.beginPath(); ctx.ellipse(ax+acW/2, ay+acH*0.36, acW*0.36, acH*0.28, 0,0,Math.PI*2); ctx.fill();
+      }
+    }
+  } else if(variant===1){
+    const groupW = 2*acW + acGapX;
+    const groupH = 2*acH + acGapY;
+    const groupGap = Math.round(innerW*0.18);
+    const totalW2 = groupW*2 + groupGap;
+    const acStartX2 = innerX + (innerW - totalW2)/2;
+    const acStartY2 = innerY + (roofH - groupH)/2;
+    for(let g=0;g<2;g++){
+      const gx = acStartX2 + g*(groupW+groupGap);
+      for(let r=0;r<2;r++){
+        for(let c=0;c<2;c++){
+          const ax = gx + c*(acW+acGapX);
+          const ay = acStartY2 + r*(acH+acGapY);
+          ctx.fillStyle = acWhite; ctx.fillRect(ax, ay, acW, acH);
+          ctx.fillStyle = acGray; ctx.fillRect(ax, ay + acH*0.70, acW, acH*0.30);
+          ctx.fillStyle = acBlack; ctx.beginPath(); ctx.ellipse(ax+acW/2, ay+acH*0.36, acW*0.36, acH*0.28, 0,0,Math.PI*2); ctx.fill();
+        }
+      }
+    }
+  } else {
+    // variant 2 : right-clustered 2x4 (like 5-story primary) but with 4-story split windows
+    const totalAcW = 4*acW + 3*acGapX;
+    const totalAcH = 2*acH + acGapY;
+    const acStartX = innerX + innerW - totalAcW - Math.round(innerW*0.07);
+    const acStartY = innerY + (roofH - totalAcH)/2;
+    for(let r=0;r<2;r++){
+      for(let c=0;c<4;c++){
+        const ax = acStartX + c*(acW+acGapX);
+        const ay = acStartY + r*(acH+acGapY);
+        ctx.fillStyle = acWhite; ctx.fillRect(ax, ay, acW, acH);
+        ctx.fillStyle = acGray; ctx.fillRect(ax, ay + acH*0.70, acW, acH*0.30);
+        ctx.fillStyle = acBlack; ctx.beginPath(); ctx.ellipse(ax+acW/2, ay+acH*0.36, acW*0.36, acH*0.28, 0,0,Math.PI*2); ctx.fill();
+      }
+    }
+  }
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.fillRect(ox + S - Math.max(2, Math.round(S*0.015)), oy, Math.max(2, Math.round(S*0.015)), S);
+  ctx.fillRect(ox, oy + S - Math.max(2, Math.round(S*0.015)), S, Math.max(2, Math.round(S*0.015)));
+  if(needsRestore) ctx.restore();
+}
+function drawFiveStoryBuilding(px, py, col, tx, ty, span, shapeOverride, rotOverride){
+  const S = CFG.TILE * span;
+  const rot = ((rotOverride||0)%4+4)%4;
+  let needsRestore=false;
+  let ox=px, oy=py;
+  if(rot!==0){
+    const cx=px+S/2, cy=py+S/2;
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(rot*Math.PI/2);
+    ctx.translate(-S/2,-S/2);
+    ox=0; oy=0;
+    needsRestore=true;
+  }
+  const borderCol = lightenHex(col, 0.18);
+  const wallCol = col;
+  const roofCol = "#23262D";
+  const winCol = "#5B8FD4";
+  const acWhite = "#E9EEF3";
+  const acGray = "#8A8D93";
+  const acBlack = "#05070A";
+  const outerBorder = Math.max(3, Math.round(S*0.04));
+  ctx.fillStyle = borderCol;
+  ctx.fillRect(ox, oy, S, S);
+  const innerX = ox + outerBorder;
+  const innerY = oy + outerBorder;
+  const innerW = S - outerBorder*2;
+  const innerH = S - outerBorder*2;
+  const roofH = Math.round(innerH * 0.46);
+  const wallH = innerH - roofH;
+  const wallY = innerY + roofH;
+  ctx.fillStyle = roofCol;
+  ctx.fillRect(innerX, innerY, innerW, roofH);
+  ctx.fillStyle = wallCol;
+  ctx.fillRect(innerX, wallY, innerW, wallH);
+  const sepH = Math.max(2, Math.round(S*0.012));
+  ctx.fillStyle = borderCol;
+  ctx.fillRect(innerX, wallY - Math.floor(sepH/2), innerW, sepH);
+  const floorCount = 5;
+  const topMargin = Math.round(wallH*0.05);
+  const doorH = Math.round(wallH*0.11);
+  const doorW = Math.round(innerW*0.13);
+  const doorMargin = Math.round(wallH*0.04);
+  const usableH = wallH - topMargin - doorH - doorMargin - Math.round(wallH*0.02);
+  const winH = Math.round(usableH * 0.14);
+  const winGapV = Math.round(usableH * 0.045);
+  const totalWinH = floorCount*winH + (floorCount-1)*winGapV;
+  const startY = wallY + topMargin + Math.max(0, Math.floor((usableH - totalWinH)/2));
+  const sideMargin = Math.round(innerW*0.06);
+  const winW = innerW - sideMargin*2;
+  const winX = innerX + sideMargin;
+  ctx.fillStyle = winCol;
+  for(let i=0;i<floorCount;i++){
+    const y = startY + i*(winH+winGapV);
+    ctx.fillRect(winX, y, winW, winH);
+    ctx.fillStyle = "rgba(255,255,255,0.05)";
+    ctx.fillRect(winX, y, winW, 1);
+    ctx.fillStyle = winCol;
+  }
+  const doorX = innerX + (innerW - doorW)/2;
+  const doorY = innerY + innerH - doorH - Math.round(wallH*0.03);
+  ctx.fillStyle = "#0F1115";
+  ctx.fillRect(doorX, doorY, doorW, doorH);
+  const acW = Math.round(innerW * 0.105);
+  const acH = Math.round(roofH * 0.20);
+  const acGapX = Math.round(innerW * 0.015);
+  const acGapY = Math.round(roofH * 0.08);
+  let variant;
+  if(shapeOverride!==null && shapeOverride!==undefined) variant = ((shapeOverride%3)+3)%3;
+  else variant = ((tx + ty) % 2);
+  if(variant===0){
+    const totalAcW = 4*acW + 3*acGapX;
+    const totalAcH = 2*acH + acGapY;
+    const acStartX = innerX + innerW - totalAcW - Math.round(innerW*0.07);
+    const acStartY = innerY + (roofH - totalAcH)/2;
+    for(let r=0;r<2;r++){
+      for(let c=0;c<4;c++){
+        const ax = acStartX + c*(acW+acGapX);
+        const ay = acStartY + r*(acH+acGapY);
+        ctx.fillStyle = acWhite; ctx.fillRect(ax, ay, acW, acH);
+        ctx.fillStyle = acGray; ctx.fillRect(ax, ay + acH*0.70, acW, acH*0.30);
+        ctx.fillStyle = acBlack; ctx.beginPath(); ctx.ellipse(ax+acW/2, ay+acH*0.36, acW*0.34, acH*0.27, 0,0,Math.PI*2); ctx.fill();
+      }
+    }
+  } else if(variant===1){
+    const totalAcW = 4*acW + 3*acGapX;
+    const totalAcH = 2*acH + acGapY;
+    const acStartX = innerX + (innerW - totalAcW)/2;
+    const acStartY = innerY + (roofH - totalAcH)/2;
+    for(let r=0;r<2;r++){
+      for(let c=0;c<4;c++){
+        const ax = acStartX + c*(acW+acGapX);
+        const ay = acStartY + r*(acH+acGapY);
+        ctx.fillStyle = acWhite; ctx.fillRect(ax, ay, acW, acH);
+        ctx.fillStyle = acGray; ctx.fillRect(ax, ay + acH*0.70, acW, acH*0.30);
+        ctx.fillStyle = acBlack; ctx.beginPath(); ctx.ellipse(ax+acW/2, ay+acH*0.36, acW*0.34, acH*0.27, 0,0,Math.PI*2); ctx.fill();
+      }
+    }
+  } else {
+    // variant 2 : split left/right 2x2 groups
+    const groupW = 2*acW + acGapX;
+    const groupH = 2*acH + acGapY;
+    const groupGap = Math.round(innerW*0.18);
+    const totalW2 = groupW*2 + groupGap;
+    const acStartX2 = innerX + (innerW - totalW2)/2;
+    const acStartY2 = innerY + (roofH - groupH)/2;
+    for(let g=0;g<2;g++){
+      const gx = acStartX2 + g*(groupW+groupGap);
+      for(let r=0;r<2;r++){
+        for(let c=0;c<2;c++){
+          const ax = gx + c*(acW+acGapX);
+          const ay = acStartY2 + r*(acH+acGapY);
+          ctx.fillStyle = acWhite; ctx.fillRect(ax, ay, acW, acH);
+          ctx.fillStyle = acGray; ctx.fillRect(ax, ay + acH*0.70, acW, acH*0.30);
+          ctx.fillStyle = acBlack; ctx.beginPath(); ctx.ellipse(ax+acW/2, ay+acH*0.36, acW*0.34, acH*0.27, 0,0,Math.PI*2); ctx.fill();
+        }
+      }
+    }
+  }
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.fillRect(ox + S - Math.max(2, Math.round(S*0.015)), oy, Math.max(2, Math.round(S*0.015)), S);
+  ctx.fillRect(ox, oy + S - Math.max(2, Math.round(S*0.015)), S, Math.max(2, Math.round(S*0.015)));
+  if(needsRestore) ctx.restore();
+}
+function drawSingleStoryBuilding(px, py, col, tx, ty, span, shapeOverride, rotOverride){
+  const S = CFG.TILE * span;
+  const rot = ((rotOverride||0)%4+4)%4;
+  let needsRestore=false;
+  let ox=px, oy=py;
+  if(rot!==0){
+    const cx=px+S/2, cy=py+S/2;
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(rot*Math.PI/2);
+    ctx.translate(-S/2,-S/2);
+    ox=0; oy=0;
+    needsRestore=true;
+  }
+  const borderCol = lightenHex(col, 0.18);
+  const roofCol = col;
+  const wallCol = darkenHex(col, 0.06);
+  const outerBorder = Math.max(3, Math.round(S*0.04));
+  ctx.fillStyle = borderCol;
+  ctx.fillRect(ox, oy, S, S);
+  const innerX = ox + outerBorder;
+  const innerY = oy + outerBorder;
+  const innerW = S - outerBorder*2;
+  const innerH = S - outerBorder*2;
+  const roofH = Math.round(innerH * 0.80);
+  const wallH = innerH - roofH;
+  const wallY = innerY + roofH;
+  ctx.fillStyle = roofCol;
+  ctx.fillRect(innerX, innerY, innerW, roofH);
+  ctx.fillStyle = wallCol;
+  ctx.fillRect(innerX, wallY, innerW, wallH);
+  const sepH = Math.max(2, Math.round(S*0.012));
+  ctx.fillStyle = borderCol;
+  ctx.fillRect(innerX, wallY - Math.floor(sepH/2), innerW, sepH);
+  // bottom windows and door - shared base but color variant per shape
+  let variant;
+  if(shapeOverride!==null && shapeOverride!==undefined) variant = ((shapeOverride%3)+3)%3;
+  else {
+    const seed = (hashTile(tx, ty) ^ 0x9e3779b9) >>> 0;
+    variant = seed % 3;
+  }
+  // side windows and door configuration per variant
+  // variant 0 : central AC + dual vents, brown sides + black door (image 1)
+  // variant 1 : brown rectangle + vertical double AC, brown sides + black door (image 2)
+  // variant 2 : tall gray rectangle + single AC, black sides + brown door (image 3)
+  const sideWinW = Math.round(innerW * 0.22);
+  const sideWinH = Math.round(wallH * 0.55);
+  const sideY = wallY + Math.round(wallH * 0.20);
+  const leftX = innerX + Math.round(innerW * 0.12);
+  const rightX = innerX + innerW - sideWinW - Math.round(innerW * 0.12);
+  const doorW = Math.round(innerW * 0.13);
+  const doorH = Math.round(wallH * 0.75);
+  const doorX = innerX + (innerW - doorW)/2;
+  const doorY = innerY + innerH - doorH - Math.max(1, Math.round(S*0.01));
+  let sideCol, doorCol;
+  if(variant===2){
+    sideCol = "#1A1E22";
+    doorCol = "#3D2814";
+  } else {
+    sideCol = "#3D2814";
+    doorCol = "#0F1115";
+  }
+  ctx.fillStyle = sideCol;
+  ctx.fillRect(leftX, sideY, sideWinW, sideWinH);
+  ctx.fillRect(rightX, sideY, sideWinW, sideWinH);
+  ctx.fillStyle = doorCol;
+  ctx.fillRect(doorX, doorY, doorW, doorH);
+  // roof structures per variant
+  const acWhite = "#E6EAF0";
+  const acGray = "#8D8F93";
+  const acBlack = "#070A0F";
+  if(variant===0){
+    // single central AC (left-center) + dual small vents at top-right
+    const acW = Math.round(innerW * 0.13);
+    const acH = Math.round(innerW * 0.13);
+    const acX = innerX + Math.round(innerW * 0.30);
+    const acY = innerY + Math.round(roofH * 0.45);
+    ctx.fillStyle = acWhite;
+    ctx.fillRect(acX, acY, acW, acH);
+    ctx.fillStyle = acGray;
+    ctx.fillRect(acX, acY + acH*0.78, acW, acH*0.22);
+    ctx.fillStyle = acBlack;
+    ctx.beginPath();
+    ctx.ellipse(acX+acW/2, acY+acH*0.40, acW*0.38, acH*0.32, 0,0,Math.PI*2);
+    ctx.fill();
+    // dual vents - two small black ovals at top-right corner
+    const ventW = Math.round(innerW * 0.07);
+    const ventH = Math.round(innerW * 0.055);
+    const ventY = innerY + Math.round(roofH * 0.08);
+    const ventX1 = innerX + innerW - ventW*2 - Math.round(innerW*0.04) - Math.round(innerW*0.02);
+    const ventX2 = ventX1 + ventW + Math.round(innerW*0.01);
+    ctx.fillStyle = acBlack;
+    ctx.beginPath(); ctx.ellipse(ventX1+ventW/2, ventY+ventH/2, ventW/2, ventH/2, 0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(ventX2+ventW/2, ventY+ventH/2, ventW/2, ventH/2, 0,0,Math.PI*2); ctx.fill();
+  } else if(variant===1){
+    // large brown rectangle at top-left + vertical double AC on right
+    const brW = Math.round(innerW * 0.52);
+    const brH = Math.round(roofH * 0.32);
+    const brX = innerX + Math.round(innerW * 0.06);
+    const brY = innerY + Math.round(roofH * 0.08);
+    ctx.fillStyle = "#8B5A2B";
+    ctx.fillRect(brX, brY, brW, brH);
+    ctx.fillStyle = "#5C3A16";
+    ctx.fillRect(brX, brY + brH*0.78, brW, brH*0.22);
+    // vertical double AC on right side
+    const acW = Math.round(innerW * 0.11);
+    const acH = Math.round(innerW * 0.11);
+    const acGap = Math.round(innerW * 0.015);
+    const acX = innerX + innerW - acW - Math.round(innerW * 0.08);
+    const acY1 = innerY + Math.round(roofH * 0.35);
+    const acY2 = acY1 + acH + acGap;
+    for(const ay of [acY1, acY2]){
+      ctx.fillStyle = acWhite; ctx.fillRect(acX, ay, acW, acH);
+      ctx.fillStyle = acGray; ctx.fillRect(acX, ay + acH*0.76, acW, acH*0.24);
+      ctx.fillStyle = acBlack; ctx.beginPath(); ctx.ellipse(acX+acW/2, ay+acH*0.40, acW*0.34, acH*0.30, 0,0,Math.PI*2); ctx.fill();
+    }
+  } else {
+    // variant 2 : tall light gray rectangle on left + single AC on right
+    const grayW = Math.round(innerW * 0.20);
+    const grayH = Math.round(roofH * 0.52);
+    const grayX = innerX + Math.round(innerW * 0.14);
+    const grayY = innerY + Math.round(roofH * 0.30);
+    ctx.fillStyle = "#9AA0A6";
+    ctx.fillRect(grayX, grayY, grayW, grayH);
+    ctx.fillStyle = "#5A5E62";
+    ctx.fillRect(grayX, grayY + grayH*0.78, grayW, grayH*0.22);
+    // single AC on right middle
+    const acW = Math.round(innerW * 0.12);
+    const acH = Math.round(innerW * 0.12);
+    const acX = innerX + innerW - acW - Math.round(innerW * 0.14);
+    const acY = innerY + Math.round(roofH * 0.45);
+    ctx.fillStyle = acWhite; ctx.fillRect(acX, acY, acW, acH);
+    ctx.fillStyle = acGray; ctx.fillRect(acX, acY + acH*0.76, acW, acH*0.24);
+    ctx.fillStyle = acBlack; ctx.beginPath(); ctx.ellipse(acX+acW/2, acY+acH*0.40, acW*0.36, acH*0.30, 0,0,Math.PI*2); ctx.fill();
+  }
+  // subtle shadow at right/bottom edge
+  ctx.fillStyle = "rgba(0,0,0,0.14)";
+  ctx.fillRect(ox + S - Math.max(2, Math.round(S*0.015)), oy, Math.max(2, Math.round(S*0.015)), S);
+  ctx.fillRect(ox, oy + S - Math.max(2, Math.round(S*0.015)), S, Math.max(2, Math.round(S*0.015)));
   if(needsRestore) ctx.restore();
 }
 function isBuildingOrigin(x, y, col, h) {
@@ -239,6 +642,63 @@ function drawShop(px, py, S, shopName, rotOverride=0, skipAwning=false){
     }
     ctx.fillStyle = "rgba(0,0,0,0.18)";
     ctx.fillRect(awningX, awningY, awningW, Math.max(1, Math.round(awningH*0.12)));
+  }
+  if(needsRestore) ctx.restore();
+}
+function isNewShopDesign(sb){
+  if(!sb || (sb.design !== "new" && sb.shopDesign !== "new")) return false;
+  const n = (sb.name||"").toLowerCase();
+  // eligible: car showroom, binco/clothing, casino, general store
+  if(n.includes("car") || n.includes("سيارات") || n.includes("showroom")) return true;
+  if(n.includes("binco") || n.includes("clothing") || n.includes("ملابس")) return true;
+  if(n.includes("casino") || n.includes("كازينو") || n.includes("caligula")) return true;
+  if(n.includes("general")) return true;
+  return false;
+}
+function drawShopNew(px, py, S, shopName, rotOverride=0, skipAwning=false){
+  const rot = ((rotOverride||0)%4+4)%4;
+  let drawPx = px, drawPy = py;
+  let needsRestore = false;
+  if(rot!==0){
+    const cx = px+S/2, cy = py+S/2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot*Math.PI/2);
+    ctx.translate(-S/2, -S/2);
+    drawPx = 0; drawPy = 0;
+    needsRestore = true;
+  }
+  const img = SHOP_BUILDING_1_IMG.img;
+  // SVG viewBox 0 0 300 300 already contains full shop (building + ACs + striped awning + supports)
+  // Draw at S×S so it perfectly replaces the previous procedural building+awning
+  if(img && img.complete && img.naturalWidth){
+    if(!skipAwning){
+      ctx.drawImage(img, drawPx, drawPy, S, S);
+    } else {
+      // Neighbor in awning direction — hide awning/bottom ~22% to avoid overlap
+      // Awning starts at ~233/300 ≈78% from top, so clip to top 78%
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(drawPx, drawPy, S, Math.round(S*0.78));
+      ctx.clip();
+      ctx.drawImage(img, drawPx, drawPy, S, S);
+      ctx.restore();
+    }
+  } else {
+    // Fallback while image is loading — dark building placeholder
+    const bw = Math.max(3, Math.round(S*0.04));
+    ctx.fillStyle = "#c3c3c3";
+    ctx.fillRect(drawPx, drawPy, S, S);
+    ctx.fillStyle = "#353639";
+    ctx.fillRect(drawPx+2, drawPy+2, S-4, S-4);
+    ctx.fillStyle = "#c3c3c3";
+    ctx.fillRect(drawPx+bw, drawPy+bw, S-bw*2, S-bw*2);
+    ctx.fillStyle = "#353639";
+    ctx.fillRect(drawPx+bw+2, drawPy+bw+2, S-bw*4, S-bw*4);
+    ctx.fillStyle = "#fff";
+    ctx.font = `bold ${Math.max(8, Math.round(S*0.08))}px Arial`;
+    ctx.textAlign = "center";
+    ctx.fillText("SHOP", drawPx+S/2, drawPy+S/2);
   }
   if(needsRestore) ctx.restore();
 }
@@ -378,37 +838,14 @@ export function render() {
     if (bx + S < cam.x - viewW / 2 - 100 || bx > cam.x + viewW / 2 + 100 || by + S < cam.y - viewH / 2 - 100 || by > cam.y + viewH / 2 + 100) continue;
     const shape = (b.shape !== undefined ? b.shape : (b.shapeOverride !== undefined ? b.shapeOverride : ((buildingShape[b.y] && buildingShape[b.y][b.x] != null) ? buildingShape[b.y][b.x] : null)));
     const rot = (b.rotation !== undefined ? b.rotation : (b.rot !== undefined ? b.rot : ((buildingRotation[b.y] && buildingRotation[b.y][b.x] != null) ? buildingRotation[b.y][b.x] : 0)));
-    if (h <= 3) {
+    if (h === 1) {
+      drawSingleStoryBuilding(bx, by, col, b.x, b.y, span, shape, rot);
+    } else if (h <= 3) {
       drawLowBuilding(bx, by, col, b.x, b.y, h, span, shape, rot);
+    } else if (h === 4) {
+      drawFourStoryBuilding(bx, by, col, b.x, b.y, span, shape, rot);
     } else {
-      const r = ((rot%4)+4)%4;
-      if(r!==0){
-        const cx=bx+S/2, cy=by+S/2;
-        ctx.save(); ctx.translate(cx,cy); ctx.rotate(r*Math.PI/2); ctx.translate(-S/2,-S/2);
-        ctx.fillStyle = col; ctx.fillRect(0, 0, S, S);
-        const sameRight = b.x + span < CFG.COLS && buildingColor[b.y]?.[b.x + span] === col;
-        const sameBottom = b.y + span < CFG.ROWS && buildingColor[b.y + span]?.[b.x] === col;
-        ctx.fillStyle = "rgba(0,0,0,0.2)";
-        if (!sameRight) ctx.fillRect(S - 4, 0, 3, S);
-        if (!sameBottom) ctx.fillRect(0, S - 4, S, 3);
-        const ba = TILE_ASSETS[T.BUILDING];
-        if (ba.img && ba.img.complete) {
-          for (let dy = 0; dy < span; dy++) for (let dx = 0; dx < span; dx++) ctx.drawImage(ba.img, dx * CFG.TILE, dy * CFG.TILE, CFG.TILE, CFG.TILE);
-        }
-        ctx.restore();
-      } else {
-        ctx.fillStyle = col;
-        ctx.fillRect(bx, by, S, S);
-        const sameRight = b.x + span < CFG.COLS && buildingColor[b.y]?.[b.x + span] === col;
-        const sameBottom = b.y + span < CFG.ROWS && buildingColor[b.y + span]?.[b.x] === col;
-        ctx.fillStyle = "rgba(0,0,0,0.2)";
-        if (!sameRight) ctx.fillRect(bx + S - 4, by, 4, S);
-        if (!sameBottom) ctx.fillRect(bx, by + S - 4, S, 4);
-        const ba = TILE_ASSETS[T.BUILDING];
-        if (ba.img && ba.img.complete) {
-          for (let dy = 0; dy < span; dy++) for (let dx = 0; dx < span; dx++) ctx.drawImage(ba.img, bx + dx * CFG.TILE, by + dy * CFG.TILE, CFG.TILE, CFG.TILE);
-        }
-      }
+      drawFiveStoryBuilding(bx, by, col, b.x, b.y, span, shape, rot);
     }
   }
 
@@ -472,12 +909,17 @@ export function render() {
         if (sbMap.has(checkX1+","+checkY1) || sbMap.has(checkX2+","+checkY2)) {
           hasShopInAwningDir = true;
         }
-        const awningH = Math.round(S * 0.16);
+        // New-Striped uses taller supports (0.115*S awning + 0.025 gap + 0.15 center), old uses 0.16*S — use max for culling
+        const awningExtra = hasShopInAwningDir ? 0 : Math.round(S * 0.30);
         if (shopPx + S < cam.x - viewW/2 - 50 || shopPx > cam.x + viewW/2 + 50 ||
-            shopPy + S + (hasShopInAwningDir?0:awningH) < cam.y - viewH/2 - 50 || shopPy > cam.y + viewH/2 + 50) {
+            shopPy + S + awningExtra < cam.y - viewH/2 - 50 || shopPy > cam.y + viewH/2 + 50) {
           // culled
         } else {
-          drawShop(shopPx, shopPy, S, sb.name, shopRot, hasShopInAwningDir);
+          if(isNewShopDesign(sb)){
+            drawShopNew(shopPx, shopPy, S, sb.name, shopRot, hasShopInAwningDir);
+          } else {
+            drawShop(shopPx, shopPy, S, sb.name, shopRot, hasShopInAwningDir);
+          }
         }
         // Label
         const cx = (minX+1) * CFG.TILE;

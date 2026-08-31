@@ -1,9 +1,9 @@
 // ======================== VEHICLES ========================
 // Extracted from game.js:51599, 51650-51796 - no logic changed
-import { CFG } from "../core/config.js?v=25";
-import { T } from "../core/config.js?v=25";
-import { getTile } from "../map/mapUtils.js?v=25";
-import { playCarExplosion } from "../audio/sounds.js?v=25";
+import { CFG } from "../core/config.js?v=26";
+import { T } from "../core/config.js?v=26";
+import { getTile } from "../map/mapUtils.js?v=26";
+import { playCarExplosion } from "../audio/sounds.js?v=26";
 
 export let vehicles = [];
 export let explosions = [];

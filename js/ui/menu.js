@@ -1,21 +1,21 @@
 // ======================== MENU & SAVE ========================
 // Extracted from game.js:54587-54847 - no logic changed
-import { CFG, G, SAVE_KEY } from "../core/config.js?v=25";
-import { gameState, setGameState, currentSaveName, setCurrentSaveName } from "../core/state.js?v=25";
-import { player, createPlayer, setPlayer } from "../entities/player.js?v=25";
-import { police, clearPolice } from "../entities/police.js?v=25";
-import { currentMission, missionsCompleted, setMissionsCompleted, quests, questStatus, activeQuestId, mainQuestIndex, setQuestStatus, setActiveQuestId, setMainQuestIndex, setQuests, setMainQuests, setSideQuests } from "../missions/missionState.js?v=25";
-import { startMission, generateMissions } from "../missions/missionSystem.js?v=25";
-import { updateMissionUI } from "../missions/missionSystem.js?v=25";
-import { updateWantedUI, updateHUD, showNotification } from "./hud.js?v=25";
-import { overlay } from "../core/domRefs.js?v=25";
-import { buildings } from "../map/mapState.js?v=25";
-import { initMap } from "../map/mapGenerator.js?v=25";
-import { loadFullMap } from "../map/mapUtils.js?v=25";
-import { cam } from "../core/canvas.js?v=25";
-import { SETTINGS } from "../input/settings.js?v=25";
-import { t } from "./i18n.js?v=25";
-import { pauseCityMusic, playCityMusic, playMenuMusic, pauseMenuMusic, stopMenuMusic, stopMachineGunLoop, pauseDrivingSound } from "../audio/sounds.js?v=25";
+import { CFG, G, SAVE_KEY } from "../core/config.js?v=26";
+import { gameState, setGameState, currentSaveName, setCurrentSaveName } from "../core/state.js?v=26";
+import { player, createPlayer, setPlayer } from "../entities/player.js?v=26";
+import { police, clearPolice } from "../entities/police.js?v=26";
+import { currentMission, missionsCompleted, setMissionsCompleted, quests, questStatus, activeQuestId, mainQuestIndex, setQuestStatus, setActiveQuestId, setMainQuestIndex, setQuests, setMainQuests, setSideQuests } from "../missions/missionState.js?v=26";
+import { startMission, generateMissions } from "../missions/missionSystem.js?v=26";
+import { updateMissionUI } from "../missions/missionSystem.js?v=26";
+import { updateWantedUI, updateHUD, showNotification } from "./hud.js?v=26";
+import { overlay } from "../core/domRefs.js?v=26";
+import { buildings } from "../map/mapState.js?v=26";
+import { initMap } from "../map/mapGenerator.js?v=26";
+import { loadFullMap } from "../map/mapUtils.js?v=26";
+import { cam } from "../core/canvas.js?v=26";
+import { SETTINGS } from "../input/settings.js?v=26";
+import { t } from "./i18n.js?v=26";
+import { pauseCityMusic, playCityMusic, playMenuMusic, pauseMenuMusic, stopMenuMusic, stopMachineGunLoop, pauseDrivingSound } from "../audio/sounds.js?v=26";
 
 function ensurePlayer() {
   // Check imported binding first, then window fallback, then create

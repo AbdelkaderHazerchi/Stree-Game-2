@@ -6,10 +6,10 @@
 // Editor: maps_editor.html allows creating multiple chats, each with multiple messages.
 // Runtime: random selection on interaction, E advances through messages, ESC closes.
 
-import { player } from "../entities/player.js?v=25";
-import { npcs } from "../entities/npcs.js?v=25";
-import { SETTINGS } from "../input/settings.js?v=25";
-import { showNotification } from "./hud.js?v=25";
+import { player } from "../entities/player.js?v=26";
+import { npcs } from "../entities/npcs.js?v=26";
+import { SETTINGS } from "../input/settings.js?v=26";
+import { showNotification } from "./hud.js?v=26";
 
 function lang(){ return (SETTINGS && SETTINGS.language==="en") ? "en":"ar"; }
 
@@ -110,11 +110,9 @@ export function initChats(){
     const closeBtn = document.getElementById("chatCloseBtn");
     if(nextBtn) nextBtn.onclick = ()=> advanceChat();
     if(closeBtn) closeBtn.onclick = ()=> closeChat();
-    if(chatDialogEl){
-      chatDialogEl.addEventListener("click", (e)=>{
-        if(e.target.id==="chatDialog") closeChat();
-      });
-    }
+    // Do not close on overlay click — user must press E to advance / ESC to close
+    // Intentionally no click-to-close on #chatDialog, to enforce reading via E
+    // (kept for future: if needed, only close when clicking explicit close button)
   } catch{}
 }
 

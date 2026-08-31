@@ -1,11 +1,11 @@
 // ======================== INVENTORY ========================
 // Extracted from game.js:52663-52711 - i18n integrated
-import { WEAPONS } from "../core/config.js?v=25";
-import { player } from "../entities/player.js?v=25";
-import { invPanel, invWeaponsEl, invItemsEl } from "../core/domRefs.js?v=25";
-import { updateHUD } from "./hud.js?v=25";
-import { showNotification } from "./hud.js?v=25";
-import { t, getWeaponName } from "./i18n.js?v=25";
+import { WEAPONS } from "../core/config.js?v=26";
+import { player } from "../entities/player.js?v=26";
+import { invPanel, invWeaponsEl, invItemsEl } from "../core/domRefs.js?v=26";
+import { updateHUD } from "./hud.js?v=26";
+import { showNotification } from "./hud.js?v=26";
+import { t, getWeaponName } from "./i18n.js?v=26";
 
 export function toggleInventory() {
   if (!player || !invPanel) return;

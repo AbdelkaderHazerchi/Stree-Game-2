@@ -2,7 +2,7 @@
 // 11 quest types (5 original + 6 added 2026-08-30)
 // Original 5: deliverShipment, killTarget, transportPerson, escapeCar, stealCar
 // New 6: silentPursuit, surveillance, plantBomb, meeting, theft, deliverLoot
-import { CFG } from "../core/config.js?v=25";
+import { CFG } from "../core/config.js?v=26";
 export const MISSION_REWARDS = {
   deliverShipment: 400,
   killTarget: 500,

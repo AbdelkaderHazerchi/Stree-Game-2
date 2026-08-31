@@ -1,12 +1,12 @@
 // ======================== SHOOTING ========================
 // Extracted from game.js:52528-52583 - no logic changed
-import { CFG, WEAPONS } from "../core/config.js?v=25";
-import { bullets } from "../entities/bullets.js?v=25";
-import { player } from "../entities/player.js?v=25";
-import { isTouchDevice, touchAimAngle } from "../input/touch.js?v=25";
-import { worldMouseX, worldMouseY } from "../input/inputState.js?v=25";
-import { showNotification, updateHUD } from "../ui/hud.js?v=25";
-import { playWeaponShot } from "../audio/sounds.js?v=25";
+import { CFG, WEAPONS } from "../core/config.js?v=26";
+import { bullets } from "../entities/bullets.js?v=26";
+import { player } from "../entities/player.js?v=26";
+import { isTouchDevice, touchAimAngle } from "../input/touch.js?v=26";
+import { worldMouseX, worldMouseY } from "../input/inputState.js?v=26";
+import { showNotification, updateHUD } from "../ui/hud.js?v=26";
+import { playWeaponShot } from "../audio/sounds.js?v=26";
 
 export function getCurrentWeapon() {
   if (!player || !player.weapons.length) return null;

@@ -1,6 +1,6 @@
 // ======================== INPUT STATE ========================
 // Extracted from game.js:122-147, 52586-52592, 52643-52645, 52712-52730 - no logic changed
-import { canvas, W, H, zoom, cam, ZOOM_MIN, ZOOM_MAX, setZoom } from "../core/canvas.js?v=25";
+import { canvas, W, H, zoom, cam, ZOOM_MIN, ZOOM_MAX, setZoom } from "../core/canvas.js?v=26";
 
 export const act = {
   up: false,

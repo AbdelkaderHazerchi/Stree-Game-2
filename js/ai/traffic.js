@@ -1,9 +1,9 @@
 // ======================== TRAFFIC AI ========================
 // Extracted from game.js:53422-53530 - no logic changed
-import { CFG, T } from "../core/config.js?v=25";
-import { getTile } from "../map/mapUtils.js?v=25";
-import { isOnRoad } from "../entities/vehicles.js?v=25";
-import { vehicles } from "../entities/vehicles.js?v=25";
+import { CFG, T } from "../core/config.js?v=26";
+import { getTile } from "../map/mapUtils.js?v=26";
+import { isOnRoad } from "../entities/vehicles.js?v=26";
+import { vehicles } from "../entities/vehicles.js?v=26";
 
 export function pickRandomDest(v) {
   for (let i = 0; i < 50; i++) {

@@ -1,14 +1,14 @@
 // ======================== BULLETS ========================
 // Extracted from game.js:51602, 53532-53656 - shooting fns moved to js/combat/shooting.js - no logic changed
-import { CFG, T } from "../core/config.js?v=25";
-import { getTile } from "../map/mapUtils.js?v=25";
-import { player } from "./player.js?v=25";
-import { npcs, killNPC, spawnLoot } from "./npcs.js?v=25";
-import { vehicles, explodeVehicle } from "./vehicles.js?v=25";
-import { police } from "./police.js?v=25";
-import { currentMission } from "../missions/missionState.js?v=25";
-import { showNotification, updateWantedUI } from "../ui/hud.js?v=25";
-import { playerDie } from "./player.js?v=25";
+import { CFG, T } from "../core/config.js?v=26";
+import { getTile } from "../map/mapUtils.js?v=26";
+import { player } from "./player.js?v=26";
+import { npcs, killNPC, spawnLoot } from "./npcs.js?v=26";
+import { vehicles, explodeVehicle } from "./vehicles.js?v=26";
+import { police } from "./police.js?v=26";
+import { currentMission } from "../missions/missionState.js?v=26";
+import { showNotification, updateWantedUI } from "../ui/hud.js?v=26";
+import { playerDie } from "./player.js?v=26";
 
 export let bullets = [];
 export function clearBullets(){ bullets.length = 0; }

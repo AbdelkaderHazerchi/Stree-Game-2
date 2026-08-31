@@ -1,7 +1,7 @@
 // ======================== PATHFINDING ========================
 // Extracted from game.js:53076-53160 - no logic changed
-import { CFG, T } from "../core/config.js?v=25";
-import { getTile } from "../map/mapUtils.js?v=25";
+import { CFG, T } from "../core/config.js?v=26";
+import { getTile } from "../map/mapUtils.js?v=26";
 
 export function findPath(sx, sy, ex, ey, maxSteps) {
   const startX = Math.floor(sx / CFG.TILE);

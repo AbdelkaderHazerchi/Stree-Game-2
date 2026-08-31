@@ -1,8 +1,8 @@
 // ======================== MAP UTILS ========================
 // Extracted from game.js:477-520 - no logic changed
-import { CFG } from "../core/config.js?v=25";
-import { T } from "../core/config.js?v=25";
-import { map, buildingColor, buildingHeight } from "./mapState.js?v=25";
+import { CFG } from "../core/config.js?v=26";
+import { T } from "../core/config.js?v=26";
+import { map, buildingColor, buildingHeight } from "./mapState.js?v=26";
 
 export function getTile(x, y) {
   if (x < 0 || x >= CFG.COLS || y < 0 || y >= CFG.ROWS) return T.WATER;

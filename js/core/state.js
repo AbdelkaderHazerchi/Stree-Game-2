@@ -1,7 +1,7 @@
 // ======================== CORE STATE ========================
 // Extracted from game.js:54582-54585 - no logic changed
 // Mutable global game state - centralized to avoid circular imports
-import { G } from "./config.js?v=25";
+import { G } from "./config.js?v=26";
 
 export let gameState = G.MENU;
 export let gameOver = false;

@@ -1,14 +1,14 @@
 // ======================== MINIMAP ========================
 // Extracted from game.js:54454-54575 - no logic changed
-import { CFG, T } from "../core/config.js?v=25";
-import { miniCtx, miniCanvas, cam, W, H, zoom } from "../core/canvas.js?v=25";
-import { getTile } from "../map/mapUtils.js?v=25";
-import { LS_ZONES } from "../map/mapData.js?v=25";
-import { specialBuildings } from "../map/mapState.js?v=25";
-import { player } from "../entities/player.js?v=25";
-import { police } from "../entities/police.js?v=25";
-import { missionGivers, currentMission, usingSequentialMissions, quests } from "../missions/missionState.js?v=25";
-import { getActiveMissionGiver, getVisibleStartGivers, getActiveEndGiver } from "../missions/missionSystem.js?v=25";
+import { CFG, T } from "../core/config.js?v=26";
+import { miniCtx, miniCanvas, cam, W, H, zoom } from "../core/canvas.js?v=26";
+import { getTile } from "../map/mapUtils.js?v=26";
+import { LS_ZONES } from "../map/mapData.js?v=26";
+import { specialBuildings } from "../map/mapState.js?v=26";
+import { player } from "../entities/player.js?v=26";
+import { police } from "../entities/police.js?v=26";
+import { missionGivers, currentMission, usingSequentialMissions, quests } from "../missions/missionState.js?v=26";
+import { getActiveMissionGiver, getVisibleStartGivers, getActiveEndGiver } from "../missions/missionSystem.js?v=26";
 
 export function renderMinimap() {
   if(!miniCtx || !miniCanvas || !player) return;

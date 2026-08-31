@@ -1419,6 +1419,191 @@ canvas {
     }
 }
 
+/* === Chat — bottom frame, E to advance (message white, speaker distinct) === */
+#chatDialog {
+    position: absolute;
+    inset: 0;
+    display: none; /* toggled to flex via JS */
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0 16px 20px;
+    background: transparent;
+    backdrop-filter: none;
+    z-index: 40;
+    pointer-events: none;
+}
+#chatDialog[style*="display: flex"],
+#chatDialog[style*="display:flex"] {
+    pointer-events: all;
+}
+.chat-frame {
+    width: min(720px, 92vw);
+    max-width: 92vw;
+    background: rgba(10, 10, 18, 0.92);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 14px 16px 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
+    backdrop-filter: blur(10px);
+    pointer-events: all;
+    text-align: start;
+}
+.chat-frame-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+.chat-speaker {
+    font-weight: 900;
+    font-size: 15px;
+    color: #4ade80; /* distinct from white message */
+    letter-spacing: 0.2px;
+    text-shadow: 0 0 8px rgba(74,222,128,0.25);
+}
+.chat-progress {
+    font-size: 11px;
+    color: #9aa0b6;
+    background: rgba(255,255,255,0.06);
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    white-space: nowrap;
+}
+.chat-message {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #ffffff; /* white as requested */
+    background: rgba(255,255,255,0.04);
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.07);
+    min-height: 44px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.chat-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+.chat-actions .menu-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+    min-width: 0;
+    width: auto;
+    flex: 0 0 auto;
+}
+.chat-hint {
+    font-size: 10px;
+    color: #777;
+    text-align: center;
+    margin-top: 8px;
+}
+.chat-hint .kbd {
+    font-family: 'Consolas', monospace;
+    font-size: 10px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-bottom-width: 2px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: #ddd;
+}
+@media (max-width: 480px) {
+    .chat-frame { padding: 12px 12px 10px; margin-bottom: 12px; }
+    .chat-message { font-size: 14px; padding: 10px 12px; }
+    .chat-speaker { font-size: 14px; }
+}
+
+/* === Meeting Dialog — bottom frame, E to advance (message white, speaker distinct color) === */
+#meetingDialog {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0 16px 20px;
+    background: transparent;
+    backdrop-filter: none;
+    z-index: 40;
+    pointer-events: none;
+}
+#meetingDialog[style*="display: flex"],
+#meetingDialog[style*="display:flex"] {
+    pointer-events: all;
+}
+.meeting-frame {
+    width: min(720px, 92vw);
+    max-width: 92vw;
+    background: rgba(10, 10, 18, 0.92);
+    border: 1px solid rgba(255,215,0,0.25);
+    border-radius: 14px;
+    padding: 14px 16px 12px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
+    backdrop-filter: blur(10px);
+    pointer-events: all;
+    text-align: start;
+}
+.meeting-frame-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+.meeting-speaker {
+    font-weight: 900;
+    font-size: 15px;
+    color: #ffd700;
+    letter-spacing: 0.2px;
+    text-shadow: 0 0 8px rgba(255,215,0,0.35);
+}
+.meeting-progress {
+    font-size: 11px;
+    color: #9aa0b6;
+    background: rgba(255,255,255,0.06);
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    white-space: nowrap;
+}
+.meeting-message {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #ffffff;
+    background: rgba(255,255,255,0.04);
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.07);
+    min-height: 44px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.meeting-hint {
+    font-size: 10px;
+    color: #777;
+    text-align: center;
+    margin-top: 8px;
+}
+.meeting-hint .kbd {
+    font-family: 'Consolas', monospace;
+    font-size: 10px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-bottom-width: 2px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: #ddd;
+}
+@media (max-width: 480px) {
+    .meeting-frame { padding: 12px 12px 10px; margin-bottom: 12px; }
+    .meeting-message { font-size: 14px; padding: 10px 12px; }
+    .meeting-speaker { font-size: 14px; }
+}
+
 /* === Hide UI during gameplay (F2) === */
 #gameContainer.ui-hidden #hud,
 #gameContainer.ui-hidden #missionBox,
@@ -1427,13 +1612,15 @@ canvas {
 #gameContainer.ui-hidden #inventoryPanel,
 #gameContainer.ui-hidden #touchControls,
 #gameContainer.ui-hidden #notification,
+#gameContainer.ui-hidden #chatDialog,
 body.ui-hidden #hud,
 body.ui-hidden #missionBox,
 body.ui-hidden #minimap,
 body.ui-hidden #controlsHelp,
 body.ui-hidden #inventoryPanel,
 body.ui-hidden #touchControls,
-body.ui-hidden #notification {
+body.ui-hidden #notification,
+body.ui-hidden #chatDialog {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;

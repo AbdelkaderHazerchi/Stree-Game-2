@@ -1,15 +1,15 @@
 // ======================== NPCS ========================
 // Extracted from game.js:51600, 51602, 51799-51845, 52990-53161, 53658-53739 - no logic changed
-import { CFG, T, WEAPONS } from "../core/config.js?v=25";
-import { getTile } from "../map/mapUtils.js?v=25";
-import { isWalkable } from "./vehicles.js?v=25";
-import { player } from "./player.js?v=25";
-import { currentMission } from "../missions/missionState.js?v=25";
-import { showNotification } from "../ui/hud.js?v=25";
-import { updateHUD } from "../ui/hud.js?v=25";
+import { CFG, T, WEAPONS } from "../core/config.js?v=26";
+import { getTile } from "../map/mapUtils.js?v=26";
+import { isWalkable } from "./vehicles.js?v=26";
+import { player } from "./player.js?v=26";
+import { currentMission } from "../missions/missionState.js?v=26";
+import { showNotification } from "../ui/hud.js?v=26";
+import { updateHUD } from "../ui/hud.js?v=26";
 // AI helpers moved to js/ai/ - re-export for compatibility (no logic change)
-import { updateGangs } from "../ai/gangs.js?v=25";
-import { findPath } from "../ai/pathfinding.js?v=25";
+import { updateGangs } from "../ai/gangs.js?v=26";
+import { findPath } from "../ai/pathfinding.js?v=26";
 export { updateGangs, findPath };
 
 export let npcs = [];

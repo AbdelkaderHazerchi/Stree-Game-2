@@ -7,7 +7,7 @@
         <meta http-equiv="Pragma" content="no-cache">
         <meta http-equiv="Expires" content="0">
         <title>Street Game - 2D Edition</title>
-        <link rel="stylesheet" href="style.css?v=25">
+        <link rel="stylesheet" href="style.css?v=26">
     </head>
     <body>
         <div id="gameContainer">
@@ -93,19 +93,31 @@
                     </div>
                 </div>
             </div>
-            <!-- Chat Dialog (generic NPC chat) -->
-            <div class="dialog-overlay" id="chatDialog" role="dialog" aria-label="Chat" style="display:none">
-                <div class="dialog-box chat-box" style="min-width:400px; max-width:520px; text-align:right" dir="auto">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-                        <div id="chatSpeaker" style="font-weight:900; color:#ffd700; font-size:15px"></div>
-                        <div id="chatProgress" style="font-size:11px; color:#999; background:rgba(255,215,0,0.08); padding:2px 8px; border-radius:12px; border:1px solid rgba(255,215,0,0.15)"></div>
+            <!-- Chat Dialog (generic NPC chat) — bottom frame, E to advance -->
+            <div id="chatDialog" role="dialog" aria-label="Chat" style="display:none">
+                <div id="chatFrame" class="chat-frame" dir="auto">
+                    <div class="chat-frame-header">
+                        <div id="chatSpeaker" class="chat-speaker"></div>
+                        <div id="chatProgress" class="chat-progress"></div>
                     </div>
-                    <div id="chatMessage" style="font-size:14px; line-height:1.6; color:#e8e8ef; background:rgba(255,255,255,0.04); padding:14px; border-radius:10px; border:1px solid rgba(255,255,255,0.07); min-height:48px; white-space:pre-wrap; word-break:break-word"></div>
-                    <div class="dialog-buttons" style="margin-top:14px">
-                        <button class="menu-btn primary" id="chatNextBtn" data-i18n="chat.next">➡️ التالي — Next (E)</button>
-                        <button class="menu-btn secondary" id="chatCloseBtn" data-i18n="chat.close">❌ إغلاق</button>
+                    <div id="chatMessage" class="chat-message"></div>
+                    <div class="chat-actions">
+                        <button class="menu-btn primary chat-next-btn" id="chatNextBtn" data-i18n="chat.next">➡️ التالي — Next (E)</button>
+                        <button class="menu-btn secondary chat-close-btn" id="chatCloseBtn" data-i18n="chat.close">❌ إغلاق</button>
                     </div>
-                    <div style="font-size:10px; color:#777; text-align:center; margin-top:8px" data-i18n="chat.hint">اضغط E للمتابعة — Press E to continue — ESC للإغلاق</div>
+                    <div class="chat-hint" data-i18n="chat.hint">اضغط <span class="kbd">E</span> للمتابعة — Press <span class="kbd">E</span> to continue — <span class="kbd">ESC</span> للإغلاق</div>
+                </div>
+            </div>
+
+            <!-- Meeting Dialog (mission meetings) — bottom frame, E to advance messages -->
+            <div id="meetingDialog" role="dialog" aria-label="Meeting" style="display:none">
+                <div id="meetingFrame" class="meeting-frame" dir="auto">
+                    <div class="meeting-frame-header">
+                        <div id="meetingSpeaker" class="meeting-speaker"></div>
+                        <div id="meetingProgress" class="meeting-progress"></div>
+                    </div>
+                    <div id="meetingMessage" class="meeting-message"></div>
+                    <div class="meeting-hint" data-i18n="meeting.hint">اضغط <span class="kbd">E</span> للمتابعة — Press <span class="kbd">E</span> to continue</div>
                 </div>
             </div>
             <!-- Main Menu — SG2 Cover Full-Bleed -->
@@ -241,6 +253,6 @@
                 <div id="touchCancelMiss" data-touch-action="cancelMission">❌</div>
             </div>
         </div>
-        <script type="module" src="js/main.js?v=25"></script>
+        <script type="module" src="js/main.js?v=26"></script>
     </body>
 </html>

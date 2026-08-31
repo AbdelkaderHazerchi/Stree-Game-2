@@ -1,11 +1,11 @@
 // ======================== HUD ========================
 // Extracted from game.js:52742-52749, 53772-53800 - i18n integrated
-import { CFG, WEAPONS } from "../core/config.js?v=25";
-import { healthFill, moneySpan, ammoSpan, wantedEl, notifEl, weaponNameEl, ammoMaxEl } from "../core/domRefs.js?v=25";
-import { player } from "../entities/player.js?v=25";
-import { cam, W, H, zoom } from "../core/canvas.js?v=25";
-import { worldMouseX, worldMouseY, mouseX, mouseY, setWorldMouseX, setWorldMouseY } from "../input/inputState.js?v=25";
-import { t, getWeaponName } from "./i18n.js?v=25";
+import { CFG, WEAPONS } from "../core/config.js?v=26";
+import { healthFill, moneySpan, ammoSpan, wantedEl, notifEl, weaponNameEl, ammoMaxEl } from "../core/domRefs.js?v=26";
+import { player } from "../entities/player.js?v=26";
+import { cam, W, H, zoom } from "../core/canvas.js?v=26";
+import { worldMouseX, worldMouseY, mouseX, mouseY, setWorldMouseX, setWorldMouseY } from "../input/inputState.js?v=26";
+import { t, getWeaponName } from "./i18n.js?v=26";
 
 export function updateCamera() {
   if (!player) return;

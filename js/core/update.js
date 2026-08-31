@@ -1,34 +1,35 @@
 // ======================== UPDATE ========================
 // Extracted from game.js:52751-52888 - no logic changed
-import { CFG, T } from "./config.js?v=25";
-import { G } from "./config.js?v=25";
-import { gameState, setGameState } from "./state.js?v=25";
-import { player } from "../entities/player.js?v=25";
-import { vehicles, isWalkable, isOnRoad, updateExplosions } from "../entities/vehicles.js?v=25";
-import { npcs, lootItems } from "../entities/npcs.js?v=25";
-import { police } from "../entities/police.js?v=25";
-import { getTile } from "../map/mapUtils.js?v=25";
-import { specialBuildings } from "../map/mapState.js?v=25";
-import { act, actJust, isAiming, worldMouseX, worldMouseY, keys } from "../input/inputState.js?v=25";
-import { actionJust, actionHeld } from "../input/keyboard.js?v=25";
-import { updateInput } from "../input/keyboard.js?v=25";
-import { closeInventory, toggleInventory, switchWeapon, switchWeaponSlot } from "../ui/inventory.js?v=25";
-import { handleEnterExit, handleHorn, cancelMission } from "../input/keyboard.js?v=25";
-import { fireWeapon } from "../combat/shooting.js?v=25";
-import { updateNPCs } from "../entities/npcs.js?v=25";
-import { updateGangs } from "../ai/gangs.js?v=25";
-import { updatePolice } from "../entities/police.js?v=25";
-import { updateBullets } from "../entities/bullets.js?v=25";
-import { updateLoot } from "../entities/npcs.js?v=25";
-import { updateTraffic } from "../ai/traffic.js?v=25";
-import { updateCamera, updateHUD, updateWantedUI } from "../ui/hud.js?v=25";
-import { currentMission, missionGivers, usingSequentialMissions, quests } from "../missions/missionState.js?v=25";
-import { updateMission, startMission, getActiveMissionGiver, getVisibleStartGivers } from "../missions/missionSystem.js?v=25";
-import { showPauseMenu } from "../ui/menu.js?v=25";
-import { SHOPS, setNearShopName } from "../ui/shop.js?v=25";
-import { updateCityMusic, updateMenuMusic, handleMachineGunTrigger } from "../audio/sounds.js?v=25";
-import { getCurrentWeapon } from "../combat/shooting.js?v=25";
-import { isChatActive, advanceChat, startRandomChatNearPlayer, closeChat, getNearbyNpc, getCurrentChat } from "../ui/chat.js?v=25";
+import { CFG, T } from "./config.js?v=26";
+import { G } from "./config.js?v=26";
+import { gameState, setGameState } from "./state.js?v=26";
+import { player } from "../entities/player.js?v=26";
+import { vehicles, isWalkable, isOnRoad, updateExplosions } from "../entities/vehicles.js?v=26";
+import { npcs, lootItems } from "../entities/npcs.js?v=26";
+import { police } from "../entities/police.js?v=26";
+import { getTile } from "../map/mapUtils.js?v=26";
+import { specialBuildings } from "../map/mapState.js?v=26";
+import { act, actJust, isAiming, worldMouseX, worldMouseY, keys } from "../input/inputState.js?v=26";
+import { actionJust, actionHeld } from "../input/keyboard.js?v=26";
+import { updateInput } from "../input/keyboard.js?v=26";
+import { closeInventory, toggleInventory, switchWeapon, switchWeaponSlot } from "../ui/inventory.js?v=26";
+import { handleEnterExit, handleHorn, cancelMission } from "../input/keyboard.js?v=26";
+import { fireWeapon } from "../combat/shooting.js?v=26";
+import { updateNPCs } from "../entities/npcs.js?v=26";
+import { updateGangs } from "../ai/gangs.js?v=26";
+import { updatePolice } from "../entities/police.js?v=26";
+import { updateBullets } from "../entities/bullets.js?v=26";
+import { updateLoot } from "../entities/npcs.js?v=26";
+import { updateTraffic } from "../ai/traffic.js?v=26";
+import { updateCamera, updateHUD, updateWantedUI } from "../ui/hud.js?v=26";
+import { currentMission, missionGivers, usingSequentialMissions, quests } from "../missions/missionState.js?v=26";
+import { updateMission, startMission, getActiveMissionGiver, getVisibleStartGivers } from "../missions/missionSystem.js?v=26";
+import { showPauseMenu } from "../ui/menu.js?v=26";
+import { SHOPS, setNearShopName } from "../ui/shop.js?v=26";
+import { updateCityMusic, updateMenuMusic, handleMachineGunTrigger } from "../audio/sounds.js?v=26";
+import { getCurrentWeapon } from "../combat/shooting.js?v=26";
+import { isMeetingActive, closeMeeting, advanceMeeting } from "../ui/meeting.js?v=26";
+import { isChatActive, advanceChat, startRandomChatNearPlayer, closeChat, getNearbyNpc, getCurrentChat } from "../ui/chat.js?v=26";
 
 export function update() {
   if (!player || !player.alive) return;
@@ -48,6 +49,18 @@ export function update() {
     }
   }
 
+  // Meeting: ESC closes meeting before pausing, E advances meeting (single advance, prevents skip)
+  if (isMeetingActive()) {
+    if (actJust.pause || (keys && (keys["escape"] || keys["Escape"]))) {
+      closeMeeting();
+      return;
+    }
+    if (actJust.enterExit) {
+      advanceMeeting();
+      return;
+    }
+  }
+
   // Process frame-based actions
   if (actJust.pause && gameState === G.PLAYING) {
     if (player.showInventory) {
@@ -59,8 +72,15 @@ export function update() {
     return;
   }
   if (player.alive) {
-    // Generic NPC chat: E near any NPC picks random chat (priority: meeting > shop/vehicle > chat)
-    if (isChatActive()) {
+    // Meeting dialog: E/ESC handled at top (single advance), here only handle inventory/cancel/horn and block other actions
+    if (isMeetingActive()) {
+      if (actionJust("inventory") || actionJust("cancelMission")) {
+        closeMeeting();
+      }
+      if (actionJust("horn")) handleHorn();
+      // Block all other actions while meeting active (E/ESC already handled at top with return)
+    } else if (isChatActive()) {
+      // Generic NPC chat: E near any NPC picks random chat (priority: meeting > shop/vehicle > chat)
       if (actionJust("enterExit")) {
         advanceChat();
       } else if (actionJust("pause") || (keys && (keys["escape"] || keys["Escape"]))) {
@@ -136,15 +156,22 @@ export function update() {
   if (player.shootCooldown > 0) player.shootCooldown -= 16;
 
   // Player movement (freeze while chatting)
-  if (isChatActive()) {
-    // Auto-close if moved far from chat NPC
+  if (isChatActive() || isMeetingActive()) {
+    // Auto-close if moved far from chat/meeting NPC
     try {
-      const cur = getCurrentChat();
-      if (cur && cur.npc) {
-        const d = Math.hypot(player.x - cur.npc.x, player.y - cur.npc.y);
-        if (d > 130) closeChat();
+      if (isChatActive()) {
+        const cur = getCurrentChat();
+        if (cur && cur.npc) {
+          const d = Math.hypot(player.x - cur.npc.x, player.y - cur.npc.y);
+          if (d > 130) closeChat();
+        }
+      }
+      if (isMeetingActive() && currentMission && currentMission.data && currentMission.data.meetingPos) {
+        const d = Math.hypot(player.x - currentMission.data.meetingPos.x, player.y - currentMission.data.meetingPos.y);
+        if (d > 130) closeMeeting();
       }
     } catch {}
+    // Freeze player during meeting/chat
   } else {
     updatePlayer();
   }
@@ -156,6 +183,10 @@ export function update() {
         const d2 = Math.hypot(player.x - cur2.npc.x, player.y - cur2.npc.y);
         if (d2 > 130) closeChat();
       }
+    }
+    if (isMeetingActive() && currentMission && currentMission.data && currentMission.data.meetingPos) {
+      const d2 = Math.hypot(player.x - currentMission.data.meetingPos.x, player.y - currentMission.data.meetingPos.y);
+      if (d2 > 130) closeMeeting();
     }
   } catch {}
 

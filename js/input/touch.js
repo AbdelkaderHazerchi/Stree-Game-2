@@ -1,6 +1,6 @@
 // ======================== TOUCH CONTROLS ========================
 // Extracted from game.js:55169-55389 - no logic changed
-import { fireWeapon } from "../combat/shooting.js?v=25";
+import { fireWeapon } from "../combat/shooting.js?v=26";
 
 export const touchHold = {};
 export const touchEdge = {};

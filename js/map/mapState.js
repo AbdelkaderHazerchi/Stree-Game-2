@@ -1,6 +1,6 @@
 // ======================== MAP STATE ========================
 // Extracted from game.js:470-475 + 51118-51213 - no logic changed
-import { CFG } from "../core/config.js?v=25";
+import { CFG } from "../core/config.js?v=26";
 
 // ======================== MAP ========================
 export let map = [];

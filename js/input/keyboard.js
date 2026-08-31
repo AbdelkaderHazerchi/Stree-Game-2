@@ -1,24 +1,24 @@
 // ======================== KEYBOARD INPUT ========================
 // Extracted from game.js:148-354, 52603-52710 - no logic changed
-import { SETTINGS, KEY_NAMES, saveKeybinds, resetKeybindsStorage } from "./settings.js?v=25";
-import { t } from "../ui/i18n.js?v=25";
-import { act, actJust, actPrev, keys, mouseLeftDown, isAiming } from "./inputState.js?v=25";
-import { touchHold, touchEdge, touchJoyX, touchJoyY, touchAimAngle, shootTouchId, setTouchAimAngle } from "./touch.js?v=25";
-import { CFG } from "../core/config.js?v=25";
-import { G } from "../core/config.js?v=25";
-import { gameState } from "../core/state.js?v=25";
-import { player } from "../entities/player.js?v=25";
-import { vehicles, isWalkable } from "../entities/vehicles.js?v=25";
-import { currentMission } from "../missions/missionState.js?v=25";
-import { failMission } from "../missions/missionSystem.js?v=25";
-import { SHOPS, openShop } from "../ui/shop.js?v=25";
-import { showNotification } from "../ui/hud.js?v=25";
-import { fireWeapon } from "../combat/shooting.js?v=25";
-import { getNearShopName } from "../ui/shop.js?v=25";
-import { showPauseMenu } from "../ui/menu.js?v=25";
-import { playEnterCar, playExitCar } from "../audio/sounds.js?v=25";
+import { SETTINGS, KEY_NAMES, saveKeybinds, resetKeybindsStorage } from "./settings.js?v=26";
+import { t } from "../ui/i18n.js?v=26";
+import { act, actJust, actPrev, keys, mouseLeftDown, isAiming } from "./inputState.js?v=26";
+import { touchHold, touchEdge, touchJoyX, touchJoyY, touchAimAngle, shootTouchId, setTouchAimAngle } from "./touch.js?v=26";
+import { CFG } from "../core/config.js?v=26";
+import { G } from "../core/config.js?v=26";
+import { gameState } from "../core/state.js?v=26";
+import { player } from "../entities/player.js?v=26";
+import { vehicles, isWalkable } from "../entities/vehicles.js?v=26";
+import { currentMission } from "../missions/missionState.js?v=26";
+import { failMission } from "../missions/missionSystem.js?v=26";
+import { SHOPS, openShop } from "../ui/shop.js?v=26";
+import { showNotification } from "../ui/hud.js?v=26";
+import { fireWeapon } from "../combat/shooting.js?v=26";
+import { getNearShopName } from "../ui/shop.js?v=26";
+import { showPauseMenu } from "../ui/menu.js?v=26";
+import { playEnterCar, playExitCar } from "../audio/sounds.js?v=26";
 // Inventory moved to js/ui/inventory.js - re-export for compatibility (no logic change)
-import { toggleInventory, closeInventory, switchWeapon, switchWeaponSlot, renderInventory } from "../ui/inventory.js?v=25";
+import { toggleInventory, closeInventory, switchWeapon, switchWeaponSlot, renderInventory } from "../ui/inventory.js?v=26";
 export { toggleInventory, closeInventory, switchWeapon, switchWeaponSlot, renderInventory };
 
 export function updateInput() {

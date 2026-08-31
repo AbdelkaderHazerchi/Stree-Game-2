@@ -2,27 +2,28 @@
 // Two-point (Start→End), Main (yellow sequential) / Side (purple all-visible), bilingual AR/EN
 // Backward compatible with legacy missionGivers random generation
 
-import { CFG, T } from "../core/config.js?v=25";
-import { getTile } from "../map/mapUtils.js?v=25";
-import { vehicles, isWalkable, explosions, EXPLOSION_DURATION } from "../entities/vehicles.js?v=25";
-import { npcs } from "../entities/npcs.js?v=25";
-import { player } from "../entities/player.js?v=25";
-import { keys } from "../input/inputState.js?v=25";
-import { actionHeld, actionJust } from "../input/keyboard.js?v=25";
-import { police } from "../entities/police.js?v=25";
-import { specialBuildings } from "../map/mapState.js?v=25";
-import { showNotification, updateSuspicionUI, hideSuspicionUI } from "../ui/hud.js?v=25";
-import { missionTitle, missionDesc, missionProg } from "../core/domRefs.js?v=25";
+import { CFG, T } from "../core/config.js?v=26";
+import { getTile } from "../map/mapUtils.js?v=26";
+import { vehicles, isWalkable, explosions, EXPLOSION_DURATION } from "../entities/vehicles.js?v=26";
+import { npcs } from "../entities/npcs.js?v=26";
+import { player } from "../entities/player.js?v=26";
+import { keys } from "../input/inputState.js?v=26";
+import { actionHeld, actionJust } from "../input/keyboard.js?v=26";
+import { police } from "../entities/police.js?v=26";
+import { specialBuildings } from "../map/mapState.js?v=26";
+import { showNotification, updateSuspicionUI, hideSuspicionUI } from "../ui/hud.js?v=26";
+import { missionTitle, missionDesc, missionProg } from "../core/domRefs.js?v=26";
 import {
   currentMission, allMissions, sequentialMissionIndex, usingSequentialMissions, missionGivers, checkpoints, particles, missionsCompleted,
   setCurrentMission, setMissionsCompleted, setAllMissions, setMissionGivers, setSequentialMissionIndex, setUsingSequentialMissions,
   quests, mainQuests, sideQuests, activeQuestId, questStatus, mainQuestIndex,
   setQuests, setMainQuests, setSideQuests, setActiveQuestId, setQuestStatus, setMainQuestIndex, getQuestById
-} from "./missionState.js?v=25";
-import { SETTINGS } from "../input/settings.js?v=25";
-import { MISSION_REWARDS, MISSION_DESCS, getQuestDisplayTitle, getQuestDisplayDesc, QUEST_TYPE_I18N, getQuestIcon } from "./missionDefs.js?v=25";
-import { t } from "../ui/i18n.js?v=25";
-import { playBombExplosion } from "../audio/sounds.js?v=25";
+} from "./missionState.js?v=26";
+import { SETTINGS } from "../input/settings.js?v=26";
+import { MISSION_REWARDS, MISSION_DESCS, getQuestDisplayTitle, getQuestDisplayDesc, QUEST_TYPE_I18N, getQuestIcon } from "./missionDefs.js?v=26";
+import { t } from "../ui/i18n.js?v=26";
+import { playBombExplosion } from "../audio/sounds.js?v=26";
+import { startMeeting, isMeetingActive, closeMeeting, getCurrentMeeting } from "../ui/meeting.js?v=26";
 
 // Helper: language
 function lang(){ return (SETTINGS && SETTINGS.language==="en") ? "en":"ar"; }
@@ -515,7 +516,7 @@ export function setupMissionStages(mission) {
       break;
     }
     case "silentPursuit": {
-      // Follow a car without getting too close/far, suspicion bar
+      // Follow a car maintaining ideal distance (3 squares), suspicion depends on distance, 5s grace, slower fill
       let targetVehicle = null;
       for(const v of vehicles){ if(!v.isPolice && !v.occupied){ targetVehicle=v; break; } }
       if(!targetVehicle){
@@ -532,8 +533,13 @@ export function setupMissionStages(mission) {
       mission.data.suspicion = 0;
       mission.data.followDuration = 30000;
       mission.data.followTimer = 0;
-      mission.data.minDist = 80;
-      mission.data.maxDist = 250;
+      // Ideal distance 3 squares (288px), with small tolerance band
+      mission.data.idealDist = 3 * CFG.TILE;
+      mission.data.tolerance = CFG.TILE * 0.4; // ~38px safe band around ideal
+      mission.data.minDist = mission.data.idealDist - mission.data.tolerance;
+      mission.data.maxDist = mission.data.idealDist + mission.data.tolerance;
+      mission.data.graceDuration = 5000; // 5s to find target
+      mission.data.suspicionRateDivisor = 1.5; // slow down fill rate
       // Make target move slowly in a loop
       targetVehicle.vx = Math.cos(Math.random()*Math.PI*2)*1.2;
       targetVehicle.vy = Math.sin(Math.random()*Math.PI*2)*1.2;
@@ -767,80 +773,41 @@ export function setupMissionStages(mission) {
       break;
     }
     case "escapeCar": {
-      // As soon as player takes a car, police pursue; must escape to editor location
-      // Stage 1: steal/enter any car
-      let targetVehicle = null;
-      for (const v of vehicles) {
-        if (!v.isPolice && !v.occupied) { targetVehicle = v; break; }
-      }
-      if (!targetVehicle) {
-        // No car available -> still allow any car entry dynamically; create a placeholder stage that checks any vehicle entry
-        mission.data.anyVehicle = true;
-        mission.stages.push({
-          type: "stealVehicle",
-          label: "استقل أي سيارة",
-          labelEn: "Enter any car",
-          done: false,
-          anyVehicle: true
-        });
-      } else {
-        const vehicleId = vehicles.indexOf(targetVehicle);
-        mission.data.targetVehicle = targetVehicle;
-        mission.data.targetVehicleId = vehicleId;
-        mission.stages.push({
-          type: "approachVehicle",
-          label: "اقترب من السيارة",
-          labelEn: "Approach vehicle",
-          done: false,
-          targetVehicleId: vehicleId,
-          radius: 60
-        });
-        mission.stages.push({
-          type: "stealVehicle",
-          label: "استقل السيارة",
-          labelEn: "Enter vehicle",
-          done: false,
-          targetVehicleId: vehicleId
-        });
-      }
+      // Police chase immediately until reaching drop-off, no car theft required
+      const drop = getQuestDropOff();
+      // Trigger police chase immediately (2 stars)
+      player.wanted = Math.max(player.wanted, 2);
+      player.wantedTimer = 0;
+      try { if (typeof updateWantedUI === "function") updateWantedUI(); } catch {}
+      showNotification(lang()==="en" ? "🚨 Police chase! Escape to the marked location!" : "🚨 الشرطة تطاردك! اهرب إلى الموقع المحدد!");
+      mission.data.escapePos = {x: drop.x, y: drop.y};
+      mission.data.escapeStarted = true;
+      // Single stage: reach drop-off while being chased (no vehicle theft required)
       mission.stages.push({
-        type: "escape",
-        label: "اهرب من الشرطة إلى الموقع (ابقَ مطاردًا 20 ثانية ثم اذهب للتسليم)",
-        labelEn: "Escape police (stay wanted 20s)",
+        type: "escapeToDropoff",
+        x: drop.x, y: drop.y,
+        label: "اهرب من الشرطة إلى نقطة التسليم",
+        labelEn: "Escape police to drop-off point",
         done: false,
-        duration: 20000
+        radius: 55
       });
-      // Final dropoff at editor end will be added via generic handler below
+      mission.data.noGenericEnd = true;
       break;
     }
     case "stealCar": {
-      let targetVehicle = null;
-      for (const v of vehicles) {
-        if (!v.isPolice && !v.occupied) { targetVehicle = v; break; }
-      }
-      if (!targetVehicle) {
-        mission.failed = true;
-        mission.failReason = lang()==="en" ? "No cars available to steal" : "لا توجد سيارات متاحة للسرقة حالياً";
-        return;
-      }
-      const vehicleId = vehicles.indexOf(targetVehicle);
-      mission.data.targetVehicle = targetVehicle;
-      mission.data.targetVehicleId = vehicleId;
+      // Steal any single car (not specific, not 3) and deliver to drop-off
       const drop = getQuestDropOff();
-      mission.stages.push({
-        type: "approachVehicle",
-        label: "اقترب من السيارة المستهدفة",
-        labelEn: "Approach target car",
-        done: false,
-        targetVehicleId: vehicleId,
-        radius: 60,
-      });
+      mission.data.anyVehicle = true;
+      mission.data.stealRequired = 1;
+      // Remember vehicle at mission start to require stealing a NEW one (not counting already-occupied)
+      mission.data.stealStartVehicle = player.inVehicle || null;
+      mission.data.stealCount = 0;
       mission.stages.push({
         type: "stealVehicle",
-        label: "اسرق السيارة",
-        labelEn: "Steal car",
+        label: "اسرق أي سيارة (واحدة فقط)",
+        labelEn: "Steal any car (just one)",
         done: false,
-        targetVehicleId: vehicleId,
+        anyVehicle: true
       });
       mission.stages.push({
         type: "dropoff",
@@ -851,7 +818,7 @@ export function setupMissionStages(mission) {
         radius: 50,
         requiresVehicle: true
       });
-      // For stealCar, the final dropoff is already this last stage, so prevent duplicate generic final
+      // Final dropoff is already this last stage, prevent duplicate generic final
       mission.data.noGenericEnd = true;
       break;
     }
@@ -1076,6 +1043,21 @@ export function updateMission() {
       }
       break;
     }
+    case "escapeToDropoff": {
+      // Police chase until reaching drop-off, no car theft required
+      // Keep wanted level active (re-trigger if lost)
+      if (player.wanted <= 0) {
+        player.wanted = Math.max(player.wanted, 1);
+        try { if (typeof updateWantedUI === "function") updateWantedUI(); } catch {}
+      }
+      const dist = Math.hypot(px - stage.x, py - stage.y);
+      const needRadius = stage.radius || 55;
+      if (dist < needRadius) {
+        stage.done = true;
+        advanceStage();
+      }
+      break;
+    }
     case "chase": {
       const t = m.data.chaseTarget;
       if (t) {
@@ -1135,8 +1117,11 @@ export function updateMission() {
     }
     case "stealVehicle": {
       if(stage.anyVehicle){
-        if(player.inVehicle){
+        // Require any non-police vehicle different from start (single, not 3)
+        const startVeh = m.data.stealStartVehicle;
+        if(player.inVehicle && !player.inVehicle.isPolice && player.inVehicle !== startVeh){
           stage.done = true;
+          m.data.stealCount = (m.data.stealCount || 0) + 1;
           advanceStage();
         }
         break;
@@ -1195,21 +1180,38 @@ export function updateMission() {
         }
       }
       const dist = Math.hypot(player.x - veh.x, player.y - veh.y);
-      const minD = m.data.minDist || 80;
-      const maxD = m.data.maxDist || 250;
+      const idealDist = m.data.idealDist || (3 * CFG.TILE);
+      const grace = m.data.graceDuration || 5000;
+      const divisor = m.data.suspicionRateDivisor || 1.5;
+      const elapsed = m.data.followTimer || 0;
       let suspicionDelta = 0;
-      if(dist < minD) suspicionDelta = (minD - dist)/minD * 0.9;
-      else if(dist > maxD) suspicionDelta = (dist - maxD)/ (maxD*0.5) * 0.7;
-      else suspicionDelta = -0.4; // recover when in band
+      if(elapsed < grace){
+        // Grace period: 5s to find target, bar stays empty / recovers quickly
+        suspicionDelta = -0.6;
+      } else {
+        // Center is ideal (288px = 3 tiles): closer → bar increases, farther → bar decreases (distance-proportional, slowed 1.5x)
+        if(dist < idealDist){
+          const closeness = (idealDist - dist) / idealDist; // 0..1
+          suspicionDelta = closeness * 0.9 / divisor * 2.2;
+          if(suspicionDelta < 0.02) suspicionDelta = 0.02;
+        } else if(dist > idealDist){
+          const farness = (dist - idealDist) / idealDist; // 0..1+
+          suspicionDelta = -farness * 0.7 / divisor * 2.2;
+          // Cap recovery speed
+          if(suspicionDelta < -0.5) suspicionDelta = -0.5;
+        } else {
+          suspicionDelta = 0;
+        }
+      }
       m.data.suspicion = Math.max(0, Math.min(100, (m.data.suspicion||0) + suspicionDelta));
-      // Update HUD suspicion bar via custom event or direct DOM
-      try { if(typeof updateSuspicionUI==="function") updateSuspicionUI(m.data.suspicion, dist, minD, maxD); } catch{}
-      // Fail if suspicion max
-      if(m.data.suspicion >= 100){
-        failMission(lang()==="en" ? "You were detected! Too close/far." : "تم كشفك! اقتراب/ابتعاد شديد.");
+      // Update HUD - pass ideal as center
+      try { if(typeof updateSuspicionUI==="function") updateSuspicionUI(m.data.suspicion, dist, idealDist, idealDist); } catch{}
+      // Fail if suspicion max (ignore during grace)
+      if(m.data.suspicion >= 100 && elapsed >= grace){
+        failMission(lang()==="en" ? "You were detected! Too close!" : "تم كشفك! اقتربت كثيرا!");
         break;
       }
-      m.data.followTimer = (m.data.followTimer||0) + 16;
+      m.data.followTimer = elapsed + 16;
       if(m.data.followTimer >= (stage.duration||30000)){
         stage.done = true;
         // cleanup suspicion
@@ -1273,46 +1275,48 @@ export function updateMission() {
     case "meeting": {
       const dist = Math.hypot(player.x - stage.x, player.y - stage.y);
       if(dist > (stage.radius||55)) break;
-      // Require pressing E to talk - progressive multi-message dialogue
+      // If meeting dialog is active, wait for it to complete via update.js handling (prevents double advance)
+      if(isMeetingActive()){
+        break;
+      }
+      // Require pressing E to start meeting - multi-message dialogue
+      // Don't start if in vehicle (similar to chat)
+      if(player.inVehicle) break;
       const justPressed = (typeof actionJust==="function" ? actionJust("enterExit") : false);
       if(justPressed){
-        // Resolve messages (prefer runtime data, fallback to quest)
+        // Resolve messages (prefer runtime data, fallback to quest/NPC)
         let msgs = m.data.meetingMessages;
         if (!Array.isArray(msgs) || !msgs.length) {
           const q = m.quest;
-          const fallback = getMeetingMessagesFromQuest(q) || getMeetingMessagesFromQuest({ params: m.data, meetingAr: m.data.meetingMsgAr, meetingEn: m.data.meetingMsgEn });
+          // Try quest first, then NPC's stored messages
+          let fallback = getMeetingMessagesFromQuest(q);
+          if (!fallback && m.data.meetingNpc && Array.isArray(m.data.meetingNpc.meetingMessages)) {
+            fallback = m.data.meetingNpc.meetingMessages;
+          }
+          if (!fallback) {
+            fallback = getMeetingMessagesFromQuest({ params: m.data, meetingAr: m.data.meetingMsgAr, meetingEn: m.data.meetingMsgEn });
+          }
           msgs = fallback || [{ ar: m.data.meetingMsgAr || "مرحباً", en: m.data.meetingMsgEn || "Hello", roleAr: m.data.meetingRoleAr || "", roleEn: m.data.meetingRoleEn || "" }];
           m.data.meetingMessages = msgs;
-          if (typeof m.data.meetingIndex!=="number") m.data.meetingIndex = 0;
         }
-        let idx = typeof m.data.meetingIndex==="number" ? m.data.meetingIndex : 0;
-        if (idx >= msgs.length) idx = msgs.length - 1;
-        const cur = msgs[idx] || msgs[0];
-        const msg = lang()==="en" ? (cur.en || cur.ar) : (cur.ar || cur.en);
-        const role = lang()==="en" ? (cur.roleEn || cur.roleAr) : (cur.roleAr || cur.roleEn);
-        // Display as "Role: Message" if role present, else just message
-        const display = role ? `${role}: ${msg}` : msg;
-        // Show with dialogue emoji and index if multiple
-        if (msgs.length > 1) {
-          showNotification(`💬 [${idx+1}/${msgs.length}] ${display}`);
-        } else {
-          showNotification(`💬 ${display}`);
-        }
-        m.data.meetingIndex = idx + 1;
-        // If more messages remain, keep stage active (stay near NPC), update UI, don't advance yet
-        if (m.data.meetingIndex < msgs.length) {
-          // Update progress text immediately for next press
-          try { updateMissionUI(); } catch {}
-          break;
-        }
-        // All messages shown - complete meeting stage
-        stage.done = true;
-        m.data.meetingDone = true;
-        // Remove meeting NPC
-        for(let i=npcs.length-1;i>=0;i--){
-          if(npcs[i].isMeetingNpc && npcs[i].questId===m.questId) npcs.splice(i,1);
-        }
-        advanceStage();
+        // Normalize messages format for meeting dialog
+        const normalizedMsgs = msgs.map(entry => ({
+          ar: String(entry.ar || "").trim() || "مرحباً",
+          en: String(entry.en || "").trim() || "Hello",
+          roleAr: String(entry.roleAr || "").trim(),
+          roleEn: String(entry.roleEn || "").trim()
+        })).filter(m => m.ar || m.en);
+        // Start meeting dialog
+        const completed = () => {
+          stage.done = true;
+          m.data.meetingDone = true;
+          // Remove meeting NPC
+          for(let i=npcs.length-1;i>=0;i--){
+            if(npcs[i].isMeetingNpc && npcs[i].questId===m.questId) npcs.splice(i,1);
+          }
+          advanceStage();
+        };
+        startMeeting(normalizedMsgs, completed);
       }
       break;
     }
@@ -1442,6 +1446,8 @@ export function completeMission() {
     }
   }catch{}
   showNotification(lang()==="en" ? `💰 Mission complete! +$${currentMission.reward}` : `💰 مهمة مكتملة! +$${currentMission.reward}`);
+  // Close any active meeting dialog
+  try{ closeMeeting(); }catch{}
 
   const completedQuestId = currentMission.questId || (currentMission.quest && currentMission.quest.id);
   const completedCategory = currentMission.category || "main";
@@ -1512,6 +1518,8 @@ export function failMission(reason) {
     for(let i=vehicles.length-1;i>=0;i--){ if(vehicles[i].isSilentTarget) vehicles.splice(i,1); }
   }catch{}
   showNotification(`❌ ${lang()==="en" ? "Failed:" : "فشلت المهمة:"} ${reason}`);
+  // Close any active meeting dialog
+  try{ closeMeeting(); }catch{}
 
   const failedQuestId = currentMission.questId;
   setTimeout(() => {
@@ -1633,11 +1641,21 @@ export function updateMissionUI() {
     } else {
       missionProg.textContent = `${lang()==="en"?"Deliver":"سلّم"} ${quest ? qTitle(quest) : ""}`;
     }
-  } else if(m.type==="meeting"){
+    } else if(m.type==="meeting"){
     if(stage?.type==="meeting"){
       const msgs = (m.data && Array.isArray(m.data.meetingMessages) && m.data.meetingMessages.length) ? m.data.meetingMessages : (getMeetingMessagesFromQuest(quest) || [{ar:"",en:""}]);
       const total = msgs.length;
-      const idx = (m.data && typeof m.data.meetingIndex==="number") ? m.data.meetingIndex : 0;
+      // Use meeting dialog's current index when active (prevents HUD showing 0 when dialog advances)
+      let idx = 0;
+      try {
+        if (isMeetingActive()) {
+          const curMeet = getCurrentMeeting();
+          if (curMeet && typeof curMeet.index === "number") idx = curMeet.index;
+          else if (m.data && typeof m.data.meetingIndex==="number") idx = m.data.meetingIndex;
+        } else if (m.data && typeof m.data.meetingIndex==="number") {
+          idx = m.data.meetingIndex;
+        }
+      } catch { idx = (m.data && typeof m.data.meetingIndex==="number") ? m.data.meetingIndex : 0; }
       if(total>1){
         const cur = msgs[Math.min(idx, total-1)] || msgs[0];
         const role = lang()==="en" ? (cur.roleEn || cur.roleAr) : (cur.roleAr || cur.roleEn);
@@ -1648,6 +1666,22 @@ export function updateMissionUI() {
       }
     } else {
       missionProg.textContent = `${lang()==="en"?"Go":"اذهب"} ${m.stage+1}/${m.stages.length}`;
+    }
+  } else if(m.type==="stealCar"){
+    if(stage?.type==="stealVehicle"){
+      missionProg.textContent = lang()==="en" ? "Steal any car (1/1) - Enter vehicle" : "اسرق أي سيارة (1/1) - استقل السيارة";
+    } else {
+      missionProg.textContent = lang()==="en" ? "Drive car to drop-off" : "قد السيارة إلى نقطة التسليم";
+    }
+  } else if(m.type==="escapeCar"){
+    if(stage?.type==="escapeToDropoff"){
+      missionProg.textContent = lang()==="en" ? "🚨 Escape police to drop-off!" : "🚨 اهرب من الشرطة إلى نقطة التسليم!";
+    } else if(stage?.type==="escape"){
+      const elapsed = Math.round((stage.timer||0)/1000);
+      const total = Math.round((stage.duration||20000)/1000);
+      missionProg.textContent = `${lang()==="en"?"Escape":"اهرب"} ${elapsed}/${total}s`;
+    } else {
+      missionProg.textContent = lang()==="en" ? "Escape!" : "اهرب!";
     }
   } else if(m.type==="deliverLoot"){
     const req = stage?.requiredItem || m.data.requiredItem || "";
