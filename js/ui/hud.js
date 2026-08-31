@@ -44,11 +44,15 @@ export function updateWantedUI() {
   if (wantedEl) wantedEl.innerHTML = html;
 }
 
+let _notifTimer = null;
 export function showNotification(msg) {
+  if(!notifEl) return;
   notifEl.textContent = msg;
   notifEl.style.opacity = 1;
-  setTimeout(() => {
-    notifEl.style.opacity = 0;
+  if(_notifTimer) clearTimeout(_notifTimer);
+  _notifTimer = setTimeout(() => {
+    if(notifEl) notifEl.style.opacity = 0;
+    _notifTimer = null;
   }, 2000);
 }
 

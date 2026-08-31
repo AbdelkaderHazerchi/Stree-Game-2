@@ -15,6 +15,7 @@ import { loadFullMap } from "../map/mapUtils.js?v=25";
 import { cam } from "../core/canvas.js?v=25";
 import { SETTINGS } from "../input/settings.js?v=25";
 import { t } from "./i18n.js?v=25";
+import { pauseCityMusic, playCityMusic, playMenuMusic, pauseMenuMusic, stopMenuMusic, stopMachineGunLoop, pauseDrivingSound } from "../audio/sounds.js?v=25";
 
 function ensurePlayer() {
   // Check imported binding first, then window fallback, then create
@@ -232,6 +233,8 @@ export function startNewGame(name) {
     name = (SETTINGS.language === "en" ? "Save " : "حفظ ") + new Date().toLocaleDateString(locale);
   }
   setCurrentSaveName(name);
+  // Stop menu music when game starts
+  try { stopMenuMusic(); } catch {}
   // Ensure map is ready before player
   try {
     if (!buildings || buildings.length === 0) {
@@ -291,14 +294,24 @@ export function startNewGame(name) {
 
 export function showPauseMenu() {
   document.getElementById("pauseMenu").style.display = "flex";
+  try { pauseCityMusic(); } catch {}
+  try { pauseMenuMusic(); } catch {}
+  try { pauseDrivingSound(); } catch {}
+  try { stopMachineGunLoop(); } catch {}
 }
 
 export function hidePauseMenu() {
   document.getElementById("pauseMenu").style.display = "none";
+  try { if (gameState === G.PLAYING) playCityMusic(); } catch {}
+  try { stopMenuMusic(); } catch {}
 }
 
 export function showMainMenu() {
   setGameState(G.MENU);
+  try { pauseCityMusic(); } catch {}
+  try { pauseDrivingSound(); } catch {}
+  try { stopMachineGunLoop(); } catch {}
+  try { playMenuMusic(); } catch {}
   const gc = document.getElementById("gameContainer");
   if (gc) gc.classList.remove("ui-hidden");
   document.body.classList.remove("ui-hidden");
@@ -335,17 +348,27 @@ export function populateSaveSlots(containerId, mode) {
         minute: "2-digit",
       });
     const noMission = t("hud.noMission").replace("🎯 ","");
-    div.innerHTML = `
-      <div>
-        <div class="name">${s.name}</div>
-        <div class="info">💰 $${s.money} | ${dateStr} | ${s.missionName || noMission}</div>
-      </div>
-      ${mode === "load" ? '<span style="color:#888">▶</span>' : ""}
-      ${mode === "save" ? "" : ""}
-    `;
+    // Build DOM safely with textContent to avoid XSS from save names
+    const infoWrap = document.createElement("div");
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "name";
+    nameDiv.textContent = s.name;
+    const infoDiv = document.createElement("div");
+    infoDiv.className = "info";
+    infoDiv.textContent = `💰 $${s.money} | ${dateStr} | ${s.missionName || noMission}`;
+    infoWrap.appendChild(nameDiv);
+    infoWrap.appendChild(infoDiv);
+    div.appendChild(infoWrap);
+    if(mode === "load"){
+      const arrow = document.createElement("span");
+      arrow.style.color = "#888";
+      arrow.textContent = "▶";
+      div.appendChild(arrow);
+    }
     if (mode === "load") {
       div.onclick = () => {
         if (loadSaveById(s.id)) {
+          try { stopMenuMusic(); } catch {}
           const gc = document.getElementById("gameContainer");
           if (gc) gc.classList.remove("ui-hidden");
           document.body.classList.remove("ui-hidden");

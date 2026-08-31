@@ -19,18 +19,20 @@ export function initMap() {
     window._mapSpawnPoint = { x: validated.x * CFG.TILE + CFG.TILE / 2, y: validated.y * CFG.TILE + CFG.TILE / 2 };
     window._mapMissionGivers = null;
     window._mapQuests = null;
+    window._mapChats = null;
+    try{ if(window.SG_Chat && window.SG_Chat.initChats) window.SG_Chat.initChats(); }catch{}
   }
 }
 
 export function loadMapFromData(data) {
-  CFG.COLS = data.cols || CFG.COLS;
-  CFG.ROWS = data.rows || CFG.ROWS;
-  // Clone tiles to avoid mutating original data
-  const tilesCopy = data.tiles ? data.tiles.map(row => [...row]) : [];
+  if(typeof data.cols === "number" && data.cols>=8 && data.cols<=200) CFG.COLS = data.cols;
+  if(typeof data.rows === "number" && data.rows>=8 && data.rows<=200) CFG.ROWS = data.rows;
+  // Clone tiles to avoid mutating original data, handle ragged rows
+  const tilesCopy = data.tiles ? data.tiles.map(row => Array.isArray(row) ? [...row] : []) : [];
   // Migration: make sand constant sandy yellow, pavement distinct
   // Old maps have SIDEWALK (2) for both road sidewalks (pavement) and beach sand.
   // Detect old maps (no PAVEMENT yet) and convert non-beach SIDEWALK to PAVEMENT
-  const hasPavement = tilesCopy.some(row => row.includes(T.PAVEMENT));
+  const hasPavement = tilesCopy.some(row => Array.isArray(row) && row.includes(T.PAVEMENT));
   if (!hasPavement) {
     for (let y = 0; y < tilesCopy.length; y++) {
       for (let x = 0; x < (tilesCopy[y]||[]).length; x++) {
@@ -101,13 +103,28 @@ export function loadMapFromData(data) {
     if (typeof window !== "undefined") window._mapSpawnPoint = { x: spawnPixelX, y: spawnPixelY };
   }
 
+  // Store chats (generic NPC chats) if present
+  if (typeof window !== "undefined") {
+    if (Array.isArray(data.chats) && data.chats.length > 0) {
+      window._mapChats = data.chats;
+    } else if (Array.isArray(data.dialogues) && data.dialogues.length > 0) {
+      window._mapChats = data.dialogues;
+    } else {
+      window._mapChats = null;
+    }
+    // Ensure chat module picks up new chats
+    try { if(window.SG_Chat && window.SG_Chat.initChats) window.SG_Chat.initChats(); } catch{}
+  }
   // Store map-defined quests (new two-point system) + legacy fallback
   if (typeof window !== "undefined") {
     // New quests array (two-point, bilingual)
     if (Array.isArray(data.quests) && data.quests.length > 0) {
       window._mapQuests = data.quests;
-      // Also expose legacy for backward compat derived from quests start points
-      window._mapMissionGivers = data.quests.map(q=>({ x: (q.start&&q.start.x)||q.x, y: (q.start&&q.start.y)||q.y, type:q.type, icon:q.icon, category:q.category, title:q.title, desc:q.desc, reward:q.reward, start:q.start, end:q.end, id:q.id, order:q.order }));
+      // Also expose legacy for backward compat derived from quests start points (use ?? to preserve 0)
+      window._mapMissionGivers = data.quests.map(q=>({ x: (q.start?.x ?? q.x), y: (q.start?.y ?? q.y), type:q.type, icon:q.icon, category:q.category, title:q.title, desc:q.desc, reward: (q.reward ?? 300), start:q.start, end:q.end, id:q.id, order: (q.order ?? 0) }));
+      // Also expose spammers if present
+      if(Array.isArray(data.spammers) && data.spammers.length) window._mapSpammers = data.spammers;
+      else if(Array.isArray(data.missionGivers)) window._mapSpammers = data.missionGivers.filter(m=>m.type==="spammer");
     } else if (Array.isArray(data.missionGivers) && data.missionGivers.length > 0) {
       // Migrate legacy flat missionGivers to quests (main, auto end offset)
       const legacyQuests = data.missionGivers.filter(m=>m.type!=="spammer").map((m, idx)=>{
@@ -120,8 +137,8 @@ export function loadMapFromData(data) {
           id: m.id||`q_main_${idx}_${type}_${sx}_${sy}`,
           category: m.category||"main",
           type, icon: m.icon||"⭐",
-          reward: m.reward||300,
-          order: m.order||idx,
+          reward: (m.reward ?? 300),
+          order: (m.order ?? idx),
           start, end,
           title: m.title||{ar:type,en:type},
           desc: m.desc||{ar:"",en:""}
@@ -129,10 +146,14 @@ export function loadMapFromData(data) {
       });
       window._mapQuests = legacyQuests;
       window._mapMissionGivers = data.missionGivers;
+      window._mapSpammers = data.missionGivers.filter(m=>m.type==="spammer");
     } else {
       window._mapQuests = null;
       window._mapMissionGivers = null;
+      window._mapSpammers = null;
     }
+    // Ensure spammers window global also set from data.spammers if exists
+    if(Array.isArray(data.spammers)) window._mapSpammers = data.spammers;
   }
 }
 
@@ -166,16 +187,19 @@ export function generateBuildingColors() {
         // Ensure 2x2 window not already visited
         if (visited.has((x + 1) + "," + y) || visited.has(x + "," + (y + 1)) || visited.has((x + 1) + "," + (y + 1))) can2x2 = false;
       }
-      if (can2x2) {
-        // Convert missing tiles to building to ensure 4 sqm
-        for (let dy = 0; dy < 2; dy++) {
-          for (let dx = 0; dx < 2; dx++) {
-            const nx = x + dx, ny = y + dy;
-            if (nx >= CFG.COLS || ny >= CFG.ROWS) continue;
-            if (map[ny][nx] !== T.BUILDING) map[ny][nx] = T.BUILDING;
-            visited.add(nx + "," + ny);
+        if (can2x2) {
+          // Convert missing tiles to building to ensure 4 sqm, but never overwrite ROAD/WATER/SPECIAL
+          for (let dy = 0; dy < 2; dy++) {
+            for (let dx = 0; dx < 2; dx++) {
+              const nx = x + dx, ny = y + dy;
+              if (nx >= CFG.COLS || ny >= CFG.ROWS) continue;
+              const t = map[ny][nx];
+              if (t !== T.BUILDING && t !== T.ROAD && t !== T.WATER && t !== T.SPECIAL) map[ny][nx] = T.BUILDING;
+              else if(t !== T.BUILDING) can2x2 = false;
+              visited.add(nx + "," + ny);
+            }
           }
-        }
+          if(!can2x2) continue;
         const zone = getZone(x, y);
         const palette = zone >= 0 ? PALETTES[LS_ZONES[zone].pal] : PALETTES.suburb;
         const color = palette[Math.floor(Math.random() * palette.length)];
@@ -230,11 +254,21 @@ export function normalizeBuildingsTo2x2() {
         if (can2x2) {
           let allBuilding = map[y][x] === T.BUILDING && map[y][x + 1] === T.BUILDING && map[y + 1][x] === T.BUILDING && map[y + 1][x + 1] === T.BUILDING;
           if (!allBuilding) {
-            // Expand: convert missing tiles to building to enforce 4 sqm
+            // Expand: convert missing tiles to building to enforce 4 sqm (never overwrite ROAD/WATER/SPECIAL)
+            let canExpand = true;
             for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
               const nx = x + dx, ny = y + dy;
               if (nx >= CFG.COLS || ny >= CFG.ROWS) continue;
-              if (map[ny][nx] !== T.BUILDING) map[ny][nx] = T.BUILDING;
+              const t = map[ny][nx];
+              if (t === T.ROAD || t === T.WATER || t === T.SPECIAL) canExpand = false;
+            }
+            if(!canExpand) can2x2 = false;
+            else {
+              for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) {
+                const nx = x + dx, ny = y + dy;
+                if (nx >= CFG.COLS || ny >= CFG.ROWS) continue;
+                if (map[ny][nx] !== T.BUILDING) map[ny][nx] = T.BUILDING;
+              }
             }
           }
         }
@@ -324,6 +358,7 @@ export function exportMapJSON() {
   const sp = getSpawnPoint();
   const mg = (typeof window !== "undefined" && window._mapMissionGivers) ? window._mapMissionGivers : [];
   const qs = (typeof window !== "undefined" && window._mapQuests) ? window._mapQuests : [];
+  const chats = (typeof window !== "undefined" && window._mapChats) ? window._mapChats : (typeof window !== "undefined" && window._mapChats === null ? [] : []);
   return JSON.stringify({
     cols: CFG.COLS,
     rows: CFG.ROWS,
@@ -336,6 +371,7 @@ export function exportMapJSON() {
     spawnPoint: sp ? { x: sp.x, y: sp.y } : { x: Math.floor(CFG.COLS / 2), y: Math.floor(CFG.ROWS / 2) },
     missionGivers: mg,
     quests: qs,
+    chats: chats || [],
     zones: LS_ZONES,
   });
 }

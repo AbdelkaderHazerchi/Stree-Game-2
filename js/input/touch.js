@@ -1,5 +1,6 @@
 // ======================== TOUCH CONTROLS ========================
 // Extracted from game.js:55169-55389 - no logic changed
+import { fireWeapon } from "../combat/shooting.js?v=25";
 
 export const touchHold = {};
 export const touchEdge = {};
@@ -53,6 +54,7 @@ export function initTouchControls() {
   // Left movement joystick
   const jZone = document.getElementById("joystickZone");
   const jKnob = document.getElementById("joystickKnob");
+  if(!jZone || !jKnob) return;
   let jTouchId = null;
 
   jZone.addEventListener(
@@ -117,6 +119,7 @@ export function initTouchControls() {
 
   // Right shoot-button-as-aim-joystick
   const shootBtn = tc.querySelector('[data-touch-action="shoot"]');
+  if(!shootBtn) return;
   shootBtn.addEventListener(
     "touchstart",
     (e) => {
@@ -156,9 +159,10 @@ export function initTouchControls() {
     "touchend",
     (e) => {
       if (!findTouch(e.changedTouches, shootTouchId)) return;
+      const wasShooting = shootTouchId !== null;
       shootTouchId = null;
       shootBtn.classList.remove("pressed");
-      import("../combat/shooting.js").then(m => m.fireWeapon && m.fireWeapon());
+      if(wasShooting) fireWeapon();
     },
     {
       passive: false,

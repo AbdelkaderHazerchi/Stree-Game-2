@@ -141,6 +141,11 @@ export const translations = {
     "diff.medium.desc": "تجربة متوازنة",
     "diff.hard.desc": "ضرر أكبر، شرطة عدوانية، مال أقل",
 
+    // Chat
+    "chat.next": "➡️ التالي — Next (E)",
+    "chat.close": "❌ إغلاق",
+    "chat.hint": "اضغط E للمتابعة — Press E to continue — ESC للإغلاق",
+
     // Shop items (fallback)
     "shop.pistolAmmo.name": "طلقات مسدس (x20)",
     "shop.pistolAmmo.desc": "20 طلقة للمسدس",
@@ -245,6 +250,10 @@ export const translations = {
     "weapon.rifle": "Rifle",
     "weapon.shotgun": "Shotgun",
 
+    "chat.next": "➡️ Next (E)",
+    "chat.close": "❌ Close",
+    "chat.hint": "Press E to continue — ESC to close",
+
     "notif.enterCar": "🚗 Entered {name}",
     "notif.exitCar": "🚶 Exited vehicle",
     "notif.horn": "📯 Honk!",
@@ -273,13 +282,17 @@ export const translations = {
   }
 };
 
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 export function t(key, params = {}) {
   const lang = SETTINGS.language || "ar";
   const dict = translations[lang] || translations.ar;
   let str = dict[key] ?? translations.ar[key] ?? key;
   for (const [k, v] of Object.entries(params)) {
-    str = str.replace(new RegExp(`\\{${k}\\}`, "g"), v);
-    str = str.replace(new RegExp(`\\$\\{${k}\\}`, "g"), v);
+    const safe = escapeHtml(v);
+    str = str.replace(new RegExp(`\\{${k}\\}`, "g"), safe);
+    str = str.replace(new RegExp(`\\$\\{${k}\\}`, "g"), safe);
   }
   return str;
 }

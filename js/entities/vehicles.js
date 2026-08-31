@@ -3,6 +3,7 @@
 import { CFG } from "../core/config.js?v=25";
 import { T } from "../core/config.js?v=25";
 import { getTile } from "../map/mapUtils.js?v=25";
+import { playCarExplosion } from "../audio/sounds.js?v=25";
 
 export let vehicles = [];
 export let explosions = [];
@@ -65,8 +66,10 @@ export const CAR_COLOR_PALETTES = {
 };
 export const CAR_COLOR_KEYS = Object.keys(CAR_COLOR_PALETTES);
 export function getRandomCarColor(){
+  if(!CAR_COLOR_KEYS.length) return "#e74c3c";
   const paletteKey = CAR_COLOR_KEYS[Math.floor(Math.random()*CAR_COLOR_KEYS.length)];
   const shades = CAR_COLOR_PALETTES[paletteKey];
+  if(!shades || !shades.length) return "#e74c3c";
   return shades[Math.floor(Math.random()*shades.length)];
 }
 export function getRandomCarColorByType(typeName){
@@ -77,6 +80,8 @@ export function getRandomCarColorByType(typeName){
 export function spawnVehicles() {
   vehicles.length = 0;
   explosions.length = 0;
+  // Build civilian type pool robustly (exclude police by flag, not position)
+  const civilianPool = VEHICLE_TYPES.filter(t => t.name !== "سيارة شرطة");
   for (let i = 0; i < CFG.NPC_VEHICLE_COUNT; i++) {
     let x,
       y,
@@ -88,9 +93,11 @@ export function spawnVehicles() {
       y = tileY * CFG.TILE + CFG.TILE / 2;
       attempts++;
     } while (isOnRoad(x, y) === false && attempts < CFG.MAX_SPAWN_ATTEMPTS);
+    // Skip spawn if still off-road after max attempts (sparse map)
+    if(!isOnRoad(x,y)) continue;
 
-    const type =
-      VEHICLE_TYPES[Math.floor(Math.random() * (VEHICLE_TYPES.length - 1))];
+    const type = civilianPool[Math.floor(Math.random() * civilianPool.length)] || civilianPool[0];
+    if(!type) continue;
     // Determine initial direction based on road orientation at spawn
     const spawnTX = Math.floor(x / CFG.TILE);
     const spawnTY = Math.floor(y / CFG.TILE);
@@ -105,19 +112,23 @@ export function spawnVehicles() {
       initAngle = (3 * Math.PI) / 2;
     }
     const health = 15 + Math.floor(Math.random() * 9); // 15-23 bullets to detonate
+    const cruiseSpeed = 1.6 + Math.random() * 0.6;
     const v = {
       x,
       y,
       w: type.w,
       h: type.h,
       speed: type.speed + (Math.random() - 0.5) * 0.5,
+      cruiseSpeed,
       color: getRandomCarColor(),
       type: type,
+      typeIdx: VEHICLE_TYPES.indexOf(type),
       angle: initAngle,
       vx: 0,
       vy: 0,
       driver: null,
       isPolice: false,
+      isPersonal: false,
       siren: false,
       occupied: false,
       hidden: false,
@@ -134,15 +145,20 @@ export function spawnVehicles() {
     vehicles.push(v);
   }
 
-  // Police vehicles
+  // Police vehicles (capped attempts to avoid infinite loop on water-only maps)
   for (let i = 0; i < CFG.POLICE_VEHICLE_COUNT; i++) {
     let x, y;
+    let attempts = 0;
     do {
       const tileX = 3 + Math.floor(Math.random() * (CFG.COLS - 6));
       const tileY = 3 + Math.floor(Math.random() * (CFG.ROWS - 6));
       x = tileX * CFG.TILE + CFG.TILE / 2;
       y = tileY * CFG.TILE + CFG.TILE / 2;
+      attempts++;
+      if(attempts >= CFG.MAX_SPAWN_ATTEMPTS) break;
     } while (isOnRoad(x, y) === false);
+    // Skip if no road found (avoid infinite loop)
+    if(!isOnRoad(x,y)) continue;
 
     const pt = VEHICLE_TYPES[4];
     const pvHealth = 15 + Math.floor(Math.random() * 9);
@@ -154,11 +170,13 @@ export function spawnVehicles() {
       speed: CFG.POLICE_SPEED,
       color: "#ffffff",
       type: pt,
+      typeIdx: VEHICLE_TYPES.indexOf(pt),
       angle: Math.random() * Math.PI * 2,
       vx: 0,
       vy: 0,
       driver: null,
       isPolice: true,
+      isPersonal: false,
       siren: false,
       occupied: false,
       hidden: false,
@@ -186,6 +204,7 @@ export function explodeVehicle(vi) {
     // tie to vehicle reference for removal; also store rotation for debris?
   };
   explosions.push(exp);
+  try { playCarExplosion(); } catch {}
   return exp;
 }
 

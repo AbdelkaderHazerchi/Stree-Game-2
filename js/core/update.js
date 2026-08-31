@@ -9,7 +9,7 @@ import { npcs, lootItems } from "../entities/npcs.js?v=25";
 import { police } from "../entities/police.js?v=25";
 import { getTile } from "../map/mapUtils.js?v=25";
 import { specialBuildings } from "../map/mapState.js?v=25";
-import { act, actJust, isAiming, worldMouseX, worldMouseY } from "../input/inputState.js?v=25";
+import { act, actJust, isAiming, worldMouseX, worldMouseY, keys } from "../input/inputState.js?v=25";
 import { actionJust, actionHeld } from "../input/keyboard.js?v=25";
 import { updateInput } from "../input/keyboard.js?v=25";
 import { closeInventory, toggleInventory, switchWeapon, switchWeaponSlot } from "../ui/inventory.js?v=25";
@@ -26,12 +26,27 @@ import { currentMission, missionGivers, usingSequentialMissions, quests } from "
 import { updateMission, startMission, getActiveMissionGiver, getVisibleStartGivers } from "../missions/missionSystem.js?v=25";
 import { showPauseMenu } from "../ui/menu.js?v=25";
 import { SHOPS, setNearShopName } from "../ui/shop.js?v=25";
+import { updateCityMusic, updateMenuMusic, handleMachineGunTrigger } from "../audio/sounds.js?v=25";
+import { getCurrentWeapon } from "../combat/shooting.js?v=25";
+import { isChatActive, advanceChat, startRandomChatNearPlayer, closeChat, getNearbyNpc, getCurrentChat } from "../ui/chat.js?v=25";
 
 export function update() {
   if (!player || !player.alive) return;
 
   // Input (keyboard + gamepad)
   updateInput();
+
+  // Chat: ESC closes chat before pausing, E advances chat
+  if (isChatActive()) {
+    if (actJust.pause || (keys && (keys["escape"] || keys["Escape"]))) {
+      closeChat();
+      return;
+    }
+    if (actJust.enterExit) {
+      advanceChat();
+      return;
+    }
+  }
 
   // Process frame-based actions
   if (actJust.pause && gameState === G.PLAYING) {
@@ -44,25 +59,105 @@ export function update() {
     return;
   }
   if (player.alive) {
-    if (actionJust("enterExit")) handleEnterExit();
-    if (actionJust("horn")) handleHorn();
-    if (actionJust("cancelMission")) cancelMission();
-    if (actionJust("inventory")) toggleInventory();
-    if (actionJust("weaponNext")) switchWeapon(1);
-    if (actionJust("weaponSlot1")) switchWeaponSlot(0);
-    if (actionJust("weaponSlot2")) switchWeaponSlot(1);
-    if (actionJust("weaponSlot3")) switchWeaponSlot(2);
-    if (actionJust("weaponSlot4")) switchWeaponSlot(3);
-    if (actionJust("weaponSlot5")) switchWeaponSlot(4);
-    // Continuous shooting (hold space)
-    if (act.shoot && player.shootCooldown <= 0) fireWeapon();
+    // Generic NPC chat: E near any NPC picks random chat (priority: meeting > shop/vehicle > chat)
+    if (isChatActive()) {
+      if (actionJust("enterExit")) {
+        advanceChat();
+      } else if (actionJust("pause") || (keys && (keys["escape"] || keys["Escape"]))) {
+        closeChat();
+      }
+      if (actionJust("inventory") || actionJust("cancelMission")) {
+        closeChat();
+      }
+      // While chatting, still allow horn etc but block vehicle/shop enter
+      if (actionJust("horn")) handleHorn();
+      // Don't process other enterExit actions while chatting
+    } else {
+      if (actionJust("enterExit")) {
+        let handledAsChat = false;
+        try {
+          let nearShop = false;
+          for(const sb of specialBuildings){
+            if(!SHOPS[sb.name]) continue;
+            const sx = sb.x * CFG.TILE + CFG.TILE/2;
+            const sy = sb.y * CFG.TILE + CFG.TILE/2;
+            if(Math.hypot(player.x - sx, player.y - sy) < 70){ nearShop = true; break; }
+          }
+          let nearVehicle = false;
+          if(!nearShop){
+            for(const v of vehicles){
+              if(v.occupied || v.hidden || v.exploding) continue;
+              if(Math.hypot(player.x - v.x, player.y - v.y) < 80){ nearVehicle = true; break; }
+            }
+          }
+          let inMeetingRadius = false;
+          if(currentMission && currentMission.stages && currentMission.stages[currentMission.stage]?.type==="meeting"){
+            const st = currentMission.stages[currentMission.stage];
+            if(st && typeof st.x==="number" && Math.hypot(player.x - st.x, player.y - st.y) < (st.radius||55)){
+              inMeetingRadius = true;
+            }
+          }
+          if(!nearShop && !nearVehicle && !inMeetingRadius){
+            const npc = getNearbyNpc(70);
+            if(npc){
+              handledAsChat = startRandomChatNearPlayer();
+            }
+          }
+        } catch(e){ try{ handledAsChat = startRandomChatNearPlayer(); }catch{} }
+        if(!handledAsChat){
+          handleEnterExit();
+        }
+      }
+      if (actionJust("horn")) handleHorn();
+      if (actionJust("cancelMission")) cancelMission();
+      if (actionJust("inventory")) toggleInventory();
+      if (actionJust("weaponNext")) switchWeapon(1);
+      if (actionJust("weaponSlot1")) switchWeaponSlot(0);
+      if (actionJust("weaponSlot2")) switchWeaponSlot(1);
+      if (actionJust("weaponSlot3")) switchWeaponSlot(2);
+      if (actionJust("weaponSlot4")) switchWeaponSlot(3);
+      if (actionJust("weaponSlot5")) switchWeaponSlot(4);
+      if (act.shoot && player.shootCooldown <= 0) fireWeapon();
+    }
   }
+
+  // Machine gun loop: stop when trigger lifted (gun2_shot.mp3)
+  try {
+    const cw = getCurrentWeapon();
+    const curName = cw ? player.weapons[player.currentWeapon] : null;
+    handleMachineGunTrigger(act.shoot, curName);
+  } catch {}
+
+  // City music: loops during gameplay not in pause/menu; menu music loops only in MENU
+  try { updateCityMusic(gameState, G); } catch {}
+  try { updateMenuMusic(gameState, G); } catch {}
 
   // Shoot cooldown
   if (player.shootCooldown > 0) player.shootCooldown -= 16;
 
-  // Player movement
-  updatePlayer();
+  // Player movement (freeze while chatting)
+  if (isChatActive()) {
+    // Auto-close if moved far from chat NPC
+    try {
+      const cur = getCurrentChat();
+      if (cur && cur.npc) {
+        const d = Math.hypot(player.x - cur.npc.x, player.y - cur.npc.y);
+        if (d > 130) closeChat();
+      }
+    } catch {}
+  } else {
+    updatePlayer();
+  }
+  // Also auto-close check after movement (in case just unfrozen? already handled)
+  try {
+    if (isChatActive()) {
+      const cur2 = getCurrentChat();
+      if (cur2 && cur2.npc) {
+        const d2 = Math.hypot(player.x - cur2.npc.x, player.y - cur2.npc.y);
+        if (d2 > 130) closeChat();
+      }
+    }
+  } catch {}
 
   // NPCs
   updateNPCs();

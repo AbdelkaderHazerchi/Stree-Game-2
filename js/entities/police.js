@@ -34,12 +34,16 @@ export function updatePolice() {
 
   while (police.length < player.wanted * 2) {
     let px, py;
+    let attempts = 0;
     do {
       const tx = Math.floor(2 + Math.random() * (CFG.COLS - 4));
       const ty = Math.floor(2 + Math.random() * (CFG.ROWS - 4));
       px = tx * CFG.TILE + CFG.TILE / 2;
       py = ty * CFG.TILE + CFG.TILE / 2;
+      attempts++;
+      if(attempts >= 50) break;
     } while (!isWalkable(px, py));
+    if(!isWalkable(px,py)) break;
 
     police.push({
       x: px,
@@ -102,7 +106,7 @@ export function updatePolice() {
       let nearest = null;
       let nearestDist = Infinity;
       for (const v of vehicles) {
-        if (!v.isPolice || v.occupied) continue;
+        if (!v.isPolice || v.occupied || v.hidden || v.exploding || v.isPersonal) continue;
         const d = Math.hypot(p.x - v.x, p.y - v.y);
         if (d < nearestDist) {
           nearestDist = d;
@@ -127,8 +131,16 @@ export function updatePolice() {
       const v = p.inVehicle;
       v.driver = null;
       v.occupied = false;
-      p.x = v.x + 30;
-      p.y = v.y + 30;
+      // Place cop at nearest walkable offset
+      let offX = v.x + 30, offY = v.y + 30;
+      let tries = 0;
+      while(tries < 8 && !isWalkable(offX, offY)){
+        offX = v.x + (Math.random()-0.5)*60;
+        offY = v.y + (Math.random()-0.5)*60;
+        tries++;
+      }
+      p.x = isWalkable(offX, offY) ? offX : v.x;
+      p.y = isWalkable(offX, offY) ? offY : v.y;
       p.inVehicle = null;
       p.targetVehicle = null;
     }

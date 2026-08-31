@@ -8,14 +8,14 @@ import { showNotification } from "./hud.js?v=25";
 import { t, getWeaponName } from "./i18n.js?v=25";
 
 export function toggleInventory() {
-  if (!player) return;
+  if (!player || !invPanel) return;
   player.showInventory = !player.showInventory;
   invPanel.style.display = player.showInventory ? "block" : "none";
   if (player.showInventory) renderInventory();
 }
 
 export function closeInventory() {
-  if (!player) return;
+  if (!player || !invPanel) return;
   player.showInventory = false;
   invPanel.style.display = "none";
 }
@@ -36,7 +36,7 @@ export function switchWeaponSlot(idx) {
 }
 
 export function renderInventory() {
-  if (!invWeaponsEl) return;
+  if (!invWeaponsEl || !player) return;
   invWeaponsEl.innerHTML = "";
   player.weapons.forEach((wName, i) => {
     const w = WEAPONS[wName];
@@ -44,7 +44,16 @@ export function renderInventory() {
     const active = i === player.currentWeapon ? "active" : "";
     const div = document.createElement("div");
     div.className = `inv-slot ${active}`;
-    div.innerHTML = `<span class="key">${i + 1}</span><span class="name">${w.icon} ${getWeaponName(wName)}</span><span class="ammo">${ammo} ${t("inventory.bullets")}</span>`;
+    const keySpan = document.createElement("span");
+    keySpan.className = "key";
+    keySpan.textContent = String(i+1);
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "name";
+    nameSpan.textContent = `${w.icon} ${getWeaponName(wName)}`;
+    const ammoSpan = document.createElement("span");
+    ammoSpan.className = "ammo";
+    ammoSpan.textContent = `${ammo} ${t("inventory.bullets")}`;
+    div.append(keySpan, nameSpan, ammoSpan);
     div.onclick = () => {
       switchWeaponSlot(i);
       renderInventory();

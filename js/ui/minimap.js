@@ -11,9 +11,11 @@ import { missionGivers, currentMission, usingSequentialMissions, quests } from "
 import { getActiveMissionGiver, getVisibleStartGivers, getActiveEndGiver } from "../missions/missionSystem.js?v=25";
 
 export function renderMinimap() {
+  if(!miniCtx || !miniCanvas || !player) return;
   const mc = miniCtx;
   const mw = miniCanvas.width;
   const mh = miniCanvas.height;
+  if(!mw || !mh) return;
   mc.clearRect(0, 0, mw, mh);
 
   const scale = mw / (CFG.COLS * CFG.TILE);
@@ -96,7 +98,9 @@ export function renderMinimap() {
   mc.strokeRect(ox, oy, vw, vh);
 
   // Player dot
-  const p = player.inVehicle || player;
+  if(!player) return;
+  const p = (player.inVehicle || player);
+  if(!p || typeof p.x !== "number") return;
   mc.fillStyle = "#00ff00";
   mc.beginPath();
   mc.arc(p.x * scale, p.y * scale, 3, 0, Math.PI * 2);

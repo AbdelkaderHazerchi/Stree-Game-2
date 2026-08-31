@@ -22,17 +22,29 @@ export function pickRandomDest(v) {
 }
 export function chooseBestDir(v, tx, ty) {
   const dirs = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2];
-  let best = v.moveAngle !== undefined ? v.moveAngle : 0;
+  let best = v.moveAngle !== undefined && v.moveAngle !== null ? v.moveAngle : 0;
   let bestDist = Infinity;
+  let found = false;
   for (const a of dirs) {
     const nx = v.x + Math.cos(a) * CFG.TILE;
     const ny = v.y + Math.sin(a) * CFG.TILE;
     if (isOnRoad(nx, ny)) {
+      found = true;
       let d = Math.hypot(nx - tx, ny - ty);
       if (a === v.moveAngle) d *= 0.85;
       if (d < bestDist) {
         bestDist = d;
         best = a;
+      }
+    }
+  }
+  // If off-road (no valid dir), search wider ring for any road
+  if(!found){
+    for(let r=1;r<=3;r++){
+      for(const a of dirs){
+        const nx = v.x + Math.cos(a) * CFG.TILE * r;
+        const ny = v.y + Math.sin(a) * CFG.TILE * r;
+        if(isOnRoad(nx, ny)) return a;
       }
     }
   }
@@ -85,16 +97,16 @@ export function updateTraffic() {
       v.moveAngle = chooseBestDir(v, v.npcTargetX, v.npcTargetY);
     }
 
-    // Check if the road ahead is still a road
-    const lookAhead = 4;
+    // Check if the road ahead is still a road (predictive)
+    const lookAhead = CFG.TILE * 0.5;
     const aheadX = v.x + Math.cos(v.moveAngle) * lookAhead;
     const aheadY = v.y + Math.sin(v.moveAngle) * lookAhead;
     if (!isOnRoad(aheadX, aheadY)) {
       v.moveAngle = chooseBestDir(v, v.npcTargetX, v.npcTargetY);
     }
 
-    // Move at steady speed
-    const spd = 1.6 + Math.random() * 0.6;
+    // Move at steady per-vehicle speed (no jitter)
+    const spd = v.cruiseSpeed || 1.8;
     const nx = v.x + Math.cos(v.moveAngle) * spd;
     const ny = v.y + Math.sin(v.moveAngle) * spd;
 
@@ -102,10 +114,11 @@ export function updateTraffic() {
       v.x = nx;
       v.y = ny;
       v.angle = v.moveAngle;
-      // Center within the road lane
+      // Center within the road lane (tolerant to floating errors)
       const cx = Math.floor(v.x / CFG.TILE) * CFG.TILE + CFG.TILE / 2;
       const cy = Math.floor(v.y / CFG.TILE) * CFG.TILE + CFG.TILE / 2;
-      if (v.moveAngle === 0 || v.moveAngle === Math.PI) {
+      const isHoriz = Math.abs(Math.sin(v.moveAngle)) < 0.01;
+      if (isHoriz) {
         v.y += (cy - v.y) * 0.15;
       } else {
         v.x += (cx - v.x) * 0.15;

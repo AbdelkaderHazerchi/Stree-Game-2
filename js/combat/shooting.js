@@ -6,6 +6,7 @@ import { player } from "../entities/player.js?v=25";
 import { isTouchDevice, touchAimAngle } from "../input/touch.js?v=25";
 import { worldMouseX, worldMouseY } from "../input/inputState.js?v=25";
 import { showNotification, updateHUD } from "../ui/hud.js?v=25";
+import { playWeaponShot } from "../audio/sounds.js?v=25";
 
 export function getCurrentWeapon() {
   if (!player || !player.weapons.length) return null;
@@ -61,4 +62,10 @@ export function fireWeapon() {
   player.ammo[wName] = Math.max(0, (player.ammo[wName] || 0) - w.ammoPerShot);
   player.shootCooldown = w.fireRate;
   updateHUD();
+  // --- Sound: per spec ---
+  // pistol -> gun_shot.mp3 each shot, smg -> gun2_shot.mp3 loops while held, rifle (sniper) -> sniper_shot.mp3
+  try {
+    // For SMG we start looping sound here; actual stop handled in update loop when trigger lifted
+    playWeaponShot(wName);
+  } catch {}
 }

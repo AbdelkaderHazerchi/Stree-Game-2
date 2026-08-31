@@ -4,8 +4,7 @@
 
 import { CFG, T } from "../core/config.js?v=25";
 import { getTile } from "../map/mapUtils.js?v=25";
-import { isWalkable } from "../entities/vehicles.js?v=25";
-import { vehicles } from "../entities/vehicles.js?v=25";
+import { vehicles, isWalkable, explosions, EXPLOSION_DURATION } from "../entities/vehicles.js?v=25";
 import { npcs } from "../entities/npcs.js?v=25";
 import { player } from "../entities/player.js?v=25";
 import { keys } from "../input/inputState.js?v=25";
@@ -23,12 +22,51 @@ import {
 import { SETTINGS } from "../input/settings.js?v=25";
 import { MISSION_REWARDS, MISSION_DESCS, getQuestDisplayTitle, getQuestDisplayDesc, QUEST_TYPE_I18N, getQuestIcon } from "./missionDefs.js?v=25";
 import { t } from "../ui/i18n.js?v=25";
+import { playBombExplosion } from "../audio/sounds.js?v=25";
 
 // Helper: language
 function lang(){ return (SETTINGS && SETTINGS.language==="en") ? "en":"ar"; }
 // Helper: title/desc from quest object (bilingual)
 function qTitle(q){ return getQuestDisplayTitle(q, lang()); }
 function qDesc(q){ return getQuestDisplayDesc(q, lang()); }
+
+// Helper to extract bilingual meeting messages (array of {ar,en,roleAr,roleEn}) with backward compat for single meetingAr/En
+function getMeetingMessagesFromQuest(q){
+  if(!q) return null;
+  let arr = null;
+  try {
+    if (q.params && Array.isArray(q.params.meetingMessages) && q.params.meetingMessages.length) arr = q.params.meetingMessages;
+    else if (Array.isArray(q.meetingMessages) && q.meetingMessages.length) arr = q.meetingMessages;
+    else if (q.params && Array.isArray(q.params.meetingDialogue) && q.params.meetingDialogue.length) arr = q.params.meetingDialogue;
+    else if (Array.isArray(q.meetingDialogue) && q.meetingDialogue.length) arr = q.meetingDialogue;
+  } catch {}
+  if (Array.isArray(arr) && arr.length) {
+    const norm = arr.map(entry=>{
+      if(!entry || typeof entry!=="object") return null;
+      const ar = String(entry.ar || entry.messageAr || entry.textAr || entry.msgAr || entry.message || "").trim();
+      const en = String(entry.en || entry.messageEn || entry.textEn || entry.msgEn || entry.message || "").trim();
+      const roleAr = String(entry.roleAr || entry.speakerAr || entry.role || "").trim();
+      const roleEn = String(entry.roleEn || entry.speakerEn || entry.role || "").trim();
+      return { ar, en, roleAr, roleEn };
+    }).filter(m=> m && (m.ar || m.en));
+    if (norm.length) return norm;
+  }
+  // Legacy single message fallback
+  let singleAr = "";
+  let singleEn = "";
+  let singleRoleAr = "";
+  let singleRoleEn = "";
+  try {
+    singleAr = (q.params && q.params.meetingAr) || q.meetingAr || "";
+    singleEn = (q.params && q.params.meetingEn) || q.meetingEn || "";
+    singleRoleAr = (q.params && (q.params.meetingRoleAr || q.params.speakerAr || q.params.roleAr)) || q.meetingRoleAr || q.speakerAr || q.roleAr || "";
+    singleRoleEn = (q.params && (q.params.meetingRoleEn || q.params.speakerEn || q.params.roleEn)) || q.meetingRoleEn || q.speakerEn || q.roleEn || "";
+  } catch {}
+  if (singleAr || singleEn) {
+    return [{ ar: String(singleAr).trim(), en: String(singleEn).trim(), roleAr: String(singleRoleAr).trim(), roleEn: String(singleRoleEn).trim() }];
+  }
+  return null;
+}
 
 function normalizeQuestForRuntime(raw, idx){
   const type = raw.type || "deliverShipment";
@@ -43,7 +81,61 @@ function normalizeQuestForRuntime(raw, idx){
   else if(typeof desc==="string") desc={ar:desc,en:desc};
   const start = raw.start ? {x:Math.floor(raw.start.x), y:Math.floor(raw.start.y)} : (typeof raw.x==="number" ? {x:Math.floor(raw.x), y:Math.floor(raw.y)} : {x:0,y:0});
   const end = raw.end ? {x:Math.floor(raw.end.x), y:Math.floor(raw.end.y)} : (typeof raw.endX==="number"? {x:Math.floor(raw.endX), y:Math.floor(raw.endY)} : {x: Math.min(CFG.COLS-1, start.x+4), y: start.y});
-  return { id: raw.id||`q_${category}_${idx}_${type}_${start.x}_${start.y}`, category, type, icon, reward, order: (typeof raw.order==="number"? raw.order: idx), start, end, title, desc };
+  // Preserve meeting messages and item params for runtime
+  let meetingMessages = null;
+  let legacyAr = "", legacyEn = "";
+  let legacyRoleAr = "", legacyRoleEn = "";
+  try {
+    meetingMessages = getMeetingMessagesFromQuest(raw);
+    // Keep legacy fields for backward compat exposure
+    if (meetingMessages && meetingMessages.length) {
+      legacyAr = meetingMessages[0].ar;
+      legacyEn = meetingMessages[0].en;
+      legacyRoleAr = meetingMessages[0].roleAr;
+      legacyRoleEn = meetingMessages[0].roleEn;
+    } else {
+      // No messages, keep single if exists (already handled inside helper but ensure raw has nothing)
+    }
+  } catch {}
+  // Build params preservation
+  let params = null;
+  try {
+    if (raw.params && typeof raw.params==="object") params = { ...raw.params };
+  } catch {}
+  // If raw has meetingMessages but params didn't, ensure params includes it
+  if (meetingMessages && meetingMessages.length) {
+    if (!params) params = {};
+    // Store canonical meetingMessages
+    params.meetingMessages = meetingMessages;
+    // Keep legacy single for old readers
+    if (legacyAr) params.meetingAr = legacyAr;
+    if (legacyEn) params.meetingEn = legacyEn;
+    if (legacyRoleAr) params.meetingRoleAr = legacyRoleAr;
+    if (legacyRoleEn) params.meetingRoleEn = legacyRoleEn;
+  } else if (raw.meetingMessages) {
+    if (!params) params = {};
+    params.meetingMessages = raw.meetingMessages;
+  }
+  // Also handle itemName legacy
+  const itemName = (raw.params && raw.params.itemName) || raw.itemName || undefined;
+  if (itemName && (!params || !params.itemName)) {
+    if (!params) params = {};
+    params.itemName = itemName;
+  }
+  const out = { id: raw.id||`q_${category}_${idx}_${type}_${start.x}_${start.y}`, category, type, icon, reward, order: (typeof raw.order==="number"? raw.order: idx), start, end, title, desc };
+  if (params) out.params = params;
+  if (itemName) out.itemName = itemName;
+  if (meetingMessages && meetingMessages.length) {
+    out.meetingMessages = meetingMessages;
+    out.meetingAr = legacyAr || undefined;
+    out.meetingEn = legacyEn || undefined;
+    out.meetingRoleAr = legacyRoleAr || undefined;
+    out.meetingRoleEn = legacyRoleEn || undefined;
+  } else if (raw.meetingAr || raw.meetingEn) {
+    out.meetingAr = raw.meetingAr;
+    out.meetingEn = raw.meetingEn;
+  }
+  return out;
 }
 
 export function generateMissions() {
@@ -189,10 +281,17 @@ export function generateMissions() {
     let params = mDef.params ? {...mDef.params} : undefined;
     if(mDef.type==="meeting"){
       params = params || {};
-      params.meetingAr = "مرحباً يا بطل";
-      params.meetingEn = "Hello hero";
+      // New multi-message format: array with message+role bilingual
+      params.meetingMessages = [
+        { ar: "مرحباً يا بطل", en: "Hello hero", roleAr: "المخبر", roleEn: "Informant" }
+      ];
+      // Keep legacy single for backward compat
+      params.meetingAr = params.meetingMessages[0].ar;
+      params.meetingEn = params.meetingMessages[0].en;
+      params.meetingRoleAr = params.meetingMessages[0].roleAr;
+      params.meetingRoleEn = params.meetingMessages[0].roleEn;
     }
-    const q={ id:`q_main_rand_${questCounter++}`, category:"main", type:mDef.type, icon:mDef.icon, reward:mDef.reward, order:idx, start:st, end:en, title:{ar:mDef.name,en:mDef.type}, desc:{ar:mDef.desc,en:mDef.desc}, params, itemName: params?.itemName, meetingAr: params?.meetingAr, meetingEn: params?.meetingEn };
+    const q={ id:`q_main_rand_${questCounter++}`, category:"main", type:mDef.type, icon:mDef.icon, reward:mDef.reward, order:idx, start:st, end:en, title:{ar:mDef.name,en:mDef.type}, desc:{ar:mDef.desc,en:mDef.desc}, params, itemName: params?.itemName, meetingAr: params?.meetingAr, meetingEn: params?.meetingEn, meetingMessages: params?.meetingMessages, meetingRoleAr: params?.meetingRoleAr, meetingRoleEn: params?.meetingRoleEn };
     quests.push(q); mainQuests.push(q);
     const legacyDef={ name:mDef.name, desc:mDef.desc, icon:mDef.icon, type:mDef.type, reward:mDef.reward, title:q.title, questId:q.id, category:"main", start:st, end:en };
     allMissions.push(legacyDef);
@@ -205,13 +304,18 @@ export function generateMissions() {
     const endPx=getWalkableTile();
     const st=pixelToTile(startPx), en=pixelToTile(endPx);
     let params = mDef.params ? {...mDef.params} : undefined;
-    // For meeting, add random bilingual message
+    // For meeting, add random bilingual message with role
     if(mDef.type==="meeting"){
       params = params || {};
-      params.meetingAr = "لدي معلومات لك";
-      params.meetingEn = "I have intel for you";
+      params.meetingMessages = [
+        { ar: "لدي معلومات لك", en: "I have intel for you", roleAr: "العميل", roleEn: "Agent" }
+      ];
+      params.meetingAr = params.meetingMessages[0].ar;
+      params.meetingEn = params.meetingMessages[0].en;
+      params.meetingRoleAr = params.meetingMessages[0].roleAr;
+      params.meetingRoleEn = params.meetingMessages[0].roleEn;
     }
-    const q={ id:`q_side_rand_${questCounter++}`, category:"side", type:mDef.type, icon:mDef.icon, reward:mDef.reward, order:idx, start:st, end:en, title:{ar:mDef.name,en:mDef.type}, desc:{ar:mDef.desc,en:mDef.desc}, params, itemName: params?.itemName, meetingAr: params?.meetingAr, meetingEn: params?.meetingEn };
+    const q={ id:`q_side_rand_${questCounter++}`, category:"side", type:mDef.type, icon:mDef.icon, reward:mDef.reward, order:idx, start:st, end:en, title:{ar:mDef.name,en:mDef.type}, desc:{ar:mDef.desc,en:mDef.desc}, params, itemName: params?.itemName, meetingAr: params?.meetingAr, meetingEn: params?.meetingEn, meetingMessages: params?.meetingMessages, meetingRoleAr: params?.meetingRoleAr, meetingRoleEn: params?.meetingRoleEn };
     quests.push(q); sideQuests.push(q);
     const legacyDef={ name:mDef.name, desc:mDef.desc, icon:mDef.icon, type:mDef.type, reward:mDef.reward, title:q.title, questId:q.id, category:"side", start:st, end:en };
     allMissions.push(legacyDef);
@@ -491,15 +595,29 @@ export function setupMissionStages(mission) {
     case "meeting": {
       const meetPos = questStartPixel || getWalkableTile();
       const drop = getQuestDropOff();
-      // Spawn meeting NPC
       const q = mission.quest;
-      const msgAr = (q && q.params && q.params.meetingAr) || q.meetingAr || "مرحباً، لدينا معلومات مهمة.";
-      const msgEn = (q && q.params && q.params.meetingEn) || q.meetingEn || "Hello, we have important intel.";
+      // Resolve bilingual messages array (supports legacy single)
+      let meetingMessages = getMeetingMessagesFromQuest(q);
+      if (!meetingMessages || !meetingMessages.length) {
+        meetingMessages = [{ ar: "مرحباً، لدينا معلومات مهمة.", en: "Hello, we have important intel.", roleAr: "", roleEn: "" }];
+      }
+      meetingMessages = meetingMessages.map(m=> ({
+        ar: String(m.ar || "").trim() || "مرحباً",
+        en: String(m.en || "").trim() || "Hello",
+        roleAr: String(m.roleAr || "").trim(),
+        roleEn: String(m.roleEn || "").trim()
+      }));
       mission.data.meetingPos = {x: meetPos.x, y: meetPos.y};
-      mission.data.meetingMsgAr = msgAr;
-      mission.data.meetingMsgEn = msgEn;
+      mission.data.meetingMessages = meetingMessages;
+      mission.data.meetingIndex = 0;
       mission.data.meetingDone = false;
-      // Spawn NPC for meeting
+      // Keep legacy first-message fields for backward compat
+      mission.data.meetingMsgAr = meetingMessages[0].ar;
+      mission.data.meetingMsgEn = meetingMessages[0].en;
+      mission.data.meetingRoleAr = meetingMessages[0].roleAr;
+      mission.data.meetingRoleEn = meetingMessages[0].roleEn;
+      // Spawn NPC for meeting (show first speaker role if available)
+      const first = meetingMessages[0];
       const npcMeet = {
         x: meetPos.x + (Math.random()-0.5)*10,
         y: meetPos.y + (Math.random()-0.5)*10,
@@ -512,16 +630,19 @@ export function setupMissionStages(mission) {
         maxHealth: 999,
         isMeetingNpc: true,
         questId: q ? q.id : mission.questId,
-        meetingAr: msgAr,
-        meetingEn: msgEn
+        meetingAr: first.ar,
+        meetingEn: first.en,
+        meetingRoleAr: first.roleAr,
+        meetingRoleEn: first.roleEn,
+        meetingMessages
       };
       npcs.push(npcMeet);
       mission.data.meetingNpc = npcMeet;
       mission.stages.push({
         type: "meeting",
         x: meetPos.x, y: meetPos.y,
-        label: "تحدث إلى الشخص (اضغط E)",
-        labelEn: "Talk to contact (press E)",
+        label: meetingMessages.length > 1 ? `تحدث إلى الشخص (${meetingMessages.length} رسائل)` : "تحدث إلى الشخص (اضغط E)",
+        labelEn: meetingMessages.length > 1 ? `Talk to contact (${meetingMessages.length} messages)` : "Talk to contact (press E)",
         done:false,
         radius: 55
       });
@@ -599,27 +720,9 @@ export function setupMissionStages(mission) {
       break;
     }
     case "killTarget": {
-      // Spawn 1 gangster target at start area (marked on map), kill 1 time, then optionally go to end
-      // For kill, we spawn a specific target NPC near start; the stage is eliminate 1
+      // Spawn 1 gangster target at start area
       const spawnAt = questStartPixel || getWalkableTile();
-      // try to spawn target gang NPC 30-60px around start
-      try{
-        const { npcs } = awaitImportNpcs();
-        // We will lazily push via dynamic import helper below; for now set data for target position
-        mission.data.targetSpawn = {x: spawnAt.x, y: spawnAt.y};
-        // Inject a gang NPC directly if npcs array available synchronously
-        // Use direct import if available
-        if(typeof spawnQuestTarget === "function"){
-          // placeholder
-        }
-      } catch{}
-      // Instead, create target data and actual spawn will be done via helper spawnGangTarget()
-      // We'll spawn now synchronously via direct manipulation if npcs imported
-      try {
-        // Import npcs lazily via global (avoid circular)
-        // We have access to npcs array via dynamic check: if we can import, do it
-      } catch{}
-      // For now, push NPC via helper function after switch
+      mission.data.targetSpawn = {x: spawnAt.x, y: spawnAt.y};
       mission.data.killTarget = 1;
       mission.data.killCount = 0;
       mission.data.targetType = "gang";
@@ -908,6 +1011,23 @@ export function updateMission() {
 
   const m = currentMission;
 
+  // Bomb countdown for plantBomb after planting (bomb_explotion.mp3)
+  if (m.type === "plantBomb" && m.data.plantPlanted && !m.data.bombExploded) {
+    if (typeof m.data.bombTimer !== "number") m.data.bombTimer = 3500;
+    m.data.bombTimer -= 16;
+    if (m.data.bombTimer <= 0) {
+      m.data.bombExploded = true;
+      try { playBombExplosion(); } catch {}
+      showNotification(lang()==="en" ? "💥 BOOM! Bomb exploded!" : "💥 انفجرت القنبلة!");
+      // Visual explosion at plant position if available
+      try {
+        const bx = m.data.plantPos ? m.data.plantPos.x : (m.stages[0] ? m.stages[0].x : player.x);
+        const by = m.data.plantPos ? m.data.plantPos.y : (m.stages[0] ? m.stages[0].y : player.y);
+        explosions.push({ x: bx, y: by, t: 0, duration: EXPLOSION_DURATION || 900, vehicle: { x: bx, y: by } });
+      } catch {}
+    }
+  }
+
   // Timer for timed missions
   if (m.timer > 0) {
     m.timer -= 16;
@@ -1138,6 +1258,8 @@ export function updateMission() {
         if(m.data.plantHold >= 3000){
           stage.done = true;
           m.data.plantPlanted = true;
+          m.data.bombTimer = 3500;
+          m.data.bombExploded = false;
           showNotification(lang()==="en" ? "💣 Bomb planted! Escape!" : "💣 تم زرع القنبلة! اهرب!");
           // Optional explosion timer visual? Not needed
           advanceStage();
@@ -1151,15 +1273,39 @@ export function updateMission() {
     case "meeting": {
       const dist = Math.hypot(player.x - stage.x, player.y - stage.y);
       if(dist > (stage.radius||55)) break;
-      // Require pressing E to talk
+      // Require pressing E to talk - progressive multi-message dialogue
       const justPressed = (typeof actionJust==="function" ? actionJust("enterExit") : false);
       if(justPressed){
-        const q = m.quest;
-        const msgAr = (q && q.params && q.params.meetingAr) || q.meetingAr || m.data.meetingMsgAr || "مرحباً";
-        const msgEn = (q && q.params && q.params.meetingEn) || q.meetingEn || m.data.meetingMsgEn || "Hello";
-        const msg = lang()==="en" ? msgEn : msgAr;
-        showNotification(`💬 ${msg}`);
-        // Show dialogue overlay? Use notification for now, maybe also HUD
+        // Resolve messages (prefer runtime data, fallback to quest)
+        let msgs = m.data.meetingMessages;
+        if (!Array.isArray(msgs) || !msgs.length) {
+          const q = m.quest;
+          const fallback = getMeetingMessagesFromQuest(q) || getMeetingMessagesFromQuest({ params: m.data, meetingAr: m.data.meetingMsgAr, meetingEn: m.data.meetingMsgEn });
+          msgs = fallback || [{ ar: m.data.meetingMsgAr || "مرحباً", en: m.data.meetingMsgEn || "Hello", roleAr: m.data.meetingRoleAr || "", roleEn: m.data.meetingRoleEn || "" }];
+          m.data.meetingMessages = msgs;
+          if (typeof m.data.meetingIndex!=="number") m.data.meetingIndex = 0;
+        }
+        let idx = typeof m.data.meetingIndex==="number" ? m.data.meetingIndex : 0;
+        if (idx >= msgs.length) idx = msgs.length - 1;
+        const cur = msgs[idx] || msgs[0];
+        const msg = lang()==="en" ? (cur.en || cur.ar) : (cur.ar || cur.en);
+        const role = lang()==="en" ? (cur.roleEn || cur.roleAr) : (cur.roleAr || cur.roleEn);
+        // Display as "Role: Message" if role present, else just message
+        const display = role ? `${role}: ${msg}` : msg;
+        // Show with dialogue emoji and index if multiple
+        if (msgs.length > 1) {
+          showNotification(`💬 [${idx+1}/${msgs.length}] ${display}`);
+        } else {
+          showNotification(`💬 ${display}`);
+        }
+        m.data.meetingIndex = idx + 1;
+        // If more messages remain, keep stage active (stay near NPC), update UI, don't advance yet
+        if (m.data.meetingIndex < msgs.length) {
+          // Update progress text immediately for next press
+          try { updateMissionUI(); } catch {}
+          break;
+        }
+        // All messages shown - complete meeting stage
         stage.done = true;
         m.data.meetingDone = true;
         // Remove meeting NPC
@@ -1187,11 +1333,10 @@ export function updateMission() {
           if(Math.hypot(p.x - player.x, p.y - player.y) < 110){ someoneNear = true; break; }
         }
       }
-      const holdingSpace = (typeof keys!=="undefined" && (keys[" "]||keys["Space"]||keys["space"]||keys["Spacebar"])) || (typeof actionHeld==="function" && actionHeld("enterExit"));
-      // Actually theft spec says hold spacebar, so check space
-      const space = (typeof keys!=="undefined" && (keys[" "]||keys["space"]||keys["Space"]));
-      // Fallback to actionHeld shoot? Use space
-      const isHolding = space;
+      const space = (typeof keys!=="undefined" && (keys[" "]||keys["space"]||keys["Space"]||keys["Spacebar"]));
+      // Support both Space and E (enterExit) for accessibility
+      const enterHeld = (typeof actionHeld==="function" && actionHeld("enterExit"));
+      const isHolding = space || enterHeld;
       if(someoneNear){
         if(isHolding){
           // Holding while someone near increases suspicion fast
@@ -1288,6 +1433,14 @@ export function completeMission() {
   setMissionsCompleted(missionsCompleted + 1);
   player.money += currentMission.reward;
 
+  // Cleanup dummy silent-pursuit vehicle if any
+  try{
+    const tid = currentMission.data && currentMission.data.silentTarget;
+    if(tid && tid.isSilentTarget){
+      const idx = vehicles.indexOf(tid);
+      if(idx>=0) vehicles.splice(idx,1);
+    }
+  }catch{}
   showNotification(lang()==="en" ? `💰 Mission complete! +$${currentMission.reward}` : `💰 مهمة مكتملة! +$${currentMission.reward}`);
 
   const completedQuestId = currentMission.questId || (currentMission.quest && currentMission.quest.id);
@@ -1309,6 +1462,8 @@ export function completeMission() {
       for(let i=npcs.length-1;i>=0;i--){
         if(npcs[i].questId===completedQuestId) npcs.splice(i,1);
       }
+      // Also cleanup dummy vehicles by flag in case stored differently
+      for(let i=vehicles.length-1;i>=0;i--){ if(vehicles[i].isSilentTarget) vehicles.splice(i,1); }
       if(q && q.category==="main"){
         // advance main index to next available
         let idx = mainQuests.findIndex(x=>x.id===completedQuestId);
@@ -1347,6 +1502,15 @@ export function completeMission() {
 export function failMission(reason) {
   if (!currentMission) return;
   currentMission.failed = true;
+  // Cleanup dummy silent vehicle immediately on fail
+  try{
+    const tid = currentMission.data && currentMission.data.silentTarget;
+    if(tid && tid.isSilentTarget){
+      const idx = vehicles.indexOf(tid);
+      if(idx>=0) vehicles.splice(idx,1);
+    }
+    for(let i=vehicles.length-1;i>=0;i--){ if(vehicles[i].isSilentTarget) vehicles.splice(i,1); }
+  }catch{}
   showNotification(`❌ ${lang()==="en" ? "Failed:" : "فشلت المهمة:"} ${reason}`);
 
   const failedQuestId = currentMission.questId;
@@ -1362,6 +1526,7 @@ export function failMission(reason) {
       for(let i=npcs.length-1;i>=0;i--){
         if(npcs[i].questId===failedQuestId) npcs.splice(i,1);
       }
+      for(let i=vehicles.length-1;i>=0;i--){ if(vehicles[i].isSilentTarget) vehicles.splice(i,1); }
     } else if (usingSequentialMissions) {
       const mg = missionGivers[sequentialMissionIndex];
       if (mg) mg.taken = false;
@@ -1469,7 +1634,21 @@ export function updateMissionUI() {
       missionProg.textContent = `${lang()==="en"?"Deliver":"سلّم"} ${quest ? qTitle(quest) : ""}`;
     }
   } else if(m.type==="meeting"){
-    missionProg.textContent = stage?.type==="meeting" ? (lang()==="en" ? "Press E to talk" : "اضغط E للتحدث") : `${lang()==="en"?"Go":"اذهب"} ${m.stage+1}/${m.stages.length}`;
+    if(stage?.type==="meeting"){
+      const msgs = (m.data && Array.isArray(m.data.meetingMessages) && m.data.meetingMessages.length) ? m.data.meetingMessages : (getMeetingMessagesFromQuest(quest) || [{ar:"",en:""}]);
+      const total = msgs.length;
+      const idx = (m.data && typeof m.data.meetingIndex==="number") ? m.data.meetingIndex : 0;
+      if(total>1){
+        const cur = msgs[Math.min(idx, total-1)] || msgs[0];
+        const role = lang()==="en" ? (cur.roleEn || cur.roleAr) : (cur.roleAr || cur.roleEn);
+        const rolePart = role ? ` - ${role}` : "";
+        missionProg.textContent = lang()==="en" ? `Press E [${idx+1}/${total}]${rolePart}` : `اضغط E [${idx+1}/${total}]${rolePart}`;
+      } else {
+        missionProg.textContent = lang()==="en" ? "Press E to talk" : "اضغط E للتحدث";
+      }
+    } else {
+      missionProg.textContent = `${lang()==="en"?"Go":"اذهب"} ${m.stage+1}/${m.stages.length}`;
+    }
   } else if(m.type==="deliverLoot"){
     const req = stage?.requiredItem || m.data.requiredItem || "";
     missionProg.textContent = `${lang()==="en"?"Need":"تحتاج"} "${req}" | ${hasItemCheck(req) ? (lang()==="en"?"Have it":"لديك") : (lang()==="en"?"Missing":"مفقود")}`;

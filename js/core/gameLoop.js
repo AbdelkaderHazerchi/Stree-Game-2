@@ -17,10 +17,35 @@ import { invPanel } from "./domRefs.js?v=25";
 import { render } from "../render/renderer.js?v=25";
 import { update } from "./update.js?v=25";
 import { cam } from "./canvas.js?v=25";
+import { initSounds, updateCityMusic, updateMenuMusic, pauseCityMusic, updateDrivingSound } from "../audio/sounds.js?v=25";
 
 export function gameLoop() {
+  // City music: loops only during gameplay (not menu/pause)
+  try { updateCityMusic(gameState, G); } catch {}
+  // Menu music: loops only while in main menu
+  try { updateMenuMusic(gameState, G); } catch {}
+  // Driving sound (pre-update, handles pause/menu fade)
+  try {
+    const isInVehiclePre = !!(player && player.inVehicle);
+    const vPre = isInVehiclePre ? player.inVehicle : null;
+    const speedPre = vPre ? Math.hypot(vPre.vx || 0, vPre.vy || 0) : 0;
+    const maxSpeedPre = vPre ? (vPre.type ? vPre.type.speed : (vPre.speed || 5)) : 5;
+    updateDrivingSound({ isInVehicle: isInVehiclePre, speed: speedPre, maxSpeed: maxSpeedPre, gameState, G });
+  } catch {}
   if (gameState === G.PLAYING && !gameOver && player && player.alive) {
     update();
+    // Driving sound post-update with fresh speed for responsive volume
+    try {
+      const isInVehicle = !!(player && player.inVehicle);
+      const v = isInVehicle ? player.inVehicle : null;
+      const speed = v ? Math.hypot(v.vx || 0, v.vy || 0) : 0;
+      const maxSpeed = v ? (v.type ? v.type.speed : (v.speed || 5)) : 5;
+      updateDrivingSound({ isInVehicle, speed, maxSpeed, gameState, G });
+    } catch {}
+  } else {
+    // Ensure city pauses immediately when not playing (menu/pause) even if update not called
+    // updateCityMusic already handles, but also ensure no machine gun lingers
+    try { if (gameState !== G.PLAYING) { /* handled via updateCityMusic */ } } catch {}
   }
   render();
   requestAnimationFrame(gameLoop);
@@ -28,6 +53,7 @@ export function gameLoop() {
 
 // ======================== INIT ========================
 export async function initGame() {
+  try { initSounds(); } catch {}
   await preloadAssets();
   initMap();
   loadFullMap();

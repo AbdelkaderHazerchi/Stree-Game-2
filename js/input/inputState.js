@@ -30,9 +30,11 @@ export const actPrev = {
 
 export const keys = {};
 document.addEventListener("keydown", (e) => {
+  if(e.target && e.target.matches && e.target.matches('input,textarea,select,[contenteditable]')) return;
   keys[e.key.toLowerCase()] = true;
 });
 document.addEventListener("keyup", (e) => {
+  if(e.target && e.target.matches && e.target.matches('input,textarea,select,[contenteditable]')) return;
   keys[e.key.toLowerCase()] = false;
 });
 export let worldMouseX = 0,
@@ -53,6 +55,7 @@ export function setMouseLeftDown(v) { mouseLeftDown = v; }
 export function setMouseRightDown(v) { mouseRightDown = v; isAiming = v; }
 export function setIsAiming(v) { isAiming = v; }
 
+if(canvas){
 canvas.addEventListener("mousemove", (e) => {
   const rect = canvas.getBoundingClientRect();
   mouseX = e.clientX - rect.left;
@@ -77,13 +80,6 @@ canvas.addEventListener("mousedown", (e) => {
     e.preventDefault();
   }
 });
-window.addEventListener("mousedown", (e) => {
-  if (e.button === 0) mouseLeftDown = true;
-  else if (e.button === 2) {
-    mouseRightDown = true;
-    isAiming = true;
-  }
-});
 canvas.addEventListener("mouseup", (e) => {
   if (e.button === 0) mouseLeftDown = false;
   else if (e.button === 2) {
@@ -92,6 +88,18 @@ canvas.addEventListener("mouseup", (e) => {
   }
 });
 canvas.addEventListener("mouseleave", () => {
+  mouseRightDown = false;
+  isAiming = false;
+});
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+}
+window.addEventListener("mousedown", (e) => {
+  if(e.target && e.target.closest && e.target.closest('input,textarea,select,[contenteditable]')) return;
+  if (e.button === 0) mouseLeftDown = true;
+  else if (e.button === 2) {
+    mouseRightDown = true;
+    isAiming = true;
+  }
 });
 window.addEventListener("mouseup", (e) => {
   if (e.button === 0) mouseLeftDown = false;
@@ -105,7 +113,6 @@ window.addEventListener("blur", () => {
   mouseRightDown = false;
   isAiming = false;
 });
-canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
 window.addEventListener("gamepadconnected", () => {
   // notification handled in hud

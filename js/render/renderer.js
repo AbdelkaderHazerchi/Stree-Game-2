@@ -138,7 +138,7 @@ function isBuildingOrigin(x, y, col, h) {
   const topSame = y > 0 && buildingColor[y - 1]?.[x] === col && buildingHeight[y - 1]?.[x] === h;
   return !leftSame && !topSame;
 }
-function drawShop(px, py, S, shopName, rotOverride=0){
+function drawShop(px, py, S, shopName, rotOverride=0, skipAwning=false){
   const rot = ((rotOverride||0)%4+4)%4;
   let drawPx=px, drawPy=py;
   let needsRestore=false;
@@ -212,32 +212,34 @@ function drawShop(px, py, S, shopName, rotOverride=0){
     ctx.closePath();
     ctx.fill();
   }
-  const awningW = Math.round(S*0.86);
-  const awningH = Math.round(S*0.16);
-  const awningX = drawPx + Math.round((S - awningW)/2);
-  const awningY = drawPy + S;
-  const awR = Math.max(2, Math.round(awningH*0.18));
-  ctx.fillStyle = awningDark;
-  ctx.beginPath();
-  ctx.moveTo(awningX, awningY);
-  ctx.lineTo(awningX+awningW, awningY);
-  ctx.lineTo(awningX+awningW, awningY+awningH-awR);
-  ctx.quadraticCurveTo(awningX+awningW, awningY+awningH, awningX+awningW-awR, awningY+awningH);
-  ctx.lineTo(awningX+awR, awningY+awningH);
-  ctx.quadraticCurveTo(awningX, awningY+awningH, awningX, awningY+awningH-awR);
-  ctx.lineTo(awningX, awningY);
-  ctx.closePath();
-  ctx.fill();
-  const numStripes = 12;
-  const stripeW = awningW / numStripes;
-  for(let i=0;i<numStripes;i++){
-    if(i%2===0) continue;
-    ctx.fillStyle = awningLight;
-    const sx = awningX + i*stripeW;
-    ctx.fillRect(sx+1, awningY+1, stripeW-1, awningH-2);
+  if(!skipAwning){
+    const awningW = Math.round(S*0.86);
+    const awningH = Math.round(S*0.16);
+    const awningX = drawPx + Math.round((S - awningW)/2);
+    const awningY = drawPy + S;
+    const awR = Math.max(2, Math.round(awningH*0.18));
+    ctx.fillStyle = awningDark;
+    ctx.beginPath();
+    ctx.moveTo(awningX, awningY);
+    ctx.lineTo(awningX+awningW, awningY);
+    ctx.lineTo(awningX+awningW, awningY+awningH-awR);
+    ctx.quadraticCurveTo(awningX+awningW, awningY+awningH, awningX+awningW-awR, awningY+awningH);
+    ctx.lineTo(awningX+awR, awningY+awningH);
+    ctx.quadraticCurveTo(awningX, awningY+awningH, awningX, awningY+awningH-awR);
+    ctx.lineTo(awningX, awningY);
+    ctx.closePath();
+    ctx.fill();
+    const numStripes = 12;
+    const stripeW = awningW / numStripes;
+    for(let i=0;i<numStripes;i++){
+      if(i%2===0) continue;
+      ctx.fillStyle = awningLight;
+      const sx = awningX + i*stripeW;
+      ctx.fillRect(sx+1, awningY+1, stripeW-1, awningH-2);
+    }
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.fillRect(awningX, awningY, awningW, Math.max(1, Math.round(awningH*0.12)));
   }
-  ctx.fillStyle = "rgba(0,0,0,0.18)";
-  ctx.fillRect(awningX, awningY, awningW, Math.max(1, Math.round(awningH*0.12)));
   if(needsRestore) ctx.restore();
 }
 
@@ -425,7 +427,7 @@ export function render() {
     }
   }
 
-  // Draw special buildings (shops) as grouped 4 sqm (2x2) with reference design
+  // Draw special buildings (shops) as distinct 2x2 blocks (fix: adjacent same-type shops no longer merged)
   {
     const sbMap = new Map();
     for (const sb of specialBuildings) sbMap.set(sb.x + "," + sb.y, sb);
@@ -433,64 +435,86 @@ export function render() {
     for (const sb of specialBuildings) {
       const key = sb.x + "," + sb.y;
       if (sbVisited.has(key)) continue;
-      const group = [];
-      const stack = [sb];
-      sbVisited.add(key);
-      while (stack.length > 0) {
-        const cur = stack.pop();
-        group.push(cur);
-        for (const [dx, dy] of [[0,-1],[0,1],[-1,0],[1,0]]) {
-          const nk = cur.x + dx + "," + (cur.y + dy);
-          if (!sbVisited.has(nk)) {
-            const n = sbMap.get(nk);
-            if (n && n.name === cur.name) { sbVisited.add(nk); stack.push(n); }
-          }
+      // Try to detect a valid 2x2 shop with this tile as top-left
+      const right = sbMap.get((sb.x+1)+","+sb.y);
+      const down = sbMap.get(sb.x+","+(sb.y+1));
+      const diag = sbMap.get((sb.x+1)+","+(sb.y+1));
+      let isOrigin2x2 = false;
+      let group = null;
+      if (right && down && diag && right.name===sb.name && down.name===sb.name && diag.name===sb.name) {
+        // Check that all 4 are not already visited (ensures greedy left-to-right, top-to-bottom partitioning)
+        if (!sbVisited.has((sb.x+1)+","+sb.y) && !sbVisited.has(sb.x+","+(sb.y+1)) && !sbVisited.has((sb.x+1)+","+(sb.y+1))) {
+          isOrigin2x2 = true;
+          group = [sb, right, down, diag];
+          for (const g of group) sbVisited.add(g.x+","+g.y);
         }
       }
-      const minX = Math.min(...group.map(s=>s.x));
-      const maxX = Math.max(...group.map(s=>s.x));
-      const minY = Math.min(...group.map(s=>s.y));
-      const maxY = Math.max(...group.map(s=>s.y));
-      const groupW = maxX - minX + 1;
-      const groupH = maxY - minY + 1;
-      const shopPx = minX * CFG.TILE;
-      const shopPy = minY * CFG.TILE;
-      const shopW = groupW * CFG.TILE;
-      const shopH = groupH * CFG.TILE;
-      const S = Math.max(shopW, shopH); // for 2x2 S=192
-      // Viewport cull (include awning below)
-      const awningH = Math.round(S * 0.16);
-      if (shopPx + S < cam.x - viewW/2 - 50 || shopPx > cam.x + viewW/2 + 50 ||
-          shopPy + S + awningH < cam.y - viewH/2 - 50 || shopPy > cam.y + viewH/2 + 50) {
-        // still may need label? skip draw but label cull below will handle
-      } else {
-        const isShop2x2 = groupW===2 && groupH===2 && group.length===4;
-        if (isShop2x2) {
-          const shopRot = (buildingRotation[minY] && buildingRotation[minY][minX] != null) ? buildingRotation[minY][minX] : 0;
-          drawShop(shopPx, shopPy, S, sb.name, shopRot);
+      if (isOrigin2x2 && group) {
+        const minX = sb.x, minY = sb.y;
+        const S = 2 * CFG.TILE;
+        const shopPx = minX * CFG.TILE;
+        const shopPy = minY * CFG.TILE;
+        const shopRot = (buildingRotation[minY] && buildingRotation[minY][minX] != null) ? buildingRotation[minY][minX] : 0;
+        // Determine if there's a shop directly in awning direction to avoid overlap
+        let hasShopInAwningDir = false;
+        const rot = ((shopRot%4)+4)%4;
+        // Awning direction in world tiles: 0=south,1=west,2=north,3=east
+        let checkX1, checkY1, checkX2, checkY2;
+        if (rot===0) { // south
+          checkX1 = minX; checkY1 = minY+2; checkX2 = minX+1; checkY2 = minY+2;
+        } else if (rot===1) { // west (awning to west)
+          checkX1 = minX-1; checkY1 = minY; checkX2 = minX-1; checkY2 = minY+1;
+        } else if (rot===2) { // north
+          checkX1 = minX; checkY1 = minY-1; checkX2 = minX+1; checkY2 = minY-1;
+        } else { // east
+          checkX1 = minX+2; checkY1 = minY; checkX2 = minX+2; checkY2 = minY+1;
+        }
+        if (sbMap.has(checkX1+","+checkY1) || sbMap.has(checkX2+","+checkY2)) {
+          hasShopInAwningDir = true;
+        }
+        const awningH = Math.round(S * 0.16);
+        if (shopPx + S < cam.x - viewW/2 - 50 || shopPx > cam.x + viewW/2 + 50 ||
+            shopPy + S + (hasShopInAwningDir?0:awningH) < cam.y - viewH/2 - 50 || shopPy > cam.y + viewH/2 + 50) {
+          // culled
         } else {
-          // Fallback per-tile for irregular groups
-          for (const g of group) {
-            const px = g.x * CFG.TILE, py = g.y * CFG.TILE;
-            if (px + CFG.TILE < cam.x - viewW/2 - 20 || px > cam.x + viewW/2 + 20 ||
-                py + CFG.TILE < cam.y - viewH/2 - 20 || py > cam.y + viewH/2 + 20) continue;
-            ctx.fillStyle = g.color || "#cc8844";
-            ctx.fillRect(px, py, CFG.TILE, CFG.TILE);
-            ctx.strokeStyle = "rgba(255,255,255,0.15)";
-            ctx.strokeRect(px+1, py+1, CFG.TILE-2, CFG.TILE-2);
-          }
+          drawShop(shopPx, shopPy, S, sb.name, shopRot, hasShopInAwningDir);
         }
-      }
-      // Label (show when near)
-      const cx = ((minX + maxX + 1)/2) * CFG.TILE;
-      const cy = ((minY + maxY + 1)/2) * CFG.TILE;
-      if (Math.hypot(target.x - cx, target.y - cy) < 320) {
-        ctx.fillStyle = "rgba(0,0,0,0.7)";
-        ctx.fillRect(cx - 40, cy - 26, 80, 16);
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 10px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(sb.name, cx, cy - 14);
+        // Label
+        const cx = (minX+1) * CFG.TILE;
+        const cy = (minY+1) * CFG.TILE;
+        if (Math.hypot(target.x - cx, target.y - cy) < 320) {
+          ctx.fillStyle = "rgba(0,0,0,0.7)";
+          ctx.fillRect(cx - 40, cy - 26, 80, 16);
+          ctx.fillStyle = "#fff";
+          ctx.font = "bold 10px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText(sb.name, cx, cy - 14);
+        }
+      } else {
+        // Not a 2x2 origin - check if this tile is part of a 2x2 already visited (should be skipped) or orphan single tile
+        // If this tile was not visited as part of a 2x2 but is isolated, draw as single tile fallback
+        // Since we only mark origins and their 3 neighbors as visited, any tile that is not an origin but is interior of a 2x2 will already be visited, so we skip.
+        // Only orphan tiles (not part of any 2x2) reach here as singletons.
+        if (sbVisited.has(key)) continue; // already part of a 2x2, skip fallback (should not happen because we checked visited at top)
+        sbVisited.add(key);
+        const px = sb.x * CFG.TILE, py = sb.y * CFG.TILE;
+        if (px + CFG.TILE < cam.x - viewW/2 - 20 || px > cam.x + viewW/2 + 20 ||
+            py + CFG.TILE < cam.y - viewH/2 - 20 || py > cam.y + viewH/2 + 20) continue;
+        ctx.fillStyle = sb.color || "#cc8844";
+        ctx.fillRect(px, py, CFG.TILE, CFG.TILE);
+        ctx.strokeStyle = "rgba(255,255,255,0.15)";
+        ctx.strokeRect(px+1, py+1, CFG.TILE-2, CFG.TILE-2);
+        // Label for single tile
+        const cx = px + CFG.TILE/2;
+        const cy = py + CFG.TILE/2;
+        if (Math.hypot(target.x - cx, target.y - cy) < 320) {
+          ctx.fillStyle = "rgba(0,0,0,0.7)";
+          ctx.fillRect(cx - 40, cy - 26, 80, 16);
+          ctx.fillStyle = "#fff";
+          ctx.font = "bold 10px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText(sb.name, cx, cy - 14);
+        }
       }
     }
   }
@@ -832,10 +856,18 @@ export function render() {
     ctx.closePath();
     ctx.fill();
 
-    // Draw vehicle SVG overlay (wheels, windows, lights)
-    const typeIdx = VEHICLE_TYPES.indexOf(v.type);
-    const va = typeIdx >= 0 ? VEHICLE_ASSETS[typeIdx] : null;
-    if (va && va.img && va.img.complete) {
+    // Draw vehicle SVG overlay (wheels, windows, lights) - robust to deserialized types
+    let va = null;
+    if(typeof v.typeIdx === 'number' && v.typeIdx >=0 && VEHICLE_ASSETS[v.typeIdx]){
+      va = VEHICLE_ASSETS[v.typeIdx];
+    } else {
+      const typeIdx = VEHICLE_TYPES.indexOf(v.type);
+      va = typeIdx >= 0 ? VEHICLE_ASSETS[typeIdx] : null;
+      if(!va && v.type && v.type.name){
+        va = VEHICLE_ASSETS.find(a=> a.name.toLowerCase().includes(v.type.name.slice(0,3).toLowerCase())) || null;
+      }
+    }
+    if (va && va.img && va.img.complete && va.img.naturalWidth) {
       ctx.drawImage(va.img, -hw, -hh, v.w, v.h);
     }
 

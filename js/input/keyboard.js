@@ -8,7 +8,7 @@ import { CFG } from "../core/config.js?v=25";
 import { G } from "../core/config.js?v=25";
 import { gameState } from "../core/state.js?v=25";
 import { player } from "../entities/player.js?v=25";
-import { vehicles } from "../entities/vehicles.js?v=25";
+import { vehicles, isWalkable } from "../entities/vehicles.js?v=25";
 import { currentMission } from "../missions/missionState.js?v=25";
 import { failMission } from "../missions/missionSystem.js?v=25";
 import { SHOPS, openShop } from "../ui/shop.js?v=25";
@@ -16,6 +16,7 @@ import { showNotification } from "../ui/hud.js?v=25";
 import { fireWeapon } from "../combat/shooting.js?v=25";
 import { getNearShopName } from "../ui/shop.js?v=25";
 import { showPauseMenu } from "../ui/menu.js?v=25";
+import { playEnterCar, playExitCar } from "../audio/sounds.js?v=25";
 // Inventory moved to js/ui/inventory.js - re-export for compatibility (no logic change)
 import { toggleInventory, closeInventory, switchWeapon, switchWeaponSlot, renderInventory } from "../ui/inventory.js?v=25";
 export { toggleInventory, closeInventory, switchWeapon, switchWeaponSlot, renderInventory };
@@ -165,11 +166,17 @@ export function rebindKey(actionName) {
     }
 
     // Normalize key: keep as lowercased
-    // Check for duplicates — allow but warn via notification
+    // Check for duplicates — prevent saving duplicate
     const duplicateAction = Object.entries(SETTINGS.keyboard).find(([act, k]) => k === key && act !== actionName);
     if (duplicateAction) {
-      // Optional: show warning; we allow duplicate but inform
       try { showNotification(t("key.used", { action: duplicateAction[0] })); } catch {}
+      btn.textContent = keyDisplay(SETTINGS.keyboard[actionName]);
+      btn.style.color = "";
+      btn.style.borderColor = "";
+      btn.classList.remove("rebinding");
+      activeRebind = null;
+      document.removeEventListener("keydown", handler, true);
+      return;
     }
 
     SETTINGS.keyboard[actionName] = key;
@@ -314,7 +321,11 @@ if (typeof window !== "undefined") {
   window.buildKeybindList = buildKeybindList;
 }
 
+let _lastEnterExitMs = 0;
 export function handleEnterExit() {
+  const now = (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now();
+  if (now - _lastEnterExitMs < 600) return;
+  _lastEnterExitMs = now;
   // Shop interaction takes priority
   const nearShopName = getNearShopName() || (typeof window !== 'undefined' ? window.nearShopName : null);
   if (!player.inVehicle && nearShopName && SHOPS[nearShopName]) {
@@ -322,16 +333,27 @@ export function handleEnterExit() {
     return;
   }
   if (player.inVehicle) {
-    // Exit vehicle
+    // Exit vehicle - find walkable offset
     const v = player.inVehicle;
-    player.x = v.x + 30;
-    player.y = v.y + 30;
+    let nx = v.x + 30, ny = v.y + 30;
+    try{
+      let found=false;
+      for(let i=0;i<8;i++){
+        const tx = v.x + (Math.random()-0.5)*60;
+        const ty = v.y + (Math.random()-0.5)*60;
+        if(isWalkable(tx,ty)){ nx=tx; ny=ty; found=true; break; }
+      }
+      if(!found && !isWalkable(nx,ny)){ nx=v.x; ny=v.y; }
+    }catch{ /* fallback keeps 30 offset */ }
+    player.x = nx;
+    player.y = ny;
     player.onFoot = true;
     player.speed = CFG.PLAYER_SPEED;
     v.driver = null;
     v.occupied = false;
     player.inVehicle = null;
     showNotification(t("notif.exitCar"));
+    try { playExitCar(); } catch {}
   } else {
     // Enter nearest vehicle
     let closest = null;
@@ -352,6 +374,7 @@ export function handleEnterExit() {
       closest.driver = player;
       closest.occupied = true;
       showNotification(t("notif.enterCar", { name: closest.type.name }));
+      try { playEnterCar(); } catch {}
     }
   }
 }

@@ -56,6 +56,12 @@ import { SHOPS, openShop } from "./ui/shop.js?v=25";
 // Render
 import { render } from "./render/renderer.js?v=25";
 
+// Audio
+import { initSounds } from "./audio/sounds.js?v=25";
+
+// Chat (generic NPC chat)
+import { initChats, isChatActive, closeChat } from "./ui/chat.js?v=25";
+
 // Expose settings globals for legacy inline handlers (fixes ReferenceError)
 if (typeof window !== "undefined") {
   window.SETTINGS = SETTINGS;
@@ -74,6 +80,8 @@ if (typeof window !== "undefined") {
 // Apply saved difficulty & language immediately (before game init)
 try { applyDifficulty(SETTINGS.difficulty); } catch (e) { console.warn("applyDifficulty failed", e); }
 try { applyI18n(); } catch (e) { console.warn("applyI18n failed", e); }
+try { initSounds(); } catch (e) { console.warn("initSounds failed", e); }
+try { initChats(); } catch (e) { console.warn("initChats failed", e); }
 
 // Re-export for global debugging (preserves original window globals without polluting)
 export { CFG, T, G, player, vehicles, npcs, police, bullets, currentMission };
@@ -244,11 +252,15 @@ window.addEventListener("languageChanged", () => {
 // ESC handler
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
+    // Chat has priority
+    try { if(isChatActive()){ closeChat(); e.preventDefault(); e.stopPropagation(); return; } } catch{}
     const sd = document.getElementById("settingsDialog");
     if (sd && sd.style.display === "flex") {
       closeSettings();
       return;
     }
+    // Also close chat dialog if open
+    try{ const cd=document.getElementById("chatDialog"); if(cd && cd.style.display==="flex"){ closeChat(); return; } }catch{}
     if (gameState === G.PLAYING && player && player.alive) {
       setGameState(G.PAUSED);
       showPauseMenu();

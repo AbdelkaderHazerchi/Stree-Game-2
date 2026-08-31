@@ -22,12 +22,16 @@ export function spawnNPCs() {
   npcs = [];
   for (let i = 0; i < CFG.NPC_COUNT; i++) {
     let x, y;
+    let attempts=0;
     do {
       const tileX = 3 + Math.floor(Math.random() * (CFG.COLS - 6));
       const tileY = 3 + Math.floor(Math.random() * (CFG.ROWS - 6));
       x = tileX * CFG.TILE + CFG.TILE / 2;
       y = tileY * CFG.TILE + CFG.TILE / 2;
+      attempts++;
+      if(attempts>=50) break;
     } while (!isWalkable(x, y));
+    if(!isWalkable(x,y)) continue;
 
     const isGang = i >= CFG.NPC_COUNT - CFG.NPC_GANG_COUNT;
     // last NPC_GANG_COUNT are gang members

@@ -34,11 +34,13 @@ export function updateBullets() {
     }
 
     // Check NPC hit (player bullets only)
+    let _hit = false;
     if (b.isPlayer) {
       for (let ni = npcs.length - 1; ni >= 0; ni--) {
         const npc = npcs[ni];
         if (Math.hypot(b.x - npc.x, b.y - npc.y) < 12) {
           bullets.splice(i, 1);
+          _hit = true;
           npc.health -= 15;
 
           // Gang members chase and shoot back
@@ -54,19 +56,14 @@ export function updateBullets() {
           }
 
           // Add wanted level for shooting NPCs
-          player.wanted = Math.min(
-            5,
-            player.wanted + (npc.type === "gang" ? 1 : 1),
-          );
+          player.wanted = Math.min(5, player.wanted + 1);
           updateWantedUI();
           break;
         }
       }
-
+      if(_hit) continue;
       // Check vehicle hit (player bullets)
-      if (i < bullets.length) {
-        // still alive after NPC check
-        for (let vi = vehicles.length - 1; vi >= 0; vi--) {
+      for (let vi = vehicles.length - 1; vi >= 0; vi--) {
           const v = vehicles[vi];
           if (v.isPolice) continue;
           if (v.occupied) continue;
@@ -74,6 +71,7 @@ export function updateBullets() {
           if (v.hidden || v.exploding) continue;
           if (Math.hypot(b.x - v.x, b.y - v.y) < Math.max(v.w, v.h) * 0.8) {
             bullets.splice(i, 1);
+            _hit = true;
             // Vehicle health: 15-23 bullets to detonate (random per vehicle)
             if (typeof v.health !== "number") {
               v.health = 15 + Math.floor(Math.random() * 9);
@@ -88,35 +86,34 @@ export function updateBullets() {
               explodeVehicle(vi);
               player.wanted = Math.min(5, player.wanted + 1);
               updateWantedUI();
-            } else {
-              // Hit feedback - keep vehicle visible until health depleted
-              // No wanted/loot until final explosion
             }
             break;
           }
-        }
       }
+      if(_hit) continue;
     }
 
     // Check player hit (from police bullets) — scaled by difficulty
     if (!b.isPlayer && player.alive) {
       const target = player.inVehicle || player;
-      if (Math.hypot(b.x - target.x, b.y - target.y) < 15) {
+      if (target && Math.hypot(b.x - target.x, b.y - target.y) < 15) {
         player.health -= 8 * (CFG.DAMAGE_MUL || 1);
         bullets.splice(i, 1);
         if (player.health <= 0) {
           playerDie();
         }
-        break;
+        continue;
       }
     }
 
     // Check police hit (can kill police too)
     if (b.isPlayer) {
+      let _pHit=false;
       for (let pi = police.length - 1; pi >= 0; pi--) {
         const p = police[pi];
         if (Math.hypot(b.x - p.x, b.y - p.y) < 12) {
           bullets.splice(i, 1);
+          _pHit=true;
           p.health = (p.health || 30) - 20;
           if (p.health <= 0) {
             if (Math.random() < 0.5)
@@ -146,10 +143,13 @@ export function updateBullets() {
           break;
         }
       }
+      if(_pHit) continue;
     }
 
     if (b.life <= 0) {
-      bullets.splice(i, 1);
+      // Only splice if still present at this index
+      if(i < bullets.length && bullets[i] === b) bullets.splice(i, 1);
+      else if(bullets.indexOf(b) !== -1) bullets.splice(bullets.indexOf(b), 1);
     }
   }
 }

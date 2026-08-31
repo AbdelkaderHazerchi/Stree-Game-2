@@ -18654,12 +18654,12 @@ export let MAP_DATA = {
       "icon": "🦹",
       "category": "main",
       "title": {
-        "ar": "مراقبة",
-        "en": "Surveillance"
+        "ar": "سرقة",
+        "en": "Theft"
       },
       "desc": {
-        "ar": "ابقَ داخل الدائرة 30 ثانية دون قتل أو شرطة",
-        "en": "Stay inside circle 30s without kills or police"
+        "ar": "اسرق الغرض (ثبّت 20 ثانية، اترك إذا اقترب أحد)",
+        "en": "Steal the item (hold 20s, release if someone approaches)"
       },
       "reward": 650,
       "start": {
@@ -18680,12 +18680,12 @@ export let MAP_DATA = {
       "icon": "💀",
       "category": "main",
       "title": {
-        "ar": "مراقبة",
-        "en": "Surveillance"
+        "ar": "قتل هدف",
+        "en": "Kill Target"
       },
       "desc": {
-        "ar": "ابقَ داخل الدائرة 30 ثانية دون قتل أو شرطة",
-        "en": "Stay inside circle 30s without kills or police"
+        "ar": "اقتل العصابة المحددة على الخريطة (مرة واحدة)",
+        "en": "Eliminate the gangster marked on the map (1 time)"
       },
       "reward": 500,
       "start": {
@@ -18706,12 +18706,12 @@ export let MAP_DATA = {
       "icon": "🎒",
       "category": "main",
       "title": {
-        "ar": "مراقبة",
-        "en": "Surveillance"
+        "ar": "تسليم مسروقات",
+        "en": "Deliver Loot"
       },
       "desc": {
-        "ar": "ابقَ داخل الدائرة 30 ثانية دون قتل أو شرطة",
-        "en": "Stay inside circle 30s without kills or police"
+        "ar": "تحقق من حمل الغرض المحدد وسلّمه",
+        "en": "Check carrying specified item and deliver"
       },
       "reward": 350,
       "start": {
@@ -18732,12 +18732,12 @@ export let MAP_DATA = {
       "icon": "💣",
       "category": "main",
       "title": {
-        "ar": "مراقبة",
-        "en": "Surveillance"
+        "ar": "زرع قنبلة",
+        "en": "Plant Bomb"
       },
       "desc": {
-        "ar": "ابقَ داخل الدائرة 30 ثانية دون قتل أو شرطة",
-        "en": "Stay inside circle 30s without kills or police"
+        "ar": "اذهب للموقع وازرع القنبلة ثم اهرب لخط النهاية",
+        "en": "Go to location, plant bomb, then escape to finish line"
       },
       "reward": 700,
       "start": {
@@ -18758,12 +18758,12 @@ export let MAP_DATA = {
       "icon": "💬",
       "category": "main",
       "title": {
-        "ar": "مراقبة",
-        "en": "Surveillance"
+        "ar": "اجتماع",
+        "en": "Meeting"
       },
       "desc": {
-        "ar": "ابقَ داخل الدائرة 30 ثانية دون قتل أو شرطة",
-        "en": "Stay inside circle 30s without kills or police"
+        "ar": "تحدث إلى الشخص في الموقع المحدد",
+        "en": "Talk to the person at the marked location"
       },
       "reward": 200,
       "start": {
@@ -18819,12 +18819,12 @@ export let MAP_DATA = {
         "y": 36
       },
       "title": {
-        "ar": "مراقبة",
-        "en": "Surveillance"
+        "ar": "سرقة",
+        "en": "Theft"
       },
       "desc": {
-        "ar": "ابقَ داخل الدائرة 30 ثانية دون قتل أو شرطة",
-        "en": "Stay inside circle 30s without kills or police"
+        "ar": "اسرق الغرض (ثبّت 20 ثانية، اترك إذا اقترب أحد)",
+        "en": "Steal the item (hold 20s, release if someone approaches)"
       },
       "params": {
         "itemName": "gold"
@@ -18847,12 +18847,12 @@ export let MAP_DATA = {
         "y": 34
       },
       "title": {
-        "ar": "مراقبة",
-        "en": "Surveillance"
+        "ar": "قتل هدف",
+        "en": "Kill Target"
       },
       "desc": {
-        "ar": "ابقَ داخل الدائرة 30 ثانية دون قتل أو شرطة",
-        "en": "Stay inside circle 30s without kills or police"
+        "ar": "اقتل العصابة المحددة على الخريطة (مرة واحدة)",
+        "en": "Eliminate the gangster marked on the map (1 time)"
       },
       "params": {
         "itemName": "gold"
@@ -18875,12 +18875,12 @@ export let MAP_DATA = {
         "y": 34
       },
       "title": {
-        "ar": "مراقبة",
-        "en": "Surveillance"
+        "ar": "تسليم مسروقات",
+        "en": "Deliver Loot"
       },
       "desc": {
-        "ar": "ابقَ داخل الدائرة 30 ثانية دون قتل أو شرطة",
-        "en": "Stay inside circle 30s without kills or police"
+        "ar": "تحقق من حمل الغرض المحدد وسلّمه",
+        "en": "Check carrying specified item and deliver"
       },
       "params": {
         "itemName": "gold"
@@ -18903,12 +18903,12 @@ export let MAP_DATA = {
         "y": 23
       },
       "title": {
-        "ar": "مراقبة",
-        "en": "Surveillance"
+        "ar": "زرع قنبلة",
+        "en": "Plant Bomb"
       },
       "desc": {
-        "ar": "ابقَ داخل الدائرة 30 ثانية دون قتل أو شرطة",
-        "en": "Stay inside circle 30s without kills or police"
+        "ar": "اذهب للموقع وازرع القنبلة ثم اهرب لخط النهاية",
+        "en": "Go to location, plant bomb, then escape to finish line"
       },
       "params": {
         "itemName": "gold"
@@ -18931,12 +18931,12 @@ export let MAP_DATA = {
         "y": 27
       },
       "title": {
-        "ar": "مراقبة",
-        "en": "Surveillance"
+        "ar": "اجتماع",
+        "en": "Meeting"
       },
       "desc": {
-        "ar": "ابقَ داخل الدائرة 30 ثانية دون قتل أو شرطة",
-        "en": "Stay inside circle 30s without kills or police"
+        "ar": "تحدث إلى الشخص في الموقع المحدد",
+        "en": "Talk to the person at the marked location"
       },
       "params": {
         "itemName": "gold"

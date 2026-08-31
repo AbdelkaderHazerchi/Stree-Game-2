@@ -3,20 +3,20 @@
 import { T } from "../core/config.js?v=25";
 
 export const TILE_ASSETS = {
-  [T.WATER]: { name: "water", src: "assets/water.svg", img: null },
-  [T.ROAD]: { name: "road", src: "assets/road.svg", img: null },
-  [T.SIDEWALK]: { name: "sand", src: "assets/sand.svg", img: null },
+  [T.WATER]: { name: "water", src: "assets/water.svg?v=25", img: null },
+  [T.ROAD]: { name: "road", src: "assets/road.svg?v=25", img: null },
+  [T.SIDEWALK]: { name: "sand", src: "assets/sand.svg?v=25", img: null },
   [T.BUILDING]: {
     name: "building",
-    src: "assets/building_detail.svg",
+    src: "assets/building_detail.svg?v=25",
     img: null,
   },
-  [T.PARK]: { name: "park", src: "assets/park.svg", img: null },
-  [T.PARKING]: { name: "parking", src: "assets/parking.svg", img: null },
-  [T.SPECIAL]: { name: "special", src: "assets/special_detail.svg", img: null },
-  [T.PAVEMENT]: { name: "pavement", src: "assets/pavement.svg", img: null },
+  [T.PARK]: { name: "park", src: "assets/park.svg?v=25", img: null },
+  [T.PARKING]: { name: "parking", src: "assets/parking.svg?v=25", img: null },
+  [T.SPECIAL]: { name: "special", src: "assets/special_detail.svg?v=25", img: null },
+  [T.PAVEMENT]: { name: "pavement", src: "assets/pavement.svg?v=25", img: null },
 };
 
-export const ROAD_CROSSWALK_IMG = { src: "assets/road_crosswalk.svg", img: null };
-export const SAND_IMG = { src: "assets/sand.svg", img: null };
-export const PAVEMENT_IMG = { src: "assets/pavement.svg", img: null };
+export const ROAD_CROSSWALK_IMG = { src: "assets/road_crosswalk.svg?v=25", img: null };
+export const SAND_IMG = { src: "assets/sand.svg?v=25", img: null };
+export const PAVEMENT_IMG = { src: "assets/pavement.svg?v=25", img: null };

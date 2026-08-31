@@ -30,7 +30,7 @@ body{
   display:flex;
   flex-direction:column;
   user-select:none;
-  transition:all 0.2s ease;
+  transition:background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -179,6 +179,8 @@ body{
   flex:1;
   overflow:hidden;
   background:var(--bg-0);
+  min-height:0;
+  min-width:0;
 }
 .panel{
   background:var(--panel);
@@ -188,6 +190,8 @@ body{
   overflow:hidden;
   flex-shrink:0;
   position:relative;
+  min-height:0;
+  min-width:0;
 }
 #leftPanel{
   width:270px;
@@ -205,6 +209,10 @@ body{
   border-top:none;
   border-bottom:none;
   background:var(--panel);
+}
+#leftPanel{
+  /* keep width from above, only add min-height fix */
+  min-height:0;
 }
 #canvasWrap{
   flex:1;
@@ -323,18 +331,63 @@ body{
 }
 [dir="rtl"] .panel-search .search-icon{left:auto;right:6px}
 
-/* ===== PANEL CONTENT ===== */
+/* ===== PANEL CONTENT - SCROLL FIX ===== */
 .panel-content{
   flex:1;
+  min-height:0;
   overflow-y:auto;
   overflow-x:hidden;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(255,215,0,0.55) rgba(255,255,255,0.06);
+  scrollbar-gutter:stable;
   padding:8px;
+  padding-bottom:24px;
   display:flex;
   flex-direction:column;
   gap:8px;
+  -webkit-overflow-scrolling:touch;
 }
-.panel-content::-webkit-scrollbar{width:5px}
-.panel-content::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.10);border-radius:3px}
+.panel-content::-webkit-scrollbar{width:10px}
+.panel-content::-webkit-scrollbar-track{background:rgba(255,255,255,0.06);border-radius:5px}
+.panel-content::-webkit-scrollbar-thumb{background:rgba(255,215,0,0.55);border-radius:5px;border:1px solid rgba(255,255,255,0.12)}
+.panel-content::-webkit-scrollbar-thumb:hover{background:rgba(255,215,0,0.85)}
+/* Ensure toolbar (right inspector) always scrollable */
+#toolbar{
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+}
+/* INSPECTOR LISTS - make lists inside inspector scrollable so properties don't disappear */
+#rightPanel .list-container{
+  max-height:260px !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(255,215,0,0.4) transparent;
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:2px;
+}
+#rightPanel .list-container::-webkit-scrollbar{width:6px}
+#rightPanel .list-container::-webkit-scrollbar-thumb{background:rgba(255,215,0,0.4);border-radius:3px}
+/* Inspector sections - allow scrolling when many props */
+#rightPanel .tool-group .section-body{
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  max-height:50vh;
+  scrollbar-width:thin;
+}
+#rightPanel .tool-group.collapsed .section-body{
+  max-height:0;
+  overflow:hidden;
+}
+.list-container{
+  /* keep lists scrollable inside panel scroll */
+  flex-shrink:0;
+}
 
 /* ===== SECTIONS - Accordion like Unity/Godot Inspector ===== */
 .tool-group{
@@ -346,6 +399,31 @@ body{
 }
 .tool-group:hover{border-color:rgba(255,255,255,0.09)}
 .tool-group.collapsed .section-body{display:none}
+/* Inspector (rightPanel) - non-collapsible, all properties visible with heading dividers */
+#rightPanel .tool-group.collapsed .section-body{display:flex !important}
+#rightPanel .tool-group{
+  overflow:visible;
+}
+#rightPanel .section-header{
+  cursor:default !important;
+  pointer-events:none;
+  background:rgba(255,215,0,0.06) !important;
+  border-bottom:1px solid var(--border) !important;
+  margin-bottom:0;
+}
+#rightPanel .section-header .chevron{
+  display:none !important;
+}
+#rightPanel .section-header .section-action,
+#rightPanel .section-header .section-count{
+  pointer-events:auto;
+}
+#rightPanel .panel-header .icon-btn{
+  display:none !important;
+}
+#rightPanel .tool-group + .tool-group{
+  margin-top:2px;
+}
 .section-header{
   display:flex;
   align-items:center;
@@ -1033,9 +1111,13 @@ body{
           <div id="questExtraParams" style="display:none; margin-top:6px; padding:6px; background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:6px">
             <div id="extraItemNameRow" style="display:none" class="prop-row"><label data-i18n-editor="editor.item">الغرض</label><input type="text" id="questItemName" placeholder="اسم الغرض" maxlength="30" oninput="editor.questItemName=this.value"></div>
             <div id="extraMeetingRow" style="display:none">
-              <div style="font-size:10px;color:#c084fc;margin-bottom:3px" data-i18n-editor="editor.meetingMsg">رسالة الاجتماع</div>
-              <div class="prop-row"><label>AR</label><input type="text" id="questMeetingAr" placeholder="رسالة الاجتماع" oninput="editor.questMeetingAr=this.value"></div>
-              <div class="prop-row"><label>EN</label><input type="text" id="questMeetingEn" placeholder="Meeting message" oninput="editor.questMeetingEn=this.value"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <div style="font-size:10px;color:#c084fc;font-weight:700" data-i18n-editor="editor.meetingMsg">رسائل الاجتماع — Meeting Messages</div>
+                <button type="button" class="tool-btn" style="padding:2px 8px;font-size:10px" onclick="addMeetingMessageEditor()">➕ <span data-i18n-editor="editor.addMessage">إضافة رسالة</span></button>
+              </div>
+              <div id="questMeetingListEditor" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;padding-right:2px"></div>
+              <div style="font-size:9px;color:var(--text-faint);margin-top:4px" data-i18n-editor="editor.meetingHint">كل رسالة تتطلب: النص والمتحدث باللغتين — Each message needs text + speaker in AR/EN</div>
+              <div style="display:none"><input type="text" id="questMeetingAr"><input type="text" id="questMeetingEn"></div>
             </div>
           </div>
           <div style="border-top:1px solid var(--border);margin:6px 0"></div>
@@ -1099,6 +1181,33 @@ body{
       <!-- Hidden legacy list for compat (not shown) -->
       <div id="missionList" style="display:none"></div>
 
+      <!-- Chats (generic NPC chats) -->
+      <div class="tool-group" data-section="chats" data-keywords="chat chats دردشة محادثة">
+        <div class="section-header" onclick="toggleSection(this)">
+          <span class="chevron">▶</span>
+          <span class="label">💬 <span data-i18n-editor="editor.chats">الدردشات — Chats</span></span>
+          <span class="section-count" id="chatCount">0</span>
+          <span class="section-action" onclick="event.stopPropagation();addChat()">➕</span>
+        </div>
+        <div class="section-body">
+          <div style="font-size:10px;color:var(--text-faint);line-height:1.4;margin-bottom:6px;background:rgba(100,200,255,0.04);padding:6px;border-radius:6px;border:1px solid rgba(100,200,255,0.09)" data-i18n-editor="editor.chatHint">
+            اضغط E قرب أي NPC يختار دردشة عشوائيا — كل دردشة عدة رسائل (نص + متحدث AR/EN)
+          </div>
+          <div id="chatsList" class="list-container" style="max-height:180px"></div>
+          <div id="chatMessagesEditor" style="display:none; margin-top:8px; padding:8px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:6px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+              <span style="font-size:11px;font-weight:800;color:#60a5fa" id="chatEditTitle">Chat #1 — Messages</span>
+              <button class="tool-btn" type="button" onclick="addChatMessage()" style="padding:2px 8px;font-size:10px">➕ رسالة</button>
+            </div>
+            <div id="chatMessagesList" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto"></div>
+            <div style="display:flex;gap:4px;margin-top:8px">
+              <button class="tool-btn danger" onclick="deleteSelectedChat()" style="flex:1">🗑 حذف الدردشة</button>
+              <button class="tool-btn" onclick="closeChatEditor()" style="flex:1">✕ إغلاق</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Spammers -->
       <div class="tool-group" data-section="spammers" data-keywords="spammer spammers عدو أعداء">
         <div class="section-header" onclick="toggleSection(this)">
@@ -1119,7 +1228,7 @@ body{
       </div>
 
       <!-- Map Info -->
-      <div class="tool-group collapsed" data-section="mapinfo">
+      <div class="tool-group" data-section="mapinfo">
         <div class="section-header" onclick="toggleSection(this)">
           <span class="chevron">▶</span>
           <span class="label">ℹ️ <span data-i18n-editor="editor.mapInfo">معلومات الخريطة</span></span>
@@ -1170,8 +1279,13 @@ body{
     <div class="prop-row"><label>EN Desc</label><input type="text" id="qdDescEn" placeholder="Quest description"></div>
     <div class="prop-row" id="qdItemRow" style="display:none"><label data-i18n-editor="editor.item">الغرض</label><input type="text" id="qdItemName" placeholder="Item name / اسم الغرض"></div>
     <div id="qdMeetingRow" style="display:none">
-      <div class="prop-row"><label>AR</label><input type="text" id="qdMeetingAr" placeholder="رسالة الاجتماع"></div>
-      <div class="prop-row"><label>EN</label><input type="text" id="qdMeetingEn" placeholder="Meeting message"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-size:10px;color:#c084fc;font-weight:700" data-i18n-editor="editor.meetingMsg">رسائل الاجتماع — Meeting Messages</div>
+        <button type="button" class="tool-btn" style="padding:2px 8px;font-size:10px" onclick="addMeetingMessageDialog()">➕ <span data-i18n-editor="editor.addMessage">إضافة رسالة</span></button>
+      </div>
+      <div id="qdMeetingList" style="display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;padding-right:2px"></div>
+      <div style="font-size:9px;color:var(--text-faint);margin-top:4px" data-i18n-editor="editor.meetingHint">كل رسالة: النص والمتحدث AR/EN</div>
+      <div style="display:none"><input type="text" id="qdMeetingAr"><input type="text" id="qdMeetingEn"></div>
     </div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <div class="prop-row" style="flex:1"><label>Start X</label><input type="number" id="qdStartX" min="0"></div>
@@ -1297,7 +1411,11 @@ const EDITOR_TRANSLATIONS = {
     "editor.qType":"النوع",
     "editor.reward":"المكافأة $",
     "editor.item":"الغرض",
-    "editor.meetingMsg":"رسالة الاجتماع",
+    "editor.meetingMsg":"رسائل الاجتماع — Meeting Messages",
+    "editor.addMessage":"إضافة رسالة",
+    "editor.meetingHint":"كل رسالة تتطلب: النص والمتحدث باللغتين — Each message needs text + speaker in AR/EN",
+    "editor.role":"المتحدث — Speaker",
+    "editor.message":"الرسالة — Message",
     "editor.titleLabel":"العنوان — Title",
     "editor.descLabel":"الوصف — Description",
     "editor.cancelPending":"إلغاء المعلق",
@@ -1305,6 +1423,9 @@ const EDITOR_TRANSLATIONS = {
     "editor.mainQuests":"المهام الرئيسية (مرتبة)",
     "editor.sideQuests":"المهام الجانبية (بنفسجي)",
     "editor.spammers":"الأعداء (Spammers)",
+    "editor.chats":"الدردشات",
+    "editor.chatHint":"اضغط E قرب أي NPC يختار دردشة عشوائيا — كل دردشة عدة رسائل (نص + متحدث AR/EN)",
+    "editor.chatMessages":"الرسائل — Messages",
     "editor.clearAll":"مسح الكل",
     "editor.mapInfo":"معلومات الخريطة",
     "editor.dimensions":"الأبعاد:",
@@ -1387,7 +1508,11 @@ const EDITOR_TRANSLATIONS = {
     "editor.qType":"Type",
     "editor.reward":"Reward $",
     "editor.item":"Item",
-    "editor.meetingMsg":"Meeting message",
+    "editor.meetingMsg":"Meeting Messages",
+    "editor.addMessage":"Add Message",
+    "editor.meetingHint":"Each message needs text + speaker in AR/EN",
+    "editor.role":"Speaker — Role",
+    "editor.message":"Message",
     "editor.titleLabel":"Title",
     "editor.descLabel":"Description",
     "editor.cancelPending":"Cancel Pending",
@@ -1395,6 +1520,9 @@ const EDITOR_TRANSLATIONS = {
     "editor.mainQuests":"Main Quests (ordered)",
     "editor.sideQuests":"Side Quests (purple)",
     "editor.spammers":"Spammers",
+    "editor.chats":"Chats",
+    "editor.chatHint":"Press E near any NPC picks random chat — each chat has multiple messages (text + speaker AR/EN)",
+    "editor.chatMessages":"Messages",
     "editor.clearAll":"Clear All",
     "editor.mapInfo":"Map Info",
     "editor.dimensions":"Size:",
@@ -1425,14 +1553,14 @@ const EDITOR_TRANSLATIONS = {
     "editor.load":"Load",
   }
 };
-let editorLang = localStorage.getItem('sg_editor_lang') || 'ar';
+let editorLang = 'ar'; try{ const v=localStorage.getItem('sg_editor_lang'); if(v) editorLang=v; }catch{}
 function tEditor(key){
   const d = EDITOR_TRANSLATIONS[editorLang] || EDITOR_TRANSLATIONS.ar;
   return d[key] || (EDITOR_TRANSLATIONS.en[key] || key);
 }
 function applyEditorLang(lang){
   editorLang = lang;
-  localStorage.setItem('sg_editor_lang', lang);
+  try{ localStorage.setItem('sg_editor_lang', lang); }catch{}
   document.documentElement.lang = lang;
   document.documentElement.dir = lang==='ar' ? 'rtl' : 'ltr';
   document.body.dir = lang==='ar' ? 'rtl' : 'ltr';
@@ -1464,6 +1592,7 @@ function toggleEditorLang(){
 try{ applyEditorLang(editorLang); }catch(e){}
 
 // ===== UX HELPERS - Godot/Unity Inspector behavior =====
+function escapeEditorHtml(s){ return String(s||'').replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function toggleSection(header){
   const group = header.closest('.tool-group');
   if(!group) return;
@@ -1593,8 +1722,8 @@ function loadEditorPrefs(){
         if(el && col==='0') el.classList.remove('collapsed');
       });
     }
-    if(p.leftW) document.getElementById('leftPanel').style.width=p.leftW;
-    if(p.rightW) document.getElementById('rightPanel').style.width=p.rightW;
+    if(p.leftW && /^\d+px$/.test(p.leftW)) document.getElementById('leftPanel').style.width=p.leftW;
+    if(p.rightW && /^\d+px$/.test(p.rightW)) document.getElementById('rightPanel').style.width=p.rightW;
     if(typeof p.grid!=='undefined') { drawGrid=p.grid; const cb=document.querySelector('#topRight input[type=checkbox]'); if(cb) cb.checked=p.grid; }
     if(p.zoom) zoom=p.zoom;
   }catch{}
@@ -1624,7 +1753,7 @@ function updateBottomCoords(tx,ty){
   if(cy) cy.textContent=ty;
 }
 // Resizable panels
-(function initResizers(){
+(function initResizers(){ if(window.__sgResizerInit) return; window.__sgResizerInit=true;
   function makeResizer(resizerId, panelId, isLeft){
     const resizer=document.getElementById(resizerId);
     const panel=document.getElementById(panelId);
@@ -1641,10 +1770,13 @@ function updateBottomCoords(tx,ty){
       if(!dragging) return;
       const dx = e.clientX - startX;
       let newW = isLeft ? startW + dx : startW - dx;
-      newW = Math.max(200, Math.min(520, newW));
+      const minW = isLeft ? 220 : 280;
+      const maxW = isLeft ? 420 : 520;
+      newW = Math.max(minW, Math.min(maxW, newW));
       panel.style.width = newW + 'px';
       if(window.render) render();
     });
+    window.addEventListener('blur', ()=>{ if(dragging){ dragging=false; resizer.classList.remove('dragging'); document.body.style.cursor=''; document.body.style.userSelect=''; }});
     window.addEventListener('mouseup', ()=>{
       if(dragging){
         dragging=false;
@@ -1762,7 +1894,7 @@ const editor = {
   selMission: -1,
   missionType: 'deliverShipment',
   // Quest system (11 types now: 5 original + 6 new)
-  quests: [], // {id, category:'main'|'side', type, start:{x,y}, end:{x,y}, title:{ar,en}, desc:{ar,en}, reward, icon, order, params:{itemName, meetingAr, meetingEn}}
+  quests: [], // {id, category:'main'|'side', type, start:{x,y}, end:{x,y}, title:{ar,en}, desc:{ar,en}, reward, icon, order, params:{itemName, meetingMessages:[{ar,en,roleAr,roleEn}]}}
   questCategory: 'main',
   questTitleAr: '',
   questTitleEn: '',
@@ -1772,9 +1904,13 @@ const editor = {
   questItemName: '',
   questMeetingAr: '',
   questMeetingEn: '',
+  questMeetingMessages: [], // new: array of {ar,en,roleAr,roleEn} for meeting type
   pendingQuest: null, // {category,type,start:{x,y}, title,desc,reward,icon}
   selQuest: -1, // index in quests
-  questIdCounter: 1
+  questIdCounter: 1,
+  chats: [], // [{id, messages:[{ar,en,roleAr,roleEn}]}]
+  selChat: -1,
+  chatIdCounter: 1
 };
 
 let drawGrid = true;
@@ -1802,6 +1938,7 @@ function initMap(cols, rows) {
   editor.tiles = []; editor.buildingColors = []; editor.buildingHeights = []; editor.buildingShapes = []; editor.buildingRotations = [];
   editor.specialBuildings = []; editor.missionGivers = []; editor.spammers = [];
   editor.quests = []; editor.pendingQuest = null; editor.selQuest = -1; editor.selMission = -1; editor.questIdCounter = 1;
+  editor.chats = []; editor.selChat = -1; editor.chatIdCounter = 1;
   editor.spawnPoint = { x: Math.floor(cols/2), y: Math.floor(rows/2) };
   for (let y = 0; y < rows; y++) {
     editor.tiles[y] = []; editor.buildingColors[y] = []; editor.buildingHeights[y] = []; editor.buildingShapes[y]=[]; editor.buildingRotations[y]=[];
@@ -1854,11 +1991,34 @@ function loadMap(data) {
       let desc=q.desc; if(!desc) desc={ar:questDefaultDesc(type,'ar'), en:questDefaultDesc(type,'en')}; else if(typeof desc==="string") desc={ar:desc,en:desc};
       const extra = {};
       const rawItem = (q.params && q.params.itemName) || q.itemName || "";
+      let rawMessages = null;
+      try {
+        if (q.params && Array.isArray(q.params.meetingMessages) && q.params.meetingMessages.length) rawMessages = q.params.meetingMessages;
+        else if (Array.isArray(q.meetingMessages) && q.meetingMessages.length) rawMessages = q.meetingMessages;
+        else if (q.params && Array.isArray(q.params.meetingDialogue) && q.params.meetingDialogue.length) rawMessages = q.params.meetingDialogue;
+        else if (Array.isArray(q.meetingDialogue) && q.meetingDialogue.length) rawMessages = q.meetingDialogue;
+      } catch {}
+      let meetingMessages = null;
+      if (Array.isArray(rawMessages) && rawMessages.length) {
+        meetingMessages = rawMessages.map(m=> ({ ar: String(m.ar||m.messageAr||m.textAr||m.msgAr||"").trim(), en: String(m.en||m.messageEn||m.textEn||m.msgEn||"").trim(), roleAr: String(m.roleAr||m.speakerAr||"").trim(), roleEn: String(m.roleEn||m.speakerEn||"").trim() })).filter(m=> m.ar||m.en);
+      }
       const rawMAr = (q.params && q.params.meetingAr) || q.meetingAr || "";
       const rawMEn = (q.params && q.params.meetingEn) || q.meetingEn || "";
+      const rawRoleAr = (q.params && (q.params.meetingRoleAr||q.params.speakerAr||q.params.roleAr)) || q.meetingRoleAr || q.speakerAr || q.roleAr || "";
+      const rawRoleEn = (q.params && (q.params.meetingRoleEn||q.params.speakerEn||q.params.roleEn)) || q.meetingRoleEn || q.speakerEn || q.roleEn || "";
       if(rawItem) extra.itemName = String(rawItem).trim();
-      if(rawMAr) extra.meetingAr = String(rawMAr).trim();
-      if(rawMEn) extra.meetingEn = String(rawMEn).trim();
+      if(meetingMessages && meetingMessages.length){
+        extra.meetingMessages = meetingMessages;
+        extra.meetingAr = meetingMessages[0].ar;
+        extra.meetingEn = meetingMessages[0].en;
+        extra.meetingRoleAr = meetingMessages[0].roleAr;
+        extra.meetingRoleEn = meetingMessages[0].roleEn;
+      } else {
+        if(rawMAr) extra.meetingAr = String(rawMAr).trim();
+        if(rawMEn) extra.meetingEn = String(rawMEn).trim();
+        if(rawRoleAr) extra.meetingRoleAr = String(rawRoleAr).trim();
+        if(rawRoleEn) extra.meetingRoleEn = String(rawRoleEn).trim();
+      }
       editor.quests.push({
         id: q.id || `q_${category}_${idx}_${type}`,
         category, type, icon,
@@ -1870,7 +2030,11 @@ function loadMap(data) {
         params: Object.keys(extra).length ? extra : undefined,
         itemName: extra.itemName,
         meetingAr: extra.meetingAr,
-        meetingEn: extra.meetingEn
+        meetingEn: extra.meetingEn,
+        meetingRoleAr: extra.meetingRoleAr,
+        meetingRoleEn: extra.meetingRoleEn,
+        meetingMessages: extra.meetingMessages,
+        meetingDialogue: extra.meetingMessages
       });
     });
     // sort mains by order
@@ -1881,6 +2045,34 @@ function loadMap(data) {
     editor.questIdCounter = maxId+1 + editor.quests.length;
     // keep legacy missionGivers empty (will be rebuilt on export)
     editor.missionGivers = [];
+    // Load chats (generic NPC chats)
+    editor.chats = [];
+    editor.selChat = -1;
+    if(Array.isArray(data.chats) && data.chats.length){
+      data.chats.forEach((c, idx)=>{
+        const msgs = (c.messages||c.dialogue||c.lines||[]).map(m=> ({
+          ar: String(m.ar||m.messageAr||m.textAr||'').trim(),
+          en: String(m.en||m.messageEn||m.textEn||'').trim(),
+          roleAr: String(m.roleAr||m.speakerAr||'').trim(),
+          roleEn: String(m.roleEn||m.speakerEn||'').trim()
+        })).filter(m=> m.ar||m.en);
+        if(msgs.length){
+          editor.chats.push({ id: c.id || `chat_${idx}`, messages: msgs });
+        }
+      });
+      editor.chatIdCounter = editor.chats.length + 1;
+    } else if(Array.isArray(data.dialogues) && data.dialogues.length){
+      data.dialogues.forEach((c, idx)=>{
+        const msgs = (c.messages||[]).map(m=> ({
+          ar: String(m.ar||'').trim(),
+          en: String(m.en||'').trim(),
+          roleAr: String(m.roleAr||'').trim(),
+          roleEn: String(m.roleEn||'').trim()
+        })).filter(m=> m.ar||m.en);
+        if(msgs.length) editor.chats.push({ id: c.id||`chat_${idx}`, messages: msgs });
+      });
+      editor.chatIdCounter = editor.chats.length + 1;
+    }
   } else {
     // legacy: missionGivers array of single points -> migrate to two-point quests (main)
     const legacy = (data.missionGivers||[]).filter(m => m.type !== 'spammer');
@@ -1900,11 +2092,32 @@ function loadMap(data) {
       let desc=m.desc; if(!desc) desc={ar:questDefaultDesc(type,'ar'), en:questDefaultDesc(type,'en')}; else if(typeof desc==="string") desc={ar:desc,en:desc};
       const extraLegacy = {};
       const rawItemL = (m.params && m.params.itemName) || m.itemName || "";
+      let rawMessagesL = null;
+      try {
+        if (m.params && Array.isArray(m.params.meetingMessages) && m.params.meetingMessages.length) rawMessagesL = m.params.meetingMessages;
+        else if (Array.isArray(m.meetingMessages) && m.meetingMessages.length) rawMessagesL = m.meetingMessages;
+      } catch {}
+      let meetingMessagesL = null;
+      if (Array.isArray(rawMessagesL) && rawMessagesL.length) {
+        meetingMessagesL = rawMessagesL.map(mm=> ({ ar: String(mm.ar||mm.messageAr||"").trim(), en: String(mm.en||mm.messageEn||"").trim(), roleAr: String(mm.roleAr||mm.speakerAr||"").trim(), roleEn: String(mm.roleEn||mm.speakerEn||"").trim() })).filter(mm=> mm.ar||mm.en);
+      }
       const rawMArL = (m.params && m.params.meetingAr) || m.meetingAr || "";
       const rawMEnL = (m.params && m.params.meetingEn) || m.meetingEn || "";
+      const rawRoleArL = (m.params && (m.params.meetingRoleAr||m.params.speakerAr)) || m.meetingRoleAr || m.speakerAr || "";
+      const rawRoleEnL = (m.params && (m.params.meetingRoleEn||m.params.speakerEn)) || m.meetingRoleEn || m.speakerEn || "";
       if(rawItemL) extraLegacy.itemName = String(rawItemL).trim();
-      if(rawMArL) extraLegacy.meetingAr = String(rawMArL).trim();
-      if(rawMEnL) extraLegacy.meetingEn = String(rawMEnL).trim();
+      if(meetingMessagesL && meetingMessagesL.length){
+        extraLegacy.meetingMessages = meetingMessagesL;
+        extraLegacy.meetingAr = meetingMessagesL[0].ar;
+        extraLegacy.meetingEn = meetingMessagesL[0].en;
+        extraLegacy.meetingRoleAr = meetingMessagesL[0].roleAr;
+        extraLegacy.meetingRoleEn = meetingMessagesL[0].roleEn;
+      } else {
+        if(rawMArL) extraLegacy.meetingAr = String(rawMArL).trim();
+        if(rawMEnL) extraLegacy.meetingEn = String(rawMEnL).trim();
+        if(rawRoleArL) extraLegacy.meetingRoleAr = String(rawRoleArL).trim();
+        if(rawRoleEnL) extraLegacy.meetingRoleEn = String(rawRoleEnL).trim();
+      }
       editor.quests.push({
         id:`q_main_${idx}_${type}_${sx}_${sy}`,
         category:'main', type, icon, reward: MISSION_REWARDS_DEFAULT[type]||300, order:idx,
@@ -1912,10 +2125,23 @@ function loadMap(data) {
         params: Object.keys(extraLegacy).length ? extraLegacy : undefined,
         itemName: extraLegacy.itemName,
         meetingAr: extraLegacy.meetingAr,
-        meetingEn: extraLegacy.meetingEn
+        meetingEn: extraLegacy.meetingEn,
+        meetingRoleAr: extraLegacy.meetingRoleAr,
+        meetingRoleEn: extraLegacy.meetingRoleEn,
+        meetingMessages: extraLegacy.meetingMessages,
+        meetingDialogue: extraLegacy.meetingMessages
       });
     });
     editor.missionGivers = [];
+  }
+  // Ensure chats loaded even for legacy path
+  if(!editor.chats) editor.chats=[];
+  if(!editor.chats.length && Array.isArray(data.chats) && data.chats.length){
+    data.chats.forEach((c, idx)=>{
+      const msgs=(c.messages||[]).map(m=>({ar:String(m.ar||'').trim(),en:String(m.en||'').trim(),roleAr:String(m.roleAr||'').trim(),roleEn:String(m.roleEn||'').trim()})).filter(m=>m.ar||m.en);
+      if(msgs.length) editor.chats.push({id:c.id||`chat_${idx}`,messages:msgs});
+    });
+    editor.chatIdCounter = editor.chats.length+1;
   }
   editor.spammers = (data.missionGivers||[]).filter(m => m.type === 'spammer').map(m => ({ x:m.x, y:m.y }));
   // Also handle spammers in quests? keep separate
@@ -1975,11 +2201,36 @@ function buildMapObject() {
   const questsOut = editor.quests.map((q, idx)=>{
     const extra = {};
     const itm = (q.params && q.params.itemName) || q.itemName || "";
+    // Prefer meetingMessages array
+    let meetingMessages = null;
+    try{
+      if (q.params && Array.isArray(q.params.meetingMessages) && q.params.meetingMessages.length) meetingMessages = q.params.meetingMessages;
+      else if (Array.isArray(q.meetingMessages) && q.meetingMessages.length) meetingMessages = q.meetingMessages;
+      else if (Array.isArray(q.meetingDialogue) && q.meetingDialogue.length) meetingMessages = q.meetingDialogue;
+      else if (q.params && Array.isArray(q.params.meetingDialogue) && q.params.meetingDialogue.length) meetingMessages = q.params.meetingDialogue;
+    }catch{}
+    if (Array.isArray(meetingMessages) && meetingMessages.length) {
+      meetingMessages = meetingMessages.map(m=> ({ ar: String(m.ar||m.messageAr||"").trim(), en: String(m.en||m.messageEn||"").trim(), roleAr: String(m.roleAr||m.speakerAr||"").trim(), roleEn: String(m.roleEn||m.speakerEn||"").trim() })).filter(m=> m.ar||m.en);
+    } else {
+      meetingMessages = null;
+    }
     const mAr = (q.params && q.params.meetingAr) || q.meetingAr || "";
     const mEn = (q.params && q.params.meetingEn) || q.meetingEn || "";
+    const mRoleAr = (q.params && (q.params.meetingRoleAr||q.params.speakerAr)) || q.meetingRoleAr || q.speakerAr || "";
+    const mRoleEn = (q.params && (q.params.meetingRoleEn||q.params.speakerEn)) || q.meetingRoleEn || q.speakerEn || "";
     if(itm) extra.itemName = String(itm).trim();
-    if(mAr) extra.meetingAr = String(mAr).trim();
-    if(mEn) extra.meetingEn = String(mEn).trim();
+    if(meetingMessages && meetingMessages.length){
+      extra.meetingMessages = meetingMessages;
+      extra.meetingAr = meetingMessages[0].ar;
+      extra.meetingEn = meetingMessages[0].en;
+      if(meetingMessages[0].roleAr) extra.meetingRoleAr = meetingMessages[0].roleAr;
+      if(meetingMessages[0].roleEn) extra.meetingRoleEn = meetingMessages[0].roleEn;
+    } else {
+      if(mAr) extra.meetingAr = String(mAr).trim();
+      if(mEn) extra.meetingEn = String(mEn).trim();
+      if(mRoleAr) extra.meetingRoleAr = String(mRoleAr).trim();
+      if(mRoleEn) extra.meetingRoleEn = String(mRoleEn).trim();
+    }
     return {
       id: q.id,
       category: q.category,
@@ -1994,9 +2245,18 @@ function buildMapObject() {
       params: Object.keys(extra).length ? extra : undefined,
       itemName: extra.itemName,
       meetingAr: extra.meetingAr,
-      meetingEn: extra.meetingEn
+      meetingEn: extra.meetingEn,
+      meetingRoleAr: extra.meetingRoleAr,
+      meetingRoleEn: extra.meetingRoleEn,
+      meetingMessages: extra.meetingMessages,
+      meetingDialogue: extra.meetingMessages
     };
   });
+  // Chats (generic NPC chats) - each chat multiple bilingual messages with role
+  const chatsOut = (editor.chats||[]).map((c, idx)=>{
+    const msgs = (c.messages||[]).map(m=> ({ ar: String(m.ar||'').trim(), en: String(m.en||'').trim(), roleAr: String(m.roleAr||'').trim(), roleEn: String(m.roleEn||'').trim() })).filter(m=> m.ar||m.en);
+    return { id: c.id || `chat_${idx}`, messages: msgs };
+  }).filter(c=> c.messages.length>0);
   // Backward-compat legacy missionGivers flat (start points only + spammers)
   const allMG = [
     ...questsOut.map(q=>({ x:q.start.x, y:q.start.y, type:q.type, icon:q.icon, category:q.category, title:q.title, desc:q.desc, reward:q.reward, start:q.start, end:q.end, id:q.id, order:q.order })),
@@ -2020,6 +2280,7 @@ function buildMapObject() {
     spawnPoint: outSpawn,
     missionGivers: allMG, // legacy
     quests: questsOut,
+    chats: chatsOut,
     spammers: editor.spammers,
     zones: editor.zones
   };
@@ -2107,7 +2368,7 @@ function updateQuestHint(){
     h.style.display="block";
     h.style.borderColor = cat==="main" ? "rgba(255,215,0,0.3)" : "rgba(168,85,247,0.35)";
     h.style.color = col;
-    h.innerHTML = `⏳ ${catLabel} <b>${editor.pendingQuest.type}</b> — Start at (${editor.pendingQuest.start.x},${editor.pendingQuest.start.y}) selected.<br>Now <b>click End point</b> (green) to finish this quest.`;
+    h.textContent = `⏳ ${catLabel} ${editor.pendingQuest.type} — Start at (${editor.pendingQuest.start.x},${editor.pendingQuest.start.y}) selected. Now click End point (green) to finish this quest.`;
   } else {
     h.style.display="none";
   }
@@ -2140,8 +2401,123 @@ function updateQuestExtraVisibility(){
   if(t==='meeting'){
     if(meetingRow) meetingRow.style.display='block';
     show=true;
+    try{ renderMeetingEditorList(); }catch(e){}
   } else { if(meetingRow) meetingRow.style.display='none'; }
   if(container) container.style.display= show ? 'block' : 'none';
+}
+// === MEETING MULTI-MESSAGE HELPERS (bilingual message + role) ===
+function normalizeMeetingMessages(arr){
+  if(!Array.isArray(arr)) return [];
+  return arr.map(m=>{
+    if(!m || typeof m!=="object") return null;
+    const ar = String(m.ar || m.messageAr || m.textAr || m.msgAr || "").trim();
+    const en = String(m.en || m.messageEn || m.textEn || m.msgEn || "").trim();
+    const roleAr = String(m.roleAr || m.speakerAr || "").trim();
+    const roleEn = String(m.roleEn || m.speakerEn || "").trim();
+    if(!ar && !en) return null;
+    return {ar, en, roleAr, roleEn};
+  }).filter(Boolean);
+}
+function syncLegacyMeetingFields(){
+  try{
+    const msgs = Array.isArray(editor.questMeetingMessages) ? editor.questMeetingMessages : [];
+    const first = msgs[0] || {ar:"",en:"",roleAr:"",roleEn:""};
+    editor.questMeetingAr = first.ar || "";
+    editor.questMeetingEn = first.en || "";
+    const arEl=document.getElementById('questMeetingAr');
+    const enEl=document.getElementById('questMeetingEn');
+    if(arEl) arEl.value = editor.questMeetingAr;
+    if(enEl) enEl.value = editor.questMeetingEn;
+  }catch{}
+}
+function renderMeetingEditorList(){
+  const c=document.getElementById('questMeetingListEditor');
+  if(!c) return;
+  if(!Array.isArray(editor.questMeetingMessages)) editor.questMeetingMessages=[];
+  if(!editor.questMeetingMessages.length){
+    const ar=(editor.questMeetingAr||'').trim();
+    const en=(editor.questMeetingEn||'').trim();
+    if(ar||en){
+      editor.questMeetingMessages=[{ar,en,roleAr:"",roleEn:""}];
+    }
+  }
+  c.innerHTML='';
+  if(!editor.questMeetingMessages.length){
+    c.innerHTML='<div style="color:var(--text-faint);font-size:10px;text-align:center;padding:8px;border:1px dashed var(--border);border-radius:6px">No messages &mdash; click + to add (text + speaker AR/EN)</div>';
+    return;
+  }
+  editor.questMeetingMessages.forEach((m, idx)=>{
+    const wrap=document.createElement('div');
+    wrap.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:4px';
+    const esc = s=> String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    wrap.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10px;font-weight:800;color:#c084fc">#`+ (idx+1) + `</span>
+        <button type="button" class="tool-btn" style="padding:2px 6px;font-size:10px;background:rgba(255,51,85,0.12);border-color:rgba(255,51,85,0.3);color:#ff6688" onclick="removeMeetingMessageEditor(`+ idx + `)">&#10006; delete</button>
+      </div>
+      <div class="prop-row"><label style="min-width:60px">AR text</label><input type="text" placeholder="نص الرسالة (عربي)" value="`+ esc(m.ar) + `" oninput="updateMeetingMessageEditor(`+ idx + `,'ar',this.value)" maxlength="120"></div>
+      <div class="prop-row"><label style="min-width:60px">EN text</label><input type="text" placeholder="Message text (EN)" value="`+ esc(m.en) + `" oninput="updateMeetingMessageEditor(`+ idx + `,'en',this.value)" maxlength="120"></div>
+      <div class="prop-row"><label style="min-width:60px">AR role</label><input type="text" placeholder="المتحدث (عربي)" value="`+ esc(m.roleAr) + `" oninput="updateMeetingMessageEditor(`+ idx + `,'roleAr',this.value)" maxlength="30"></div>
+      <div class="prop-row"><label style="min-width:60px">EN role</label><input type="text" placeholder="Speaker (EN)" value="`+ esc(m.roleEn) + `" oninput="updateMeetingMessageEditor(`+ idx + `,'roleEn',this.value)" maxlength="30"></div>
+    `;
+    c.appendChild(wrap);
+  });
+}
+function addMeetingMessageEditor(){
+  if(!Array.isArray(editor.questMeetingMessages)) editor.questMeetingMessages=[];
+  editor.questMeetingMessages.push({ar:"",en:"",roleAr:"",roleEn:""});
+  syncLegacyMeetingFields();
+  renderMeetingEditorList();
+}
+function removeMeetingMessageEditor(idx){
+  if(!Array.isArray(editor.questMeetingMessages)) return;
+  editor.questMeetingMessages.splice(idx,1);
+  syncLegacyMeetingFields();
+  renderMeetingEditorList();
+}
+function updateMeetingMessageEditor(idx, field, value){
+  if(!Array.isArray(editor.questMeetingMessages)) return;
+  if(!editor.questMeetingMessages[idx]) return;
+  editor.questMeetingMessages[idx][field]=value;
+  syncLegacyMeetingFields();
+}
+let dialogMeetingMessages = [];
+function renderMeetingDialogList(){
+  const c=document.getElementById('qdMeetingList');
+  if(!c) return;
+  c.innerHTML='';
+  if(!dialogMeetingMessages.length){
+    c.innerHTML='<div style="color:var(--text-faint);font-size:10px;text-align:center;padding:8px;border:1px dashed var(--border);border-radius:6px">No messages &mdash; click + to add (text + speaker AR/EN)</div>';
+    return;
+  }
+  dialogMeetingMessages.forEach((m, idx)=>{
+    const wrap=document.createElement('div');
+    wrap.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:4px';
+    const esc = s=> String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    wrap.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10px;font-weight:800;color:#c084fc">#`+ (idx+1) + `</span>
+        <button type="button" class="tool-btn" style="padding:2px 6px;font-size:10px;background:rgba(255,51,85,0.12);border-color:rgba(255,51,85,0.3);color:#ff6688" onclick="removeMeetingMessageDialog(`+ idx + `)">&#10006;</button>
+      </div>
+      <div class="prop-row"><label>AR text</label><input type="text" placeholder="نص" value="`+ esc(m.ar) + `" oninput="updateMeetingMessageDialog(`+ idx + `,'ar',this.value)" maxlength="120"></div>
+      <div class="prop-row"><label>EN text</label><input type="text" placeholder="Text" value="`+ esc(m.en) + `" oninput="updateMeetingMessageDialog(`+ idx + `,'en',this.value)" maxlength="120"></div>
+      <div class="prop-row"><label>AR role</label><input type="text" placeholder="متحدث" value="`+ esc(m.roleAr) + `" oninput="updateMeetingMessageDialog(`+ idx + `,'roleAr',this.value)" maxlength="30"></div>
+      <div class="prop-row"><label>EN role</label><input type="text" placeholder="Speaker" value="`+ esc(m.roleEn) + `" oninput="updateMeetingMessageDialog(`+ idx + `,'roleEn',this.value)" maxlength="30"></div>
+    `;
+    c.appendChild(wrap);
+  });
+}
+function addMeetingMessageDialog(){
+  dialogMeetingMessages.push({ar:"",en:"",roleAr:"",roleEn:""});
+  renderMeetingDialogList();
+}
+function removeMeetingMessageDialog(idx){
+  dialogMeetingMessages.splice(idx,1);
+  renderMeetingDialogList();
+}
+function updateMeetingMessageDialog(idx, field, value){
+  if(!dialogMeetingMessages[idx]) return;
+  dialogMeetingMessages[idx][field]=value;
 }
 function updateQuestExtraVisibility(){
   const t=editor.missionType;
@@ -2156,6 +2532,7 @@ function updateQuestExtraVisibility(){
   if(t==='meeting'){
     if(meetingRow) meetingRow.style.display='block';
     show=true;
+    try{ renderMeetingEditorList(); }catch(e){}
   } else { if(meetingRow) meetingRow.style.display='none'; }
   if(container) container.style.display= show ? 'block' : 'none';
 }
@@ -2166,8 +2543,28 @@ function syncToolbarFromQuest(q){
   editor.questDescAr=q.desc.ar||""; editor.questDescEn=q.desc.en||"";
   editor.questReward=q.reward;
   editor.questItemName= (q.params && q.params.itemName) || q.itemName || "";
-  editor.questMeetingAr= (q.params && q.params.meetingAr) || q.meetingAr || "";
-  editor.questMeetingEn= (q.params && q.params.meetingEn) || q.meetingEn || "";
+  // Handle meetingMessages array (bilingual message+role)
+  let msgs = null;
+  try{
+    if (q.params && Array.isArray(q.params.meetingMessages) && q.params.meetingMessages.length) msgs = q.params.meetingMessages;
+    else if (Array.isArray(q.meetingMessages) && q.meetingMessages.length) msgs = q.meetingMessages;
+    else if (Array.isArray(q.meetingDialogue) && q.meetingDialogue.length) msgs = q.meetingDialogue;
+  }catch{}
+  if (Array.isArray(msgs) && msgs.length) {
+    editor.questMeetingMessages = msgs.map(m=> ({ ar: String(m.ar||m.messageAr||"").trim(), en: String(m.en||m.messageEn||"").trim(), roleAr: String(m.roleAr||m.speakerAr||"").trim(), roleEn: String(m.roleEn||m.speakerEn||"").trim() })).filter(m=> m.ar||m.en);
+  } else {
+    const ar = (q.params && q.params.meetingAr) || q.meetingAr || "";
+    const en = (q.params && q.params.meetingEn) || q.meetingEn || "";
+    const roleAr = (q.params && (q.params.meetingRoleAr||q.params.speakerAr)) || q.meetingRoleAr || "";
+    const roleEn = (q.params && (q.params.meetingRoleEn||q.params.speakerEn)) || q.meetingRoleEn || "";
+    if(ar||en){
+      editor.questMeetingMessages = [{ar: String(ar).trim(), en: String(en).trim(), roleAr: String(roleAr).trim(), roleEn: String(roleEn).trim()}];
+    } else {
+      editor.questMeetingMessages = [];
+    }
+  }
+  editor.questMeetingAr= (q.params && q.params.meetingAr) || q.meetingAr || (editor.questMeetingMessages[0]?.ar||"");
+  editor.questMeetingEn= (q.params && q.params.meetingEn) || q.meetingEn || (editor.questMeetingMessages[0]?.en||"");
   const catEl=document.getElementById('questCategory'); if(catEl) catEl.value=q.category;
   const typeEl=document.getElementById('missionT'); if(typeEl) typeEl.value=q.type;
   const tAr=document.getElementById('questTitleAr'); if(tAr) tAr.value=q.title.ar||"";
@@ -2179,13 +2576,14 @@ function syncToolbarFromQuest(q){
   const mArEl=document.getElementById('questMeetingAr'); if(mArEl) mArEl.value=editor.questMeetingAr;
   const mEnEl=document.getElementById('questMeetingEn'); if(mEnEl) mEnEl.value=editor.questMeetingEn;
   updateQuestExtraVisibility();
+  try{ renderMeetingEditorList(); }catch(e){}
 }
 function onDialogTypeChange(){
   const t=document.getElementById('qdType').value;
   const itemRow=document.getElementById('qdItemRow');
   const meetingRow=document.getElementById('qdMeetingRow');
   if(t==='theft' || t==='deliverLoot'){ if(itemRow) itemRow.style.display='flex'; } else { if(itemRow) itemRow.style.display='none'; }
-  if(t==='meeting'){ if(meetingRow) meetingRow.style.display='block'; } else { if(meetingRow) meetingRow.style.display='none'; }
+  if(t==='meeting'){ if(meetingRow) meetingRow.style.display='block'; try{ renderMeetingDialogList(); }catch(e){} } else { if(meetingRow) meetingRow.style.display='none'; }
 }
 function cancelPendingQuest(){
   editor.pendingQuest=null;
@@ -2277,13 +2675,34 @@ function paint(tx, ty, tile) {
       const id = `q_${category}_${editor.questIdCounter++}_${type}_${start.x}_${start.y}`;
       // Extra params for new 6 types
       const itemName = (editor.questItemName||'').trim();
-      const meetingAr = (editor.questMeetingAr||'').trim();
-      const meetingEn = (editor.questMeetingEn||'').trim();
+      let meetingMessages = Array.isArray(editor.questMeetingMessages) ? editor.questMeetingMessages.map(m=> ({ar:String(m.ar||'').trim(), en:String(m.en||'').trim(), roleAr:String(m.roleAr||'').trim(), roleEn:String(m.roleEn||'').trim()})).filter(m=> m.ar||m.en) : [];
+      if(!meetingMessages.length){
+        const legacyAr=(editor.questMeetingAr||'').trim();
+        const legacyEn=(editor.questMeetingEn||'').trim();
+        if(legacyAr||legacyEn) meetingMessages=[{ar:legacyAr,en:legacyEn,roleAr:"",roleEn:""}];
+      }
+      if(type==='meeting' && meetingMessages.length){
+        for(let i=0;i<meetingMessages.length;i++){
+          const mm=meetingMessages[i];
+          if(!mm.ar || !mm.en || !mm.roleAr || !mm.roleEn){
+            alert((editorLang==='ar' ? `رسالة ${i+1}: يجب ملء النص والمتحدث باللغتين (AR/EN)` : `Message ${i+1}: text and speaker must be filled in both AR/EN`));
+            return;
+          }
+        }
+      }
+      if(type==='meeting' && !meetingMessages.length){
+        alert((editorLang==='ar' ? 'يجب إضافة رسالة واحدة على الأقل للاجتماع (النص والمتحدث باللغتين)' : 'Meeting requires at least one message (text + speaker in AR/EN)'));
+        return;
+      }
       const params = {};
       if(itemName) params.itemName = itemName;
-      if(meetingAr) params.meetingAr = meetingAr;
-      if(meetingEn) params.meetingEn = meetingEn;
-      // Also store meeting message as title/desc fallback if title is default? But keep params separate
+      if(meetingMessages.length){
+        params.meetingMessages = meetingMessages;
+        params.meetingAr = meetingMessages[0].ar;
+        params.meetingEn = meetingMessages[0].en;
+        if(meetingMessages[0].roleAr) params.meetingRoleAr = meetingMessages[0].roleAr;
+        if(meetingMessages[0].roleEn) params.meetingRoleEn = meetingMessages[0].roleEn;
+      }
       editor.quests.push({
         id, category, type, icon, reward, order,
         start, end,
@@ -2291,8 +2710,12 @@ function paint(tx, ty, tile) {
         desc: {ar:descAr, en:descEn},
         params: Object.keys(params).length ? params : undefined,
         itemName: itemName||undefined,
-        meetingAr: meetingAr||undefined,
-        meetingEn: meetingEn||undefined
+        meetingAr: meetingMessages[0]?.ar || undefined,
+        meetingEn: meetingMessages[0]?.en || undefined,
+        meetingRoleAr: meetingMessages[0]?.roleAr || undefined,
+        meetingRoleEn: meetingMessages[0]?.roleEn || undefined,
+        meetingMessages: meetingMessages.length ? meetingMessages : undefined,
+        meetingDialogue: meetingMessages.length ? meetingMessages : undefined
       });
       editor.pendingQuest = null;
       editor.selQuest = editor.quests.length-1;
@@ -2358,34 +2781,46 @@ function erase(tx, ty) {
     setStatus(`Pending quest start at (${tx},${ty}) cleared`);
     return;
   }
-  // Handle shop (T.SPECIAL) 2x2 block first - erase whole shop
+  // Handle shop (T.SPECIAL) 2x2 block first - erase whole shop (greedy 2x2, avoids merging adjacent same-type shops)
   if(editor.tiles[ty]?.[tx]===T.SPECIAL){
     const sb = editor.specialBuildings.find(s=>s.x===tx&&s.y===ty);
     const shopName = sb?.name || null;
     if(shopName){
-      // find 2x2 origin containing this tile with same shop name
-      let ox=tx, oy=ty, found=false;
-      for(let candY=ty-1; candY<=ty; candY++){
-        for(let candX=tx-1; candX<=tx; candX++){
-          if(!ib(candX,candY)) continue;
-          let ok=true;
-          for(let dy=0;dy<2;dy++){
-            for(let dx=0;dx<2;dx++){
-              const nx=candX+dx, ny=candY+dy;
-              if(!ib(nx,ny) || editor.tiles[ny][nx]!==T.SPECIAL) ok=false;
-              else if(!editor.specialBuildings.some(s=>s.x===nx&&s.y===ny&&s.name===shopName)) ok=false;
-            }
-          }
-          if(ok && candX<=tx && tx < candX+2 && candY<=ty && ty < candY+2){
-            ox=candX; oy=candY; found=true; break;
+      // Reconstruct shop instances via greedy 2x2 scan and find which contains (tx,ty)
+      const sbMap = new Map();
+      for(const s of editor.specialBuildings) sbMap.set(s.x+','+s.y, s);
+      const visited = new Set();
+      let targetOrigin = null;
+      // Greedy scan to build instances
+      const instances = [];
+      for(const s of editor.specialBuildings){
+        const k=s.x+','+s.y;
+        if(visited.has(k)) continue;
+        const r=sbMap.get((s.x+1)+','+s.y);
+        const d=sbMap.get(s.x+','+(s.y+1));
+        const diag=sbMap.get((s.x+1)+','+(s.y+1));
+        if(r && d && diag && r.name===s.name && d.name===s.name && diag.name===s.name){
+          if(!visited.has((s.x+1)+','+s.y) && !visited.has(s.x+','+(s.y+1)) && !visited.has((s.x+1)+','+(s.y+1))){
+            instances.push({ox:s.x, oy:s.y, name:s.name});
+            visited.add(k); visited.add((s.x+1)+','+s.y); visited.add(s.x+','+(s.y+1)); visited.add((s.x+1)+','+(s.y+1));
+            continue;
           }
         }
-        if(found) break;
+        visited.add(k);
+        instances.push({ox:s.x, oy:s.y, name:s.name, single:true});
       }
-      if(found){
-        // Erase the 2x2 shop block
-        for(let dy=0; dy<2; dy++){
-          for(let dx=0; dx<2; dx++){
+      for(const inst of instances){
+        if(inst.single){
+          if(inst.ox===tx && inst.oy===ty){ targetOrigin={ox:tx,oy:ty, w:1,h:1, name:inst.name}; break; }
+        } else {
+          if(tx>=inst.ox && tx<inst.ox+2 && ty>=inst.oy && ty<inst.oy+2){ targetOrigin={ox:inst.ox, oy:inst.oy, w:2,h:2, name:inst.name}; break; }
+        }
+      }
+      if(targetOrigin){
+        const ox=targetOrigin.ox, oy=targetOrigin.oy;
+        const w=targetOrigin.w, h=targetOrigin.h;
+        for(let dy=0; dy<h; dy++){
+          for(let dx=0; dx<w; dx++){
             const nx=ox+dx, ny=oy+dy;
             if(!ib(nx,ny)) continue;
             editor.tiles[ny][nx]=T.WATER;
@@ -2395,16 +2830,15 @@ function erase(tx, ty) {
             editor.buildingRotations[ny][nx]=0;
           }
         }
-        editor.specialBuildings = editor.specialBuildings.filter(s=> !(s.x>=ox && s.x<ox+2 && s.y>=oy && s.y<oy+2 && s.name===shopName));
+        editor.specialBuildings = editor.specialBuildings.filter(s=> !(s.x>=ox && s.x<ox+w && s.y>=oy && s.y<oy+h && s.name===targetOrigin.name));
         editor.missionGivers = editor.missionGivers.filter(m=>!(Math.floor(m.x)===tx&&Math.floor(m.y)===ty));
-        // also remove any quest at that tile (already handled) and spammers
         editor.spammers = editor.spammers.filter(s=>!(Math.floor(s.x)===tx&&Math.floor(s.y)===ty));
         if (editor.spawnPoint && editor.spawnPoint.x===tx && editor.spawnPoint.y===ty) {
           editor.spawnPoint = { x: Math.floor(editor.cols/2), y: Math.floor(editor.rows/2) };
           setStatus(`Spawn was at erased tile (${tx},${ty}) - reset to center (${editor.spawnPoint.x},${editor.spawnPoint.y})`);
         }
         refreshUI(); render();
-        setStatus(`Erased shop ${shopName} 2x2 at (${ox},${oy})`);
+        setStatus(`Erased shop ${targetOrigin.name} ${w}x${h} at (${ox},${oy})`);
         return;
       }
     }
@@ -2514,12 +2948,12 @@ function flood(tx, ty) {
   const target = editor.tiles[ty][tx];
   const newTile = editor.curTile;
   if (target === newTile) return;
-  // Don't flood over special buildings with non-special tiles, or vice versa
   if (target === T.SPECIAL && newTile !== T.SPECIAL) { setStatus('Cannot flood over shops'); return; }
   if (target !== T.SPECIAL && newTile === T.SPECIAL) { setStatus('Cannot flood shops onto other tiles'); return; }
   const stack = [[tx, ty]];
   const visited = new Uint8Array(editor.cols * editor.rows);
   let count = 0;
+  const affected = [];
   while (stack.length > 0 && count < 50000) {
     const [cx, cy] = stack.pop();
     if (!ib(cx,cy)) continue;
@@ -2527,10 +2961,23 @@ function flood(tx, ty) {
     if (visited[idx]) continue;
     if (editor.tiles[cy][cx] !== target) continue;
     visited[idx] = 1;
-    paint(cx, cy, newTile);
+    // Direct assignment without per-tile render (batch)
+    editor.tiles[cy][cx] = newTile;
+    if (newTile !== T.BUILDING) { editor.buildingColors[cy][cx]=null; editor.buildingHeights[cy][cx]=0; editor.buildingShapes[cy][cx]=null; editor.buildingRotations[cy][cx]=0; }
+    else {
+      editor.buildingColors[cy][cx]=editor.bldC; editor.buildingHeights[cy][cx]=editor.bldH; editor.buildingShapes[cy][cx]=editor.bldShape; editor.buildingRotations[cy][cx]=editor.bldRot;
+    }
+    if(newTile===T.SPECIAL){
+      if (!editor.specialBuildings.some(s=>s.x===cx&&s.y===cy)) editor.specialBuildings.push({x:cx, y:cy, color:editor.shopC, name:editor.shopT});
+      editor.buildingRotations[cy][cx]=editor.shopRot;
+    } else {
+      editor.specialBuildings = editor.specialBuildings.filter(s=>!(s.x===cx&&s.y===cy));
+    }
+    affected.push([cx,cy]);
     count++;
     stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
   }
+  refreshUI();
   render();
   setStatus(`Flood fill: ${count} tiles`);
 }
@@ -2604,22 +3051,36 @@ function rotateShopSelected(dir){
   const sb = editor.specialBuildings.find(s=>s.x===tx&&s.y===ty);
   const shopName = sb?.name || null;
   if(!shopName){ editor.shopRot = (editor.shopRot + dir + 4)%4; document.getElementById('shopRotV').textContent=(editor.shopRot*90)+'°'; render(); return; }
-  let ox=tx, oy=ty, found=false;
-  for(let candY=ty-1;candY<=ty;candY++) for(let candX=tx-1;candX<=tx;candX++){
-    if(!ib(candX,candY)) continue;
-    let ok=true;
-    for(let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++){
-      const nx=candX+dx, ny=candY+dy;
-      if(!ib(nx,ny)||editor.tiles[ny][nx]!==T.SPECIAL) ok=false;
-      else if(!editor.specialBuildings.some(s=>s.x===nx&&s.y===ny&&s.name===shopName)) ok=false;
+  // Find shop instance containing (tx,ty) via greedy 2x2 reconstruction
+  const sbMap = new Map();
+  for(const s of editor.specialBuildings) sbMap.set(s.x+','+s.y, s);
+  const visited = new Set();
+  let target = null;
+  for(const s of editor.specialBuildings){
+    const k=s.x+','+s.y;
+    if(visited.has(k)) continue;
+    const r=sbMap.get((s.x+1)+','+s.y);
+    const d=sbMap.get(s.x+','+(s.y+1));
+    const diag=sbMap.get((s.x+1)+','+(s.y+1));
+    if(r && d && diag && r.name===s.name && d.name===s.name && diag.name===s.name){
+      if(!visited.has((s.x+1)+','+s.y) && !visited.has(s.x+','+(s.y+1)) && !visited.has((s.x+1)+','+(s.y+1))){
+        // Found a 2x2 at s
+        if(tx>=s.x && tx<s.x+2 && ty>=s.y && ty<s.y+2) target={ox:s.x, oy:s.y, w:2,h:2, name:s.name};
+        visited.add(k); visited.add((s.x+1)+','+s.y); visited.add(s.x+','+(s.y+1)); visited.add((s.x+1)+','+(s.y+1));
+        if(target) break;
+        continue;
+      }
     }
-    if(ok && candX<=tx && tx<candX+2 && candY<=ty && ty<candY+2){ ox=candX; oy=candY; found=true; break; }
+    visited.add(k);
+    if(s.x===tx && s.y===ty && !target) target={ox:tx, oy:ty, w:1,h:1, name:s.name};
   }
-  if(!found){ ox=tx; oy=ty; }
-  for(let dy=0;dy<2;dy++) for(let dx=0;dx<2;dx++){
+  let ox, oy, w, h;
+  if(target){ ox=target.ox; oy=target.oy; w=target.w; h=target.h; }
+  else { ox=tx; oy=ty; w=1; h=1; }
+  for(let dy=0;dy<h;dy++) for(let dx=0;dx<w;dx++){
     const nx=ox+dx, ny=oy+dy;
     if(!ib(nx,ny)) continue;
-    if(editor.tiles[ny][nx]===T.SPECIAL && editor.specialBuildings.some(s=>s.x===nx&&s.y===ny&&s.name===shopName)){
+    if(editor.tiles[ny][nx]===T.SPECIAL && sbMap.has(nx+','+ny) && sbMap.get(nx+','+ny).name===shopName){
       editor.buildingRotations[ny][nx] = ((editor.buildingRotations[ny][nx]||0) + dir + 4)%4;
     }
   }
@@ -2655,9 +3116,12 @@ function refreshQuestLists(){
       const sel = globalIdx===editor.selQuest;
       const d=document.createElement('div');
       d.className='mi' + (sel?' selected':'');
-      d.style.borderColor = q.category==="main" ? "rgba(255,215,0,0.25)" : "rgba(168,85,247,0.25)";
-      d.innerHTML=`<span class="mi-num" style="color:#ffd700">#${idx+1}</span><span class="mi-type">${q.icon||'⭐'} ${q.title&&(q.title.ar||q.title.en)||questDefaultTitle(q.type,'ar')} <span style="color:#999;font-size:10px">${q.type}</span></span><span class="mi-pos" title="Start→End">(${q.start.x},${q.start.y})→(${q.end.x},${q.end.y})</span><span class="mi-del">✖</span>`;
-      d.querySelector('.mi-del').onclick = e=>{ e.stopPropagation(); editor.quests.splice(globalIdx,1); if(editor.selQuest===globalIdx) editor.selQuest=-1; else if(editor.selQuest>globalIdx) editor.selQuest--; let mo=0; editor.quests.forEach(qq=>{ if(qq.category==='main') qq.order=mo++; }); refreshUI(); render(); };
+      d.style.borderColor = q.category==="main" ? "rgba(255,215,0,0.25)" : "rgba(168,85,247,0.25)";      const numSpan=document.createElement('span'); numSpan.className='mi-num'; numSpan.style.color='#ffd700'; numSpan.textContent='#'+(idx+1);
+      const typeSpan=document.createElement('span'); typeSpan.className='mi-type'; typeSpan.textContent=(q.icon||'⭐')+' '+(q.title&&(q.title.ar||q.title.en)||questDefaultTitle(q.type,'ar'))+' ';
+      const typeSmall=document.createElement('span'); typeSmall.style.color='#999'; typeSmall.style.fontSize='10px'; typeSmall.textContent=q.type; typeSpan.appendChild(typeSmall);
+      const posSpan=document.createElement('span'); posSpan.className='mi-pos'; posSpan.title='Start→End'; posSpan.textContent=`(${q.start.x},${q.start.y})→(${q.end.x},${q.end.y})`;
+      const delSpan=document.createElement('span'); delSpan.className='mi-del'; delSpan.textContent='✖';
+      d.append(numSpan, typeSpan, posSpan, delSpan);d.querySelector('.mi-del').onclick = e=>{ e.stopPropagation(); editor.quests.splice(globalIdx,1); if(editor.selQuest===globalIdx) editor.selQuest=-1; else if(editor.selQuest>globalIdx) editor.selQuest--; let mo=0; editor.quests.forEach(qq=>{ if(qq.category==='main') qq.order=mo++; }); refreshUI(); render(); };
       d.onclick = ()=>{ editor.selQuest=globalIdx; const qq=editor.quests[globalIdx]; if(qq) syncToolbarFromQuest(qq); refreshQuestLists(); render(); };
       d.ondblclick = ()=> openQuestDialog(globalIdx);
       mainEl.appendChild(d);
@@ -2672,9 +3136,12 @@ function refreshQuestLists(){
       const sel = globalIdx===editor.selQuest;
       const d=document.createElement('div');
       d.className='mi' + (sel?' selected':'');
-      d.style.borderColor="rgba(168,85,247,0.25)";
-      d.innerHTML=`<span class="mi-num" style="color:#c084fc">●</span><span class="mi-type">${q.icon||'⭐'} ${q.title&&(q.title.ar||q.title.en)||questDefaultTitle(q.type,'ar')} <span style="color:#999;font-size:10px">${q.type}</span></span><span class="mi-pos">(${q.start.x},${q.start.y})→(${q.end.x},${q.end.y})</span><span class="mi-del">✖</span>`;
-      d.querySelector('.mi-del').onclick = e=>{ e.stopPropagation(); editor.quests.splice(globalIdx,1); if(editor.selQuest===globalIdx) editor.selQuest=-1; else if(editor.selQuest>globalIdx) editor.selQuest--; refreshUI(); render(); };
+      d.style.borderColor="rgba(168,85,247,0.25)";      const numSpan=document.createElement('span'); numSpan.className='mi-num'; numSpan.style.color='#ffd700'; numSpan.textContent='#'+(idx+1);
+      const typeSpan=document.createElement('span'); typeSpan.className='mi-type'; typeSpan.textContent=(q.icon||'⭐')+' '+(q.title&&(q.title.ar||q.title.en)||questDefaultTitle(q.type,'ar'))+' ';
+      const typeSmall=document.createElement('span'); typeSmall.style.color='#999'; typeSmall.style.fontSize='10px'; typeSmall.textContent=q.type; typeSpan.appendChild(typeSmall);
+      const posSpan=document.createElement('span'); posSpan.className='mi-pos'; posSpan.title='Start→End'; posSpan.textContent=`(${q.start.x},${q.start.y})→(${q.end.x},${q.end.y})`;
+      const delSpan=document.createElement('span'); delSpan.className='mi-del'; delSpan.textContent='✖';
+      d.append(numSpan, typeSpan, posSpan, delSpan);d.querySelector('.mi-del').onclick = e=>{ e.stopPropagation(); editor.quests.splice(globalIdx,1); if(editor.selQuest===globalIdx) editor.selQuest=-1; else if(editor.selQuest>globalIdx) editor.selQuest--; refreshUI(); render(); };
       d.onclick = ()=>{ editor.selQuest=globalIdx; const qq=editor.quests[globalIdx]; if(qq) syncToolbarFromQuest(qq); refreshQuestLists(); render(); };
       d.ondblclick = ()=> openQuestDialog(globalIdx);
       sideEl.appendChild(d);
@@ -2734,17 +3201,35 @@ function openQuestDialog(globalIdx){
   document.getElementById('qdDescAr').value=q.desc.ar||"";
   document.getElementById('qdDescEn').value=q.desc.en||"";
   const item = (q.params && q.params.itemName) || q.itemName || "";
-  const mAr = (q.params && q.params.meetingAr) || q.meetingAr || "";
-  const mEn = (q.params && q.params.meetingEn) || q.meetingEn || "";
+  let msgs = null;
+  try{
+    if (q.params && Array.isArray(q.params.meetingMessages) && q.params.meetingMessages.length) msgs = q.params.meetingMessages;
+    else if (Array.isArray(q.meetingMessages) && q.meetingMessages.length) msgs = q.meetingMessages;
+    else if (Array.isArray(q.meetingDialogue) && q.meetingDialogue.length) msgs = q.meetingDialogue;
+  }catch{}
+  if (Array.isArray(msgs) && msgs.length) {
+    dialogMeetingMessages = msgs.map(m=> ({ ar: String(m.ar||m.messageAr||"").trim(), en: String(m.en||m.messageEn||"").trim(), roleAr: String(m.roleAr||m.speakerAr||"").trim(), roleEn: String(m.roleEn||m.speakerEn||"").trim() })).filter(m=> m.ar||m.en);
+  } else {
+    const mAr = (q.params && q.params.meetingAr) || q.meetingAr || "";
+    const mEn = (q.params && q.params.meetingEn) || q.meetingEn || "";
+    const roleAr = (q.params && (q.params.meetingRoleAr||q.params.speakerAr)) || q.meetingRoleAr || "";
+    const roleEn = (q.params && (q.params.meetingRoleEn||q.params.speakerEn)) || q.meetingRoleEn || "";
+    if(mAr||mEn){
+      dialogMeetingMessages = [{ar: String(mAr).trim(), en: String(mEn).trim(), roleAr: String(roleAr).trim(), roleEn: String(roleEn).trim()}];
+    } else {
+      dialogMeetingMessages = [];
+    }
+  }
   const qdItem = document.getElementById('qdItemName'); if(qdItem) qdItem.value=item;
-  const qdMAr = document.getElementById('qdMeetingAr'); if(qdMAr) qdMAr.value=mAr;
-  const qdMEn = document.getElementById('qdMeetingEn'); if(qdMEn) qdMEn.value=mEn;
+  const qdMAr = document.getElementById('qdMeetingAr'); if(qdMAr) qdMAr.value=dialogMeetingMessages[0]?.ar||"";
+  const qdMEn = document.getElementById('qdMeetingEn'); if(qdMEn) qdMEn.value=dialogMeetingMessages[0]?.en||"";
   document.getElementById('qdStartX').value=q.start.x;
   document.getElementById('qdStartY').value=q.start.y;
   document.getElementById('qdEndX').value=q.end.x;
   document.getElementById('qdEndY').value=q.end.y;
   document.getElementById('questDialog').style.display='flex';
   onDialogTypeChange();
+  try{ renderMeetingDialogList(); }catch(e){}
   refreshQuestLists();
 }
 function saveQuestDialog(){
@@ -2763,20 +3248,47 @@ function saveQuestDialog(){
   const ex=+document.getElementById('qdEndX').value;
   const ey=+document.getElementById('qdEndY').value;
   const itemName=(document.getElementById('qdItemName')?.value||'').trim();
-  const meetingAr=(document.getElementById('qdMeetingAr')?.value||'').trim();
-  const meetingEn=(document.getElementById('qdMeetingEn')?.value||'').trim();
+  let meetingMessages = Array.isArray(dialogMeetingMessages) ? dialogMeetingMessages.map(m=> ({ar:String(m.ar||'').trim(), en:String(m.en||'').trim(), roleAr:String(m.roleAr||'').trim(), roleEn:String(m.roleEn||'').trim()})).filter(m=> m.ar||m.en) : [];
+  // Fallback to legacy single inputs if array empty but inputs have data (backward compat)
+  if(!meetingMessages.length){
+    const legacyAr=(document.getElementById('qdMeetingAr')?.value||'').trim();
+    const legacyEn=(document.getElementById('qdMeetingEn')?.value||'').trim();
+    if(legacyAr||legacyEn) meetingMessages=[{ar:legacyAr,en:legacyEn,roleAr:"",roleEn:""}];
+  }
+  if(type==='meeting' && meetingMessages.length){
+    for(let i=0;i<meetingMessages.length;i++){
+      const mm=meetingMessages[i];
+      if(!mm.ar || !mm.en || !mm.roleAr || !mm.roleEn){
+        alert((editorLang==='ar' ? `رسالة ${i+1}: يجب ملء النص والمتحدث باللغتين` : `Message ${i+1}: text and speaker must be filled in both AR/EN`));
+        return;
+      }
+    }
+  }
+  if(type==='meeting' && !meetingMessages.length){
+    alert((editorLang==='ar' ? 'يجب إضافة رسالة واحدة على الأقل للاجتماع' : 'Meeting requires at least one message'));
+    return;
+  }
   if(sx<0||sx>=editor.cols||sy<0||sy>=editor.rows||ex<0||ex>=editor.cols||ey<0||ey>=editor.rows){ alert("Start/End out of bounds"); return; }
   if(sx===ex && sy===ey){ alert("Start and End cannot be same tile"); return; }
   q.category=cat; q.type=type; q.icon=MISSION_ICONS[type]||'⭐'; q.reward=reward;
   q.title={ar:titleAr,en:titleEn}; q.desc={ar:descAr,en:descEn};
   q.start={x:sx,y:sy}; q.end={x:ex,y:ey};
   q.itemName = itemName || undefined;
-  q.meetingAr = meetingAr || undefined;
-  q.meetingEn = meetingEn || undefined;
+  q.meetingAr = meetingMessages[0]?.ar || undefined;
+  q.meetingEn = meetingMessages[0]?.en || undefined;
+  q.meetingRoleAr = meetingMessages[0]?.roleAr || undefined;
+  q.meetingRoleEn = meetingMessages[0]?.roleEn || undefined;
+  q.meetingMessages = meetingMessages.length ? meetingMessages : undefined;
+  q.meetingDialogue = meetingMessages.length ? meetingMessages : undefined;
   q.params = {};
   if(itemName) q.params.itemName=itemName;
-  if(meetingAr) q.params.meetingAr=meetingAr;
-  if(meetingEn) q.params.meetingEn=meetingEn;
+  if(meetingMessages.length){
+    q.params.meetingMessages = meetingMessages;
+    q.params.meetingAr = meetingMessages[0].ar;
+    q.params.meetingEn = meetingMessages[0].en;
+    if(meetingMessages[0].roleAr) q.params.meetingRoleAr = meetingMessages[0].roleAr;
+    if(meetingMessages[0].roleEn) q.params.meetingRoleEn = meetingMessages[0].roleEn;
+  }
   if(!Object.keys(q.params).length) q.params=undefined;
   let mo=0; editor.quests.forEach(qq=>{ if(qq.category==="main") qq.order=mo++; });
   editor.quests.sort((a,b)=>{ if(a.category!==b.category) return a.category==="main"?-1:1; if(a.category==="main") return (a.order||0)-(b.order||0); return 0; });
@@ -2813,16 +3325,134 @@ function refreshSpammerList() {
   editor.spammers.forEach((s, i) => {
     const d = document.createElement('div');
     d.className = 'si';
-    d.innerHTML = `<span>💀 #${i+1}</span><span class="si-pos">(${s.x},${s.y})</span><span class="si-del">✖</span>`;
+    const skull=document.createElement('span'); skull.textContent=`💀 #${i+1}`; const pos=document.createElement('span'); pos.className='si-pos'; pos.textContent=`(${s.x},${s.y})`; const del=document.createElement('span'); del.className='si-del'; del.textContent='✖'; d.append(skull, pos, del);
     d.querySelector('.si-del').onclick = () => { editor.spammers.splice(i,1); refreshUI(); render(); };
     el.appendChild(d);
   });
   document.getElementById('spammerCount').textContent = editor.spammers.length;
 }
 
+// ================ CHATS (generic NPC chats) ================
+function refreshChatList(){
+  const el=document.getElementById('chatsList');
+  const countEl=document.getElementById('chatCount');
+  if(countEl) countEl.textContent = (editor.chats||[]).length;
+  if(!el) return;
+  el.innerHTML='';
+  if(!editor.chats || !editor.chats.length){
+    el.innerHTML='<div style="color:var(--text-faint);font-size:11px;text-align:center;padding:10px;border:1px dashed var(--border);border-radius:6px">No chats — click + to create</div>';
+    document.getElementById('chatMessagesEditor').style.display='none';
+    return;
+  }
+  editor.chats.forEach((c, idx)=>{
+    const d=document.createElement('div');
+    d.className='mi' + (editor.selChat===idx ? ' selected' : '');
+    const num=document.createElement('span'); num.className='mi-num'; num.textContent='#'+(idx+1);
+    const type=document.createElement('span'); type.className='mi-type'; type.textContent='💬 Chat '+ (idx+1) + ' (' + (c.messages?c.messages.length:0) + ' msgs)';
+    const del=document.createElement('span'); del.className='mi-del'; del.textContent='✖';
+    del.onclick=(e)=>{ e.stopPropagation(); editor.chats.splice(idx,1); if(editor.selChat===idx) { editor.selChat=-1; document.getElementById('chatMessagesEditor').style.display='none'; } else if(editor.selChat>idx) editor.selChat--; refreshChatList(); };
+    d.append(num,type,del);
+    d.onclick=()=>{ editor.selChat=idx; refreshChatList(); showChatEditor(idx); };
+    el.appendChild(d);
+  });
+  if(editor.selChat>=0 && editor.selChat<editor.chats.length){
+    showChatEditor(editor.selChat);
+  }
+}
+function showChatEditor(idx){
+  const editorDiv=document.getElementById('chatMessagesEditor');
+  if(!editorDiv) return;
+  if(idx<0 || idx>=editor.chats.length){ editorDiv.style.display='none'; return; }
+  editorDiv.style.display='block';
+  const title=document.getElementById('chatEditTitle');
+  if(title) title.textContent=`Chat #${idx+1} — ${editor.chats[idx].messages.length} messages`;
+  renderChatMessages();
+}
+function closeChatEditor(){
+  const ed=document.getElementById('chatMessagesEditor');
+  if(ed) ed.style.display='none';
+  editor.selChat=-1;
+  refreshChatList();
+}
+function addChat(){
+  if(!Array.isArray(editor.chats)) editor.chats=[];
+  const id=`chat_${editor.chatIdCounter++}`;
+  editor.chats.push({ id, messages: [{ ar: "", en: "", roleAr: "", roleEn: "" }] });
+  editor.selChat = editor.chats.length-1;
+  refreshChatList();
+}
+function deleteSelectedChat(){
+  const idx=editor.selChat;
+  if(idx<0 || idx>=editor.chats.length) return;
+  if(!confirm(editorLang==='ar' ? 'حذف هذه الدردشة؟' : 'Delete this chat?')) return;
+  editor.chats.splice(idx,1);
+  editor.selChat=-1;
+  document.getElementById('chatMessagesEditor').style.display='none';
+  refreshChatList();
+  render();
+}
+function renderChatMessages(){
+  const c=document.getElementById('chatMessagesList');
+  if(!c) return;
+  c.innerHTML='';
+  const idx=editor.selChat;
+  if(idx<0 || idx>=editor.chats.length) return;
+  const chat=editor.chats[idx];
+  if(!chat.messages || !chat.messages.length){
+    chat.messages=[{ar:"",en:"",roleAr:"",roleEn:""}];
+  }
+  chat.messages.forEach((m, midx)=>{
+    const wrap=document.createElement('div');
+    wrap.style.cssText='background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:4px';
+    const esc=s=> String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+    wrap.innerHTML=`
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:10px;font-weight:800;color:#60a5fa">Msg #`+ (midx+1) + `</span>
+        <button type="button" class="tool-btn" style="padding:2px 6px;font-size:10px;background:rgba(255,51,85,0.12);border-color:rgba(255,51,85,0.3);color:#ff6688" onclick="removeChatMessage(`+ midx + `)">✖</button>
+      </div>
+      <div class="prop-row"><label style="min-width:60px">AR text</label><input type="text" placeholder="نص الرسالة (عربي)" value="`+ esc(m.ar) + `" oninput="updateChatMessage(`+ midx + `,'ar',this.value)" maxlength="120"></div>
+      <div class="prop-row"><label style="min-width:60px">EN text</label><input type="text" placeholder="Message text (EN)" value="`+ esc(m.en) + `" oninput="updateChatMessage(`+ midx + `,'en',this.value)" maxlength="120"></div>
+      <div class="prop-row"><label style="min-width:60px">AR role</label><input type="text" placeholder="المتحدث (عربي)" value="`+ esc(m.roleAr) + `" oninput="updateChatMessage(`+ midx + `,'roleAr',this.value)" maxlength="30"></div>
+      <div class="prop-row"><label style="min-width:60px">EN role</label><input type="text" placeholder="Speaker (EN)" value="`+ esc(m.roleEn) + `" oninput="updateChatMessage(`+ midx + `,'roleEn',this.value)" maxlength="30"></div>
+    `;
+    c.appendChild(wrap);
+  });
+}
+function addChatMessage(){
+  const idx=editor.selChat;
+  if(idx<0) return;
+  if(!Array.isArray(editor.chats[idx].messages)) editor.chats[idx].messages=[];
+  editor.chats[idx].messages.push({ar:"",en:"",roleAr:"",roleEn:""});
+  renderChatMessages();
+  refreshChatList();
+}
+function removeChatMessage(midx){
+  const idx=editor.selChat;
+  if(idx<0) return;
+  const msgs=editor.chats[idx].messages;
+  if(!msgs) return;
+  msgs.splice(midx,1);
+  if(!msgs.length) msgs.push({ar:"",en:"",roleAr:"",roleEn:""});
+  renderChatMessages();
+  refreshChatList();
+}
+function updateChatMessage(midx, field, value){
+  const idx=editor.selChat;
+  if(idx<0) return;
+  const chat=editor.chats[idx];
+  if(!chat || !chat.messages || !chat.messages[midx]) return;
+  chat.messages[midx][field]=value;
+  // Update count display
+  const title=document.getElementById('chatEditTitle');
+  if(title) title.textContent=`Chat #${idx+1} — ${chat.messages.length} messages`;
+  // Update list count
+  refreshChatList();
+}
+
 function refreshUI() {
   refreshMissionList();
   refreshSpammerList();
+  refreshChatList();
 }
 
 // ================ EXPORT / IMPORT ================
@@ -2833,10 +3463,14 @@ function exportMap() {
   document.getElementById('exportDialog').style.display = 'flex';
 }
 
-function copyExport() {
+async function copyExport() {
   const ta = document.getElementById('exportText');
-  ta.select(); document.execCommand('copy');
-  setStatus('Copied!');
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(ta.value);
+    else { ta.select(); document.execCommand('copy'); }
+    setStatus('Copied!');
+  }catch{ ta.select(); try{document.execCommand('copy'); setStatus('Copied!');}catch{}
+  }
 }
 
 function downloadMap() {
@@ -2984,7 +3618,7 @@ function isEditorBuildingOrigin(x,y,col,h){
   const topSame = y>0 && editor.buildingColors[y-1]?.[x]===col && editor.buildingHeights[y-1]?.[x]===h;
   return !leftSame && !topSame;
 }
-function drawShopEditor(px, py, S, shopName, rotOverride=0){
+function drawShopEditor(px, py, S, shopName, rotOverride=0, skipAwning=false){
   const rot = ((rotOverride||0)%4+4)%4;
   let drawPx=px, drawPy=py;
   let needsRestore=false;
@@ -3074,37 +3708,39 @@ function drawShopEditor(px, py, S, shopName, rotOverride=0){
     ctx.fill();
   }
   // Awning - striped rectangle below building
-  const awningW = Math.round(S*0.86);
-  const awningH = Math.round(S*0.16);
-  const awningX = drawPx + Math.round((S - awningW)/2);
-  const awningY = drawPy + S; // directly below building
-  // awning background (dark)
-  ctx.fillStyle = awningDark;
-  // draw with slight bottom radius
-  const awR = Math.max(2, Math.round(awningH*0.18));
-  ctx.beginPath();
-  ctx.moveTo(awningX, awningY);
-  ctx.lineTo(awningX+awningW, awningY);
-  ctx.lineTo(awningX+awningW, awningY+awningH-awR);
-  ctx.quadraticCurveTo(awningX+awningW, awningY+awningH, awningX+awningW-awR, awningY+awningH);
-  ctx.lineTo(awningX+awR, awningY+awningH);
-  ctx.quadraticCurveTo(awningX, awningY+awningH, awningX, awningY+awningH-awR);
-  ctx.lineTo(awningX, awningY);
-  ctx.closePath();
-  ctx.fill();
-  // stripes
-  const numStripes = 12;
-  const stripeW = awningW / numStripes;
-  for(let i=0;i<numStripes;i++){
-    if(i%2===0) continue; // keep dark for even, light for odd - dark already background
-    ctx.fillStyle = awningLight;
-    const sx = awningX + i*stripeW;
-    // clip to awning shape
-    ctx.fillRect(sx+1, awningY+1, stripeW-1, awningH-2);
+  if(!skipAwning){
+    const awningW = Math.round(S*0.86);
+    const awningH = Math.round(S*0.16);
+    const awningX = drawPx + Math.round((S - awningW)/2);
+    const awningY = drawPy + S; // directly below building
+    // awning background (dark)
+    ctx.fillStyle = awningDark;
+    // draw with slight bottom radius
+    const awR = Math.max(2, Math.round(awningH*0.18));
+    ctx.beginPath();
+    ctx.moveTo(awningX, awningY);
+    ctx.lineTo(awningX+awningW, awningY);
+    ctx.lineTo(awningX+awningW, awningY+awningH-awR);
+    ctx.quadraticCurveTo(awningX+awningW, awningY+awningH, awningX+awningW-awR, awningY+awningH);
+    ctx.lineTo(awningX+awR, awningY+awningH);
+    ctx.quadraticCurveTo(awningX, awningY+awningH, awningX, awningY+awningH-awR);
+    ctx.lineTo(awningX, awningY);
+    ctx.closePath();
+    ctx.fill();
+    // stripes
+    const numStripes = 12;
+    const stripeW = awningW / numStripes;
+    for(let i=0;i<numStripes;i++){
+      if(i%2===0) continue; // keep dark for even, light for odd - dark already background
+      ctx.fillStyle = awningLight;
+      const sx = awningX + i*stripeW;
+      // clip to awning shape
+      ctx.fillRect(sx+1, awningY+1, stripeW-1, awningH-2);
+    }
+    // awning top edge highlight (where it meets building)
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.fillRect(awningX, awningY, awningW, Math.max(1, Math.round(awningH*0.12)));
   }
-  // awning top edge highlight (where it meets building)
-  ctx.fillStyle = "rgba(0,0,0,0.18)";
-  ctx.fillRect(awningX, awningY, awningW, Math.max(1, Math.round(awningH*0.12)));
   if(needsRestore) ctx.restore();
 }
 function drawLowEditor(px,py,col,tx,ty,h, span=1, shapeOverride=null, rotOverride=0){
@@ -3314,66 +3950,76 @@ function render() {
   for (const sb of editor.specialBuildings) {
     const key = sb.x+','+sb.y;
     if (sbVisited.has(key)) continue;
-    // Collect connected group
-    const group = [];
-    const stack = [sb];
-    sbVisited.add(key);
-    while (stack.length > 0) {
-      const cur = stack.pop();
-      group.push(cur);
-      for (const [dx,dy] of [[0,-1],[0,1],[-1,0],[1,0]]) {
-        const nk = (cur.x+dx)+','+(cur.y+dy);
-        if (!sbVisited.has(nk)) {
-          const n = sbMap.get(nk);
-          if (n && n.name === cur.name) { sbVisited.add(nk); stack.push(n); }
-        }
+    // Try to detect a valid 2x2 shop with this tile as top-left (greedy, avoids merging adjacent same-type shops)
+    const right = sbMap.get((sb.x+1)+','+sb.y);
+    const down = sbMap.get(sb.x+','+(sb.y+1));
+    const diag = sbMap.get((sb.x+1)+','+(sb.y+1));
+    let isOrigin2x2 = false;
+    let group = null;
+    if (right && down && diag && right.name===sb.name && down.name===sb.name && diag.name===sb.name) {
+      if (!sbVisited.has((sb.x+1)+','+sb.y) && !sbVisited.has(sb.x+','+(sb.y+1)) && !sbVisited.has((sb.x+1)+','+(sb.y+1))) {
+        isOrigin2x2 = true;
+        group = [sb, right, down, diag];
+        for (const g of group) sbVisited.add(g.x+','+g.y);
       }
     }
-    // Render group as 4 sqm shop (2x2) with reference design - striped awning, door, bars
-    const minX = Math.min(...group.map(g=>g.x));
-    const maxX = Math.max(...group.map(g=>g.x));
-    const minYg = Math.min(...group.map(g=>g.y));
-    const maxYg = Math.max(...group.map(g=>g.y));
-    const groupW = maxX - minX + 1;
-    const groupH = maxYg - minYg + 1;
-    // Check if group is valid 2x2 (4 sqm) - use custom shop renderer, else fallback per-tile
-    const isShop2x2 = groupW===2 && groupH===2 && group.length===4;
-    // Also check if viewport cull - if shop completely outside view, skip
-    const shopPx = minX*TS, shopPy = minYg*TS;
-    const shopS = groupW*TS; // for 2x2, S=64; includes awning below
-    // simple viewport check expanded for awning
-    if(shopPx + shopS < (cam.x - (canvas.width/zoom)/2) - 20 || shopPx > (cam.x + (canvas.width/zoom)/2) + 20 ||
-       shopPy + shopS + Math.round(shopS*0.16) < (cam.y - (canvas.height/zoom)/2) - 20 || shopPy > (cam.y + (canvas.height/zoom)/2) + 20){
-      // outside view, skip drawing but still need label later
-    } else if(isShop2x2){
+    if (isOrigin2x2 && group) {
+      const minX = sb.x, minYg = sb.y;
+      const shopPx = minX*TS, shopPy = minYg*TS;
+      const shopS = 2*TS;
       const rot = editor.buildingRotations[minYg]?.[minX] ?? editor.shopRot ?? 0;
-      drawShopEditor(shopPx, shopPy, shopS, sb.name, rot);
-    } else {
-      // Fallback per-tile for irregular groups
-      for (const g of group) {
-        if (g.x<sx || g.x>ex || g.y<sy || g.y>ey) continue;
-        const px=g.x*TS, py=g.y*TS;
-        ctx.fillStyle=g.color; ctx.fillRect(px,py,TS,TS);
-        ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=1;
-        ctx.strokeRect(px+1,py+1,TS-2,TS-2);
-        ctx.fillStyle='rgba(255,255,255,0.2)';
-        ctx.fillRect(px+3,py+3,TS/2-6,TS/2-6);
-        ctx.fillRect(px+TS/2+3,py+3,TS/2-6,TS/2-6);
-        ctx.fillRect(px+3,py+TS/2+3,TS/2-6,TS/2-6);
-        ctx.fillRect(px+TS/2+3,py+TS/2+3,TS/2-6,TS/2-6);
+      // Check adjacent shop in awning direction to avoid overlap
+      let hasShopInAwningDir = false;
+      const r = ((rot%4)+4)%4;
+      let cx1, cy1, cx2, cy2;
+      if (r===0) { cx1=minX; cy1=minYg+2; cx2=minX+1; cy2=minYg+2; }
+      else if (r===1) { cx1=minX-1; cy1=minYg; cx2=minX-1; cy2=minYg+1; }
+      else if (r===2) { cx1=minX; cy1=minYg-1; cx2=minX+1; cy2=minYg-1; }
+      else { cx1=minX+2; cy1=minYg; cx2=minX+2; cy2=minYg+1; }
+      if (sbMap.has(cx1+','+cy1) || sbMap.has(cx2+','+cy2)) hasShopInAwningDir = true;
+      if(shopPx + shopS < (cam.x - (canvas.width/zoom)/2) - 20 || shopPx > (cam.x + (canvas.width/zoom)/2) + 20 ||
+         shopPy + shopS + (hasShopInAwningDir?0:Math.round(shopS*0.16)) < (cam.y - (canvas.height/zoom)/2) - 20 || shopPy > (cam.y + (canvas.height/zoom)/2) + 20){
+        // culled
+      } else {
+        drawShopEditor(shopPx, shopPy, shopS, sb.name, rot, hasShopInAwningDir);
       }
+      const cx = (minX+1)*TS;
+      const cy = minYg*TS;
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      const name = sb.name;
+      ctx.font = 'bold 8px Arial';
+      const tw = ctx.measureText(name).width + 8;
+      ctx.fillRect(cx - tw/2, cy - 18, tw, 14);
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.fillText(name, cx, cy - 8);
+    } else {
+      if (sbVisited.has(key)) continue;
+      sbVisited.add(key);
+      const px=sb.x*TS, py=sb.y*TS;
+      if (sb.x<sx || sb.x>ex || sb.y<sy || sb.y>ey) continue;
+      if (px + TS < (cam.x - (canvas.width/zoom)/2) - 20 || px > (cam.x + (canvas.width/zoom)/2) + 20 ||
+          py + TS < (cam.y - (canvas.height/zoom)/2) - 20 || py > (cam.y + (canvas.height/zoom)/2) + 20) continue;
+      ctx.fillStyle=sb.color; ctx.fillRect(px,py,TS,TS);
+      ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=1;
+      ctx.strokeRect(px+1,py+1,TS-2,TS-2);
+      ctx.fillStyle='rgba(255,255,255,0.2)';
+      ctx.fillRect(px+3,py+3,TS/2-6,TS/2-6);
+      ctx.fillRect(px+TS/2+3,py+3,TS/2-6,TS/2-6);
+      ctx.fillRect(px+3,py+TS/2+3,TS/2-6,TS/2-6);
+      ctx.fillRect(px+TS/2+3,py+TS/2+3,TS/2-6,TS/2-6);
+      const cx = px+TS/2;
+      const cy = py+TS/2;
+      // single tile label
+      ctx.fillStyle = 'rgba(0,0,0,0.7)';
+      const name = sb.name;
+      ctx.font = 'bold 8px Arial';
+      const tw = ctx.measureText(name).width + 8;
+      ctx.fillRect(cx - tw/2, cy - 18, tw, 14);
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.fillText(name, cx, cy - 8);
     }
-    // Render name label centered above group (reuse minX/maxX/minYg)
-    const cx = (minX+maxX+1)/2*TS;
-    const cy = minYg*TS;
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    const name = sb.name;
-    ctx.font = 'bold 8px Arial';
-    const tw = ctx.measureText(name).width + 8;
-    ctx.fillRect(cx - tw/2, cy - 18, tw, 14);
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
-    ctx.fillText(name, cx, cy - 8);
   }
 
   // Spawn
@@ -3540,15 +4186,16 @@ preloadAssets().then(() => {
 
 // Keyboard shortcuts
 document.addEventListener('keydown', e => {
+  if(e.target && e.target.matches && e.target.matches('input,textarea,select,[contenteditable]')) return;
   if (e.key === '1') selectTile(4);
   else if (e.key === '2') selectTile(3);
   else if (e.key === '3') selectTile(1);
   else if (e.key === '4') selectTile(0);
   else if (e.key === '5') selectTile(2);
-  else if (e.key === 'b') setTool('brush');
-  else if (e.key === 'f') setTool('bucket');
-  else if (e.key === 'e') setTool('eraser');
-  else if (e.key === 'p') setTool('picker');
+  else if (e.key.toLowerCase() === 'b') setTool('brush');
+  else if (e.key.toLowerCase() === 'f') setTool('bucket');
+  else if (e.key.toLowerCase() === 'e') setTool('eraser');
+  else if (e.key.toLowerCase() === 'p') setTool('picker');
   else if (e.key === 'g') { drawGrid=!drawGrid; document.querySelector('#topBar input[type=checkbox]').checked=drawGrid; render(); }
   else if (e.key === 'r' || e.key === 'R') { rotateBuilding(1); }
   else if (e.key === 'q' || e.key === 'Q') { rotateBuilding(-1); }

@@ -2,7 +2,7 @@
 // 11 quest types (5 original + 6 added 2026-08-30)
 // Original 5: deliverShipment, killTarget, transportPerson, escapeCar, stealCar
 // New 6: silentPursuit, surveillance, plantBomb, meeting, theft, deliverLoot
-
+import { CFG } from "../core/config.js?v=25";
 export const MISSION_REWARDS = {
   deliverShipment: 400,
   killTarget: 500,
@@ -141,15 +141,23 @@ export function migrateLegacyMissionsToQuests(legacyList){
 }
 export function normalizeQuest(raw, idx=0){
   const rawType = raw.type || "deliverShipment";
+  if(rawType === "spammer") return null;
   const type = LEGACY_TO_NEW[rawType] || rawType;
   const allowed = ["deliverShipment","killTarget","transportPerson","escapeCar","stealCar","silentPursuit","surveillance","plantBomb","meeting","theft","deliverLoot"];
   const finalType = allowed.includes(type) ? type : "deliverShipment";
   const cat = raw.category==="side" ? "side" : "main";
   const icon = raw.icon || getQuestIcon(finalType);
-  const start = raw.start ? {x: Math.floor(raw.start.x), y: Math.floor(raw.start.y)} : (typeof raw.x==="number" ? {x: Math.floor(raw.x), y: Math.floor(raw.y)} : {x:0,y:0});
+  let start = raw.start ? {x: Math.floor(raw.start.x), y: Math.floor(raw.start.y)} : (typeof raw.x==="number" ? {x: Math.floor(raw.x), y: Math.floor(raw.y)} : {x:0,y:0});
   let end = raw.end ? {x: Math.floor(raw.end.x), y: Math.floor(raw.end.y)} : null;
   if(!end && typeof raw.endX==="number") end = {x: Math.floor(raw.endX), y: Math.floor(raw.endY)};
   if(!end) end = {x: start.x+4, y: start.y};
+  // Clamp to map bounds if CFG available
+  try{
+    const maxX = (CFG.COLS||120)-1, maxY=(CFG.ROWS||120)-1;
+    start.x=Math.max(0,Math.min(maxX, start.x)); start.y=Math.max(0,Math.min(maxY, start.y));
+    end.x=Math.max(0,Math.min(maxX, end.x)); end.y=Math.max(0,Math.min(maxY, end.y));
+    if(start.x===end.x && start.y===end.y) end.x=Math.min(maxX, start.x+1);
+  }catch{}
   let title = raw.title;
   if(!title || (typeof title==="object" && !title.ar && !title.en)){
     title = {ar:getQuestDefaultTitle(finalType,"ar"), en:getQuestDefaultTitle(finalType,"en")};

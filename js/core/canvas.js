@@ -1,7 +1,7 @@
 // ======================== CANVAS SETUP ========================
-// Extracted from game.js:425-449, 52736-52740 - no logic changed
-export const canvas = document.getElementById("gameCanvas");
-export const ctx = canvas.getContext("2d");
+// Extracted from game.js:425-449, 52736-52740 - made resilient
+export let canvas = typeof document !== 'undefined' ? document.getElementById("gameCanvas") : null;
+export let ctx = canvas ? canvas.getContext("2d") : null;
 export let W, H;
 export let zoom = 1.0;
 export const ZOOM_MIN = 0.5;
@@ -14,26 +14,27 @@ export function setW(v) { W = v; }
 export function setH(v) { H = v; }
 
 export function resizeCanvas() {
+  if(!canvas){ W = typeof window !== 'undefined' ? window.innerWidth : 800; H = typeof window !== 'undefined' ? window.innerHeight : 600; return; }
   W = window.innerWidth;
   H = window.innerHeight;
   canvas.width = W;
   canvas.height = H;
 }
-resizeCanvas();
-
-window.addEventListener('resize', () => {
+try{ resizeCanvas(); }catch{}
+if(typeof window !== 'undefined'){
+  window.addEventListener('resize', () => {
     const gc = document.getElementById('gameContainer');
-    if (gc) {
+    if (gc && canvas) {
         canvas.width = gc.clientWidth;
         canvas.height = gc.clientHeight;
         W = gc.clientWidth;
         H = gc.clientHeight;
     } else {
-        resizeCanvas();
+        try{ resizeCanvas(); }catch{}
     }
-});
+  });
+}
 
-export const miniCanvas = document.getElementById("minimapCanvas");
-export const miniCtx = miniCanvas.getContext("2d");
-miniCanvas.width = 180;
-miniCanvas.height = 180;
+export let miniCanvas = typeof document !== 'undefined' ? document.getElementById("minimapCanvas") : null;
+export let miniCtx = miniCanvas ? miniCanvas.getContext("2d") : null;
+if(miniCanvas){ try{ miniCanvas.width = 180; miniCanvas.height = 180; }catch{} }

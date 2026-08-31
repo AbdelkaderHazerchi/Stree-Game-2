@@ -328,6 +328,11 @@ export function getNearShopName(){ return nearShopName; }
 export function setNearShopName(v){ nearShopName = v; if (typeof window !== 'undefined') window.nearShopName = v; }
 
 export function givePersonalCar(typeIndex) {
+  // Eject player if driving personal car to avoid orphan inVehicle ref
+  if (player.inVehicle && player.inVehicle === player.personalCar) {
+    player.inVehicle = null;
+    player.onFoot = true;
+  }
   // Remove old personal car if exists
   if (player.personalCar) {
     const idx = vehicles.indexOf(player.personalCar);
@@ -386,18 +391,29 @@ export function openShop(shopName) {
     const div = document.createElement("div");
     div.className = "save-slot";
     const canBuy = player.money >= item.price;
-    div.innerHTML = `
-      <div>
-        <div class="name">${item.icon || ""} ${item.name} - <span style="color:#ffd700">$${item.price}</span></div>
-        <div class="info">${item.desc}</div>
-      </div>
-      <button class="menu-btn" style="padding:6px 16px;font-size:12px;${canBuy ? "background:#ff6b35;color:#fff" : "background:#444;color:#666"}" ${canBuy ? "" : "disabled"}>
-        ${canBuy ? "شراء" : "💰"}
-      </button>
-    `;
+    // Build safely with textContent
+    const left = document.createElement("div");
+    const nameRow = document.createElement("div");
+    nameRow.className = "name";
+    nameRow.textContent = `${item.icon || ""} ${item.name} - $${item.price}`;
+    // Color price part via span with safe text
+    // Already included in textContent above
+    const descRow = document.createElement("div");
+    descRow.className = "info";
+    descRow.textContent = item.desc;
+    left.appendChild(nameRow);
+    left.appendChild(descRow);
+    const btn = document.createElement("button");
+    btn.className = "menu-btn";
+    btn.style.padding = "6px 16px";
+    btn.style.fontSize = "12px";
+    btn.style.background = canBuy ? "#ff6b35" : "#444";
+    btn.style.color = canBuy ? "#fff" : "#666";
+    btn.disabled = !canBuy;
+    btn.textContent = canBuy ? "شراء" : "💰";
     if (canBuy) {
-      const btn = div.querySelector("button");
       btn.onclick = () => {
+        if(player.money < item.price) return;
         player.money -= item.price;
         item.action(player);
         updateHUD();
@@ -407,6 +423,8 @@ export function openShop(shopName) {
         else if (shopName === "💊 عيادة") showNotification("❤️ تم العلاج!");
       };
     }
+    div.appendChild(left);
+    div.appendChild(btn);
     container.appendChild(div);
   });
   document.getElementById("shopPlayerInfo").textContent =
@@ -414,16 +432,20 @@ export function openShop(shopName) {
   document.getElementById("shopDialog").style.display = "flex";
 }
 
-document.getElementById("closeShopBtn").onclick = () => {
-  document.getElementById("shopDialog").style.display = "none";
+const _closeShopBtn = document.getElementById("closeShopBtn");
+if(_closeShopBtn) _closeShopBtn.onclick = () => {
+  const d=document.getElementById("shopDialog");
+  if(d) d.style.display = "none";
   activeShop = null;
 };
 
 // Overlay button (death/respawn)
-overlayBtn.addEventListener("click", () => {
-  if (!player.alive) {
-    respawnPlayer();
-  } else {
-    overlay.style.display = "none";
-  }
-});
+if(overlayBtn){
+  overlayBtn.addEventListener("click", () => {
+    if (!player.alive) {
+      respawnPlayer();
+    } else {
+      if(overlay) overlay.style.display = "none";
+    }
+  });
+}
