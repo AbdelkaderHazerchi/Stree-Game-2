@@ -184,6 +184,26 @@ export const SHOPS = {
           givePersonalCar(3);
         },
       },
+      {
+        name: "BMW-s5",
+        price: 15000,
+        desc: "سيارة سيدان فاخرة عالية الأداء",
+        icon: "🚗",
+        carType: 5,
+        action: (p) => {
+          givePersonalCar(5);
+        },
+      },
+      {
+        name: "Mercedes-g8",
+        price: 17000,
+        desc: "سيارة دفع رباعي فاخرة وقوية",
+        icon: "🚙",
+        carType: 6,
+        action: (p) => {
+          givePersonalCar(6);
+        },
+      },
     ],
   },
   "💊 عيادة": {
@@ -318,6 +338,455 @@ export const SHOPS = {
           givePersonalCar(3);
         },
       },
+      {
+        name: "BMW-s5",
+        price: 15000,
+        desc: "سيارة سيدان فاخرة عالية الأداء",
+        icon: "🚗",
+        carType: 5,
+        action: (p) => {
+          givePersonalCar(5);
+        },
+      },
+      {
+        name: "Mercedes-g8",
+        price: 17000,
+        desc: "سيارة دفع رباعي فاخرة وقوية",
+        icon: "🚙",
+        carType: 6,
+        action: (p) => {
+          givePersonalCar(6);
+        },
+      },
+    ],
+  },
+  "🏛️ Police Station": {
+    title: "🏛️ Police Station - مركز الشرطة",
+    items: [
+      {
+        name: "إزالة النجوم (رشوة)",
+        price: 600,
+        desc: "إزالة مستوى المطلوبين بالكامل",
+        icon: "🌟",
+        action: (p) => {
+          p.wanted = 0;
+          clearPolice();
+          updateWantedUI();
+          showNotification("🌟 تم إزالة النجوم - الشرطة صرفت النظر");
+        },
+      },
+      {
+        name: "درع الشرطة",
+        price: 400,
+        desc: "درع واقي +50 صحة",
+        icon: "🛡️",
+        action: (p) => {
+          p.maxHealth = 150;
+          p.health = Math.min(p.health + 50, 150);
+          showNotification("🛡️ درع الشرطة +50");
+        },
+      },
+      {
+        name: "ذخيرة مسدس (x30)",
+        price: 180,
+        desc: "30 طلقة مسدس",
+        icon: "📦",
+        action: (p) => {
+          p.ammo.pistol = (p.ammo.pistol || 0) + 30;
+          showNotification("📦 +30 طلقة مسدس");
+        },
+      },
+      {
+        name: "علاج كامل",
+        price: 150,
+        desc: "استعادة الصحة كاملة",
+        icon: "❤️",
+        action: (p) => {
+          p.health = p.maxHealth;
+          showNotification("❤️ تم العلاج الكامل");
+        },
+      },
+    ],
+  },
+  // Aliases for Police Station (editor or map may store without emoji or with different spacing)
+  "🏛️Police Station": {
+    title: "🏛️ Police Station - مركز الشرطة",
+    items: [
+      {
+        name: "إزالة النجوم (رشوة)",
+        price: 600,
+        desc: "إزالة مستوى المطلوبين بالكامل",
+        icon: "🌟",
+        action: (p) => {
+          p.wanted = 0;
+          clearPolice();
+          updateWantedUI();
+          showNotification("🌟 تم إزالة النجوم - الشرطة صرفت النظر");
+        },
+      },
+      {
+        name: "درع الشرطة",
+        price: 400,
+        desc: "درع واقي +50 صحة",
+        icon: "🛡️",
+        action: (p) => {
+          p.maxHealth = 150;
+          p.health = Math.min(p.health + 50, 150);
+          showNotification("🛡️ درع الشرطة +50");
+        },
+      },
+      {
+        name: "ذخيرة مسدس (x30)",
+        price: 180,
+        desc: "30 طلقة مسدس",
+        icon: "📦",
+        action: (p) => {
+          p.ammo.pistol = (p.ammo.pistol || 0) + 30;
+          showNotification("📦 +30 طلقة مسدس");
+        },
+      },
+      {
+        name: "علاج كامل",
+        price: 150,
+        desc: "استعادة الصحة كاملة",
+        icon: "❤️",
+        action: (p) => {
+          p.health = p.maxHealth;
+          showNotification("❤️ تم العلاج الكامل");
+        },
+      },
+    ],
+  },
+  "Police Station": {
+    title: "🏛️ Police Station - مركز الشرطة",
+    items: [
+      {
+        name: "إزالة النجوم (رشوة)",
+        price: 600,
+        desc: "إزالة مستوى المطلوبين بالكامل",
+        icon: "🌟",
+        action: (p) => {
+          p.wanted = 0;
+          clearPolice();
+          updateWantedUI();
+          showNotification("🌟 تم إزالة النجوم - الشرطة صرفت النظر");
+        },
+      },
+      {
+        name: "درع الشرطة",
+        price: 400,
+        desc: "درع واقي +50 صحة",
+        icon: "🛡️",
+        action: (p) => {
+          p.maxHealth = 150;
+          p.health = Math.min(p.health + 50, 150);
+          showNotification("🛡️ درع الشرطة +50");
+        },
+      },
+      {
+        name: "ذخيرة مسدس (x30)",
+        price: 180,
+        desc: "30 طلقة مسدس",
+        icon: "📦",
+        action: (p) => {
+          p.ammo.pistol = (p.ammo.pistol || 0) + 30;
+          showNotification("📦 +30 طلقة مسدس");
+        },
+      },
+      {
+        name: "علاج كامل",
+        price: 150,
+        desc: "استعادة الصحة كاملة",
+        icon: "❤️",
+        action: (p) => {
+          p.health = p.maxHealth;
+          showNotification("❤️ تم العلاج الكامل");
+        },
+      },
+    ],
+  },
+  "🏥 Hospital": {
+    title: "🏥 Hospital - مستشفى",
+    items: [
+      {
+        name: "علاج كامل",
+        price: 100,
+        desc: "استعادة الصحة كاملة",
+        icon: "❤️",
+        action: (p) => {
+          p.health = p.maxHealth;
+          showNotification("❤️ تم العلاج الكامل");
+        },
+      },
+      {
+        name: "درع طبي",
+        price: 300,
+        desc: "درع واقي +50 صحة",
+        icon: "🛡️",
+        action: (p) => {
+          p.maxHealth = 150;
+          p.health = Math.min(p.health + 50, 150);
+          showNotification("🛡️ درع طبي +50");
+        },
+      },
+      {
+        name: "إزالة النجوم",
+        price: 500,
+        desc: "إزالة مستوى المطلوبين",
+        icon: "🌟",
+        action: (p) => {
+          p.wanted = 0;
+          clearPolice();
+          updateWantedUI();
+          showNotification("🌟 تم إزالة النجوم");
+        },
+      },
+      {
+        name: "إسعاف سريع",
+        price: 200,
+        desc: "شفاء فوري +50 صحة",
+        icon: "🚑",
+        action: (p) => {
+          p.health = Math.min(p.health + 50, p.maxHealth);
+          showNotification("🚑 تم الإسعاف +50 صحة");
+        },
+      },
+    ],
+  },
+  // Aliases
+  "🏥Hospital": {
+    title: "🏥 Hospital - مستشفى",
+    items: [
+      {
+        name: "علاج كامل",
+        price: 100,
+        desc: "استعادة الصحة كاملة",
+        icon: "❤️",
+        action: (p) => {
+          p.health = p.maxHealth;
+          showNotification("❤️ تم العلاج الكامل");
+        },
+      },
+      {
+        name: "درع طبي",
+        price: 300,
+        desc: "درع واقي +50 صحة",
+        icon: "🛡️",
+        action: (p) => {
+          p.maxHealth = 150;
+          p.health = Math.min(p.health + 50, 150);
+          showNotification("🛡️ درع طبي +50");
+        },
+      },
+      {
+        name: "إزالة النجوم",
+        price: 500,
+        desc: "إزالة مستوى المطلوبين",
+        icon: "🌟",
+        action: (p) => {
+          p.wanted = 0;
+          clearPolice();
+          updateWantedUI();
+          showNotification("🌟 تم إزالة النجوم");
+        },
+      },
+      {
+        name: "إسعاف سريع",
+        price: 200,
+        desc: "شفاء فوري +50 صحة",
+        icon: "🚑",
+        action: (p) => {
+          p.health = Math.min(p.health + 50, p.maxHealth);
+          showNotification("🚑 تم الإسعاف +50 صحة");
+        },
+      },
+    ],
+  },
+  "Hospital": {
+    title: "🏥 Hospital - مستشفى",
+    items: [
+      {
+        name: "علاج كامل",
+        price: 100,
+        desc: "استعادة الصحة كاملة",
+        icon: "❤️",
+        action: (p) => {
+          p.health = p.maxHealth;
+          showNotification("❤️ تم العلاج الكامل");
+        },
+      },
+      {
+        name: "درع طبي",
+        price: 300,
+        desc: "درع واقي +50 صحة",
+        icon: "🛡️",
+        action: (p) => {
+          p.maxHealth = 150;
+          p.health = Math.min(p.health + 50, 150);
+          showNotification("🛡️ درع طبي +50");
+        },
+      },
+      {
+        name: "إزالة النجوم",
+        price: 500,
+        desc: "إزالة مستوى المطلوبين",
+        icon: "🌟",
+        action: (p) => {
+          p.wanted = 0;
+          clearPolice();
+          updateWantedUI();
+          showNotification("🌟 تم إزالة النجوم");
+        },
+      },
+      {
+        name: "إسعاف سريع",
+        price: 200,
+        desc: "شفاء فوري +50 صحة",
+        icon: "🚑",
+        action: (p) => {
+          p.health = Math.min(p.health + 50, p.maxHealth);
+          showNotification("🚑 تم الإسعاف +50 صحة");
+        },
+      },
+    ],
+  },
+  "🏦 Bank": {
+    title: "🏦 Bank - بنك",
+    items: [
+      {
+        name: "إيداع أموال",
+        price: 100,
+        desc: "إيداع $500 في الحساب",
+        icon: "💰",
+        action: (p) => {
+          p.money += 500;
+          showNotification("💰 تم إيداع $500");
+        },
+      },
+      {
+        name: "قرض سريع",
+        price: 500,
+        desc: "اقتراض $2000 (سداد $2500)",
+        icon: "📝",
+        action: (p) => {
+          p.money += 2000;
+          p.debt = (p.debt || 0) + 2500;
+          showNotification("📝 قرض $2000 - سداد $2500");
+        },
+      },
+      {
+        name: "خزنة آمنة",
+        price: 300,
+        desc: "حماية الأموال من السرقة",
+        icon: "🔒",
+        action: (p) => {
+          p.safeMode = true;
+          showNotification("🔒 خزنة آمنة مفعلة");
+        },
+      },
+      {
+        name: "تحويل بنكي",
+        price: 200,
+        desc: "نقل أموال بين الحسابات",
+        icon: "💳",
+        action: (p) => {
+          p.money = Math.round(p.money * 1.05);
+          showNotification("💳 فائدة بنكية 5%");
+        },
+      },
+    ],
+  },
+  // Aliases
+  "🏦Bank": {
+    title: "🏦 Bank - بنك",
+    items: [
+      {
+        name: "إيداع أموال",
+        price: 100,
+        desc: "إيداع $500 في الحساب",
+        icon: "💰",
+        action: (p) => {
+          p.money += 500;
+          showNotification("💰 تم إيداع $500");
+        },
+      },
+      {
+        name: "قرض سريع",
+        price: 500,
+        desc: "اقتراض $2000 (سداد $2500)",
+        icon: "📝",
+        action: (p) => {
+          p.money += 2000;
+          p.debt = (p.debt || 0) + 2500;
+          showNotification("📝 قرض $2000 - سداد $2500");
+        },
+      },
+      {
+        name: "خزنة آمنة",
+        price: 300,
+        desc: "حماية الأموال من السرقة",
+        icon: "🔒",
+        action: (p) => {
+          p.safeMode = true;
+          showNotification("🔒 خزنة آمنة مفعلة");
+        },
+      },
+      {
+        name: "تحويل بنكي",
+        price: 200,
+        desc: "نقل أموال بين الحسابات",
+        icon: "💳",
+        action: (p) => {
+          p.money = Math.round(p.money * 1.05);
+          showNotification("💳 فائدة بنكية 5%");
+        },
+      },
+    ],
+  },
+  "Bank": {
+    title: "🏦 Bank - بنك",
+    items: [
+      {
+        name: "إيداع أموال",
+        price: 100,
+        desc: "إيداع $500 في الحساب",
+        icon: "💰",
+        action: (p) => {
+          p.money += 500;
+          showNotification("💰 تم إيداع $500");
+        },
+      },
+      {
+        name: "قرض سريع",
+        price: 500,
+        desc: "اقتراض $2000 (سداد $2500)",
+        icon: "📝",
+        action: (p) => {
+          p.money += 2000;
+          p.debt = (p.debt || 0) + 2500;
+          showNotification("📝 قرض $2000 - سداد $2500");
+        },
+      },
+      {
+        name: "خزنة آمنة",
+        price: 300,
+        desc: "حماية الأموال من السرقة",
+        icon: "🔒",
+        action: (p) => {
+          p.safeMode = true;
+          showNotification("🔒 خزنة آمنة مفعلة");
+        },
+      },
+      {
+        name: "تحويل بنكي",
+        price: 200,
+        desc: "نقل أموال بين الحسابات",
+        icon: "💳",
+        action: (p) => {
+          p.money = Math.round(p.money * 1.05);
+          showNotification("💳 فائدة بنكية 5%");
+        },
+      },
     ],
   },
 };
@@ -352,15 +821,18 @@ export function givePersonalCar(typeIndex) {
     }
   }
   const type = VEHICLE_TYPES[typeIndex];
+  if (!type) { showNotification("❌ نوع السيارة غير موجود"); return; }
+  const health = 18;
   const car = {
     x: px,
     y: py,
     w: type.w,
     h: type.h,
     speed: type.speed + 0.3,
+    cruiseSpeed: 1.6 + Math.random()*0.6,
     color: "#ffd700",
-    // gold color for personal car
     type: type,
+    typeIdx: typeIndex,
     angle: Math.PI / 2,
     vx: 0,
     vy: 0,
@@ -369,6 +841,9 @@ export function givePersonalCar(typeIndex) {
     siren: false,
     occupied: false,
     isPersonal: true,
+    hidden: false,
+    exploding: false,
+    health, maxHealth: health,
     npcTargetX: px,
     npcTargetY: py,
     npcWaitTimer: 0,

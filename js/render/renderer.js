@@ -3,7 +3,7 @@
 import { CFG, T, G } from "../core/config.js?v=26";
 import { ctx, W, H, zoom, cam, miniCtx } from "../core/canvas.js?v=26";
 import { getTile } from "../map/mapUtils.js?v=26";
-import { TILE_ASSETS, ROAD_CROSSWALK_IMG, SAND_IMG, SHOP_BUILDING_1_IMG } from "../assets/tileAssets.js?v=26";
+import { TILE_ASSETS, SAND_IMG, SHOP_BUILDING_1_IMG, POLICE_STATION_IMG, HOSPITAL_IMG, BANK_IMG } from "../assets/tileAssets.js?v=26";
 import { VEHICLE_ASSETS, EXPLOSION_ASSET } from "../assets/vehicleAssets.js?v=26";
 import { LS_ZONES } from "../map/mapData.js?v=26";
 import { VEHICLE_TYPES, vehicles, explosions, EXPLOSION_SIZE, EXPLOSION_DURATION } from "../entities/vehicles.js?v=26";
@@ -702,6 +702,310 @@ function drawShopNew(px, py, S, shopName, rotOverride=0, skipAwning=false){
   }
   if(needsRestore) ctx.restore();
 }
+function isPoliceStation(sb){
+  if(!sb || !sb.name) return false;
+  const n = sb.name.toLowerCase();
+  // matches emoji, english and arabic
+  return n.includes("police") || n.includes("شرطة") || n.includes("🏛️") || n.includes("police station");
+}
+function drawStarPath(ctx, cx, cy, outerR, innerR){
+  ctx.beginPath();
+  for(let i=0;i<10;i++){
+    const r = i%2===0 ? outerR : innerR;
+    const a = -Math.PI/2 + i*Math.PI/5;
+    const x = cx + Math.cos(a)*r;
+    const y = cy + Math.sin(a)*r;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+}
+function drawPoliceStation(px, py, S, shopName, rotOverride=0, skipAwning=false){
+  const rot = ((rotOverride||0)%4+4)%4;
+  let drawPx = px, drawPy = py;
+  let needsRestore = false;
+  if(rot!==0){
+    const cx = px+S/2, cy = py+S/2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot*Math.PI/2);
+    ctx.translate(-S/2, -S/2);
+    drawPx = 0; drawPy = 0;
+    needsRestore = true;
+  }
+  // Try to use SVG image if loaded - but keep procedural as reliable fallback
+  const img = POLICE_STATION_IMG && POLICE_STATION_IMG.img;
+  const useImg = img && img.complete && img.naturalWidth;
+  if(useImg){
+    // SVG already contains exact picture (border + dark top + gray bottom + ACs + POLICE + star + blue/black doors)
+    ctx.drawImage(img, drawPx, drawPy, S, S);
+    if(needsRestore) ctx.restore();
+    return;
+  }
+  // Procedural fallback - exact replica of picture without external image
+  const borderCol = "#8B97AB";
+  const darkCol = "#1E2126";
+  const wallCol = "#6F7E94";
+  const acWhite = "#D6D9DF";
+  const acGray = "#8A8D93";
+  const acBlack = "#070A0F";
+  const borderW = Math.max(3, Math.round(S*0.020));
+  ctx.fillStyle = borderCol;
+  ctx.fillRect(drawPx, drawPy, S, S);
+  const innerX = drawPx + borderW;
+  const innerY = drawPy + borderW;
+  const innerW = S - borderW*2;
+  const innerH = S - borderW*2;
+  const roofH = Math.round(innerH * 0.58);
+  const wallH = innerH - roofH;
+  const wallY = innerY + roofH;
+  ctx.fillStyle = darkCol;
+  ctx.fillRect(innerX, innerY, innerW, roofH);
+  ctx.fillStyle = wallCol;
+  ctx.fillRect(innerX, wallY, innerW, wallH);
+  const sepH = Math.max(2, Math.round(S*0.013));
+  ctx.fillStyle = borderCol;
+  ctx.fillRect(innerX, wallY - Math.floor(sepH/2), innerW, sepH);
+  // AC units - two white boxes with two black ovals each
+  const acW = Math.round(innerW * 0.295);
+  const acH = Math.round(innerW * 0.094);
+  const acX = innerX + Math.round(innerW * 0.23);
+  const ac1Y = innerY + Math.round(roofH * 0.19);
+  const ac2Y = innerY + Math.round(roofH * 0.53);
+  for(const ay of [ac1Y, ac2Y]){
+    ctx.fillStyle = acWhite;
+    ctx.fillRect(acX, ay, acW, acH);
+    ctx.fillStyle = acGray;
+    const grayH = Math.max(2, Math.round(acH*0.22));
+    ctx.fillRect(acX, ay + acH - grayH, acW, grayH);
+    ctx.fillStyle = acBlack;
+    const ovalRX = acW*0.19;
+    const ovalRY = acH*0.33;
+    const cx1 = acX + acW*0.28;
+    const cx2 = acX + acW*0.72;
+    const cy = ay + acH*0.40;
+    ctx.beginPath(); ctx.ellipse(cx1, cy, ovalRX, ovalRY, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx2, cy, ovalRX, ovalRY, 0, 0, Math.PI*2); ctx.fill();
+  }
+  // POLICE text
+  const fontSize = Math.round(innerW * 0.108);
+  ctx.fillStyle = "#080A0F";
+  ctx.font = `900 ${fontSize}px "Arial Black", Arial, sans-serif`;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  const textX = innerX + Math.round(innerW*0.060);
+  const textY = wallY + Math.round(wallH*0.30);
+  ctx.fillText("POLICE", textX, textY);
+  // Yellow star to the right of POLICE
+  const starCX = innerX + innerW - Math.round(innerW*0.185);
+  const starCY = textY;
+  const starOuter = Math.round(wallH*0.29);
+  const starInner = starOuter * 0.42;
+  ctx.fillStyle = "#CFC000";
+  ctx.strokeStyle = "#2F3300";
+  ctx.lineWidth = Math.max(1, Math.round(S*0.005));
+  ctx.lineJoin = "round";
+  drawStarPath(ctx, starCX, starCY, starOuter, starInner);
+  ctx.fill();
+  ctx.stroke();
+  // inner highlight
+  ctx.fillStyle = "#E6D600";
+  drawStarPath(ctx, starCX, starCY, starOuter*0.66, starInner*0.67);
+  ctx.fill();
+  // Blue panel
+  const blueW = Math.round(innerW*0.435);
+  const blueH = Math.round(wallH*0.28);
+  const blueX = innerX + Math.round(innerW*0.145);
+  const blueY = innerY + innerH - blueH - Math.round(wallH*0.13);
+  ctx.fillStyle = "#1B3250";
+  ctx.fillRect(blueX, blueY, blueW, blueH);
+  ctx.strokeStyle = "#0F1E32";
+  ctx.lineWidth = Math.max(1, Math.round(S*0.003));
+  ctx.strokeRect(blueX, blueY, blueW, blueH);
+  // Black door on right
+  const doorW = Math.round(innerW*0.135);
+  const doorH = Math.round(wallH*0.50);
+  const doorX = innerX + innerW - doorW - Math.round(innerW*0.055);
+  const doorY = innerY + innerH - doorH - Math.max(1, Math.round(S*0.006));
+  ctx.fillStyle = "#080A0F";
+  ctx.fillRect(doorX, doorY, doorW, doorH);
+  // subtle right/bottom shadow
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.fillRect(drawPx + S - Math.max(2, Math.round(S*0.015)), drawPy, Math.max(2, Math.round(S*0.015)), S);
+  ctx.fillRect(drawPx, drawPy + S - Math.max(2, Math.round(S*0.015)), S, Math.max(2, Math.round(S*0.015)));
+  if(needsRestore) ctx.restore();
+}
+function isHospital(sb){
+  if(!sb || !sb.name) return false;
+  const n = sb.name.toLowerCase();
+  return n.includes("hospital") || n.includes("مستشفى") || n.includes("🏥");
+}
+function drawHospital(px, py, S, shopName, rotOverride=0, skipAwning=false){
+  const rot = ((rotOverride||0)%4+4)%4;
+  let drawPx = px, drawPy = py;
+  let needsRestore = false;
+  if(rot!==0){
+    const cx = px+S/2, cy = py+S/2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot*Math.PI/2);
+    ctx.translate(-S/2, -S/2);
+    drawPx = 0; drawPy = 0;
+    needsRestore = true;
+  }
+  const img = HOSPITAL_IMG && HOSPITAL_IMG.img;
+  const useImg = img && img.complete && img.naturalWidth;
+  if(useImg){
+    ctx.drawImage(img, drawPx, drawPy, S, S);
+    if(needsRestore) ctx.restore();
+    return;
+  }
+  // Procedural fallback - hospital building with red cross
+  const borderCol = "#8B97AB";
+  const wallCol = "#E8E8E8";
+  const roofCol = "#C0392B";
+  const crossCol = "#E74C3C";
+  const borderW = Math.max(3, Math.round(S*0.020));
+  ctx.fillStyle = borderCol;
+  ctx.fillRect(drawPx, drawPy, S, S);
+  const innerX = drawPx + borderW;
+  const innerY = drawPy + borderW;
+  const innerW = S - borderW*2;
+  const innerH = S - borderW*2;
+  const roofH = Math.round(innerH * 0.25);
+  const wallH = innerH - roofH;
+  const wallY = innerY + roofH;
+  ctx.fillStyle = roofCol;
+  ctx.fillRect(innerX, innerY, innerW, roofH);
+  ctx.fillStyle = wallCol;
+  ctx.fillRect(innerX, wallY, innerW, wallH);
+  // Red cross in center
+  const crossSize = Math.round(innerW * 0.18);
+  const crossThickness = Math.round(innerW * 0.05);
+  const crossCX = innerX + innerW/2;
+  const crossCY = innerY + innerH/2;
+  ctx.fillStyle = crossCol;
+  // Vertical bar
+  ctx.fillRect(crossCX - crossThickness/2, crossCY - crossSize/2, crossThickness, crossSize);
+  // Horizontal bar
+  ctx.fillRect(crossCX - crossSize/2, crossCY - crossThickness/2, crossSize, crossThickness);
+  // Windows
+  const winW = Math.round(innerW * 0.12);
+  const winH = Math.round(wallH * 0.15);
+  const winGapX = Math.round(innerW * 0.05);
+  const winGapY = Math.round(wallH * 0.1);
+  const winCols = 3;
+  const winRows = 3;
+  const totalWinW = winCols * winW + (winCols - 1) * winGapX;
+  const totalWinH = winRows * winH + (winRows - 1) * winGapY;
+  const startX = innerX + (innerW - totalWinW) / 2;
+  const startY = wallY + (wallH - totalWinH) / 2;
+  ctx.fillStyle = "#355485";
+  for(let row = 0; row < winRows; row++){
+    for(let col = 0; col < winCols; col++){
+      const wx = startX + col * (winW + winGapX);
+      const wy = startY + row * (winH + winGapY);
+      ctx.fillRect(wx, wy, winW, winH);
+    }
+  }
+  // Entrance at bottom center
+  const doorW = Math.round(innerW * 0.25);
+  const doorH = Math.round(wallH * 0.35);
+  const doorX = innerX + (innerW - doorW) / 2;
+  const doorY = innerY + innerH - doorH;
+  ctx.fillStyle = "#2C3E50";
+  ctx.fillRect(doorX, doorY, doorW, doorH);
+  // Subtle shadow
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.fillRect(drawPx + S - Math.max(2, Math.round(S*0.015)), drawPy, Math.max(2, Math.round(S*0.015)), S);
+  ctx.fillRect(drawPx, drawPy + S - Math.max(2, Math.round(S*0.015)), S, Math.max(2, Math.round(S*0.015)));
+  if(needsRestore) ctx.restore();
+}
+function isBank(sb){
+  if(!sb || !sb.name) return false;
+  const n = sb.name.toLowerCase();
+  return n.includes("bank") || n.includes("بنك") || n.includes("🏦");
+}
+function drawBank(px, py, S, shopName, rotOverride=0, skipAwning=false){
+  const rot = ((rotOverride||0)%4+4)%4;
+  let drawPx = px, drawPy = py;
+  let needsRestore = false;
+  if(rot!==0){
+    const cx = px+S/2, cy = py+S/2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot*Math.PI/2);
+    ctx.translate(-S/2, -S/2);
+    drawPx = 0; drawPy = 0;
+    needsRestore = true;
+  }
+  const img = BANK_IMG && BANK_IMG.img;
+  const useImg = img && img.complete && img.naturalWidth;
+  if(useImg){
+    ctx.drawImage(img, drawPx, drawPy, S, S);
+    if(needsRestore) ctx.restore();
+    return;
+  }
+  // Procedural fallback - bank building with columns and dollar sign
+  const borderCol = "#8B97AB";
+  const wallCol = "#E8E8E8";
+  const roofCol = "#1A3C5E";
+  const accentCol = "#F39C12";
+  const borderW = Math.max(3, Math.round(S*0.020));
+  ctx.fillStyle = borderCol;
+  ctx.fillRect(drawPx, drawPy, S, S);
+  const innerX = drawPx + borderW;
+  const innerY = drawPy + borderW;
+  const innerW = S - borderW*2;
+  const innerH = S - borderW*2;
+  const roofH = Math.round(innerH * 0.20);
+  const wallH = innerH - roofH;
+  const wallY = innerY + roofH;
+  ctx.fillStyle = roofCol;
+  ctx.fillRect(innerX, innerY, innerW, roofH);
+  ctx.fillStyle = wallCol;
+  ctx.fillRect(innerX, wallY, innerW, wallH);
+  // Columns (Greek temple style)
+  const colCount = 4;
+  const colW = Math.round(innerW * 0.12);
+  const colGap = (innerW - colCount * colW) / (colCount + 1);
+  ctx.fillStyle = "#C0C0C0";
+  for(let i = 0; i < colCount; i++){
+    const cx = innerX + colGap + i * (colW + colGap);
+    ctx.fillRect(cx, wallY, colW, wallH);
+    // Column capital
+    ctx.fillStyle = "#D4A843";
+    ctx.fillRect(cx - 2, wallY - 6, colW + 4, 6);
+    ctx.fillStyle = "#C0C0C0";
+  }
+  // Dollar sign in center
+  const fontSize = Math.round(innerW * 0.15);
+  ctx.fillStyle = accentCol;
+  ctx.font = `900 ${fontSize}px "Arial Black", Arial, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("$", innerX + innerW/2, innerY + innerH/2);
+  // Windows between columns
+  const winW = Math.round((colGap - 4) * 0.8);
+  const winH = Math.round(wallH * 0.35);
+  ctx.fillStyle = "#355485";
+  for(let i = 0; i < colCount - 1; i++){
+    const wx = innerX + colGap + (i+1) * colW + i * colGap + (colGap - winW) / 2;
+    const wy = wallY + (wallH - winH) / 2;
+    ctx.fillRect(wx, wy, winW, winH);
+  }
+  // Entrance at bottom center
+  const doorW = Math.round(innerW * 0.22);
+  const doorH = Math.round(wallH * 0.40);
+  const doorX = innerX + (innerW - doorW) / 2;
+  const doorY = innerY + innerH - doorH;
+  ctx.fillStyle = "#1A3C5E";
+  ctx.fillRect(doorX, doorY, doorW, doorH);
+  // Subtle shadow
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.fillRect(drawPx + S - Math.max(2, Math.round(S*0.015)), drawPy, Math.max(2, Math.round(S*0.015)), S);
+  ctx.fillRect(drawPx, drawPy + S - Math.max(2, Math.round(S*0.015)), S, Math.max(2, Math.round(S*0.015)));
+  if(needsRestore) ctx.restore();
+}
 
 export function render() {
   ctx.clearRect(0, 0, W, H);
@@ -752,17 +1056,17 @@ export function render() {
           const a = TILE_ASSETS[T.ROAD];
           if (a.img && a.img.complete)
             ctx.drawImage(a.img, px, py, CFG.TILE, CFG.TILE);
+          // Perpendicular intersection: remove pedestrian crosswalk markings.
+          // A perpendicular intersection requires road neighbors in BOTH axes (horizontal + vertical).
+          // When detected, render plain asphalt with no overlay; otherwise preserve yellow lane dashes.
           const isInterX =
             (x > 0 && getTile(x - 1, y) === T.ROAD) ||
             (x < CFG.COLS - 1 && getTile(x + 1, y) === T.ROAD);
           const isInterY =
             (y > 0 && getTile(x, y - 1) === T.ROAD) ||
             (y < CFG.ROWS - 1 && getTile(x, y + 1) === T.ROAD);
-          const isIntersection = isInterX && isInterY;
-          if (isIntersection) {
-            if (ROAD_CROSSWALK_IMG.img && ROAD_CROSSWALK_IMG.img.complete)
-              ctx.drawImage(ROAD_CROSSWALK_IMG.img, px, py, CFG.TILE, CFG.TILE);
-          } else {
+          const isPerpendicularIntersection = isInterX && isInterY;
+          if (!isPerpendicularIntersection) {
             ctx.fillStyle = "rgba(255,200,0,0.3)";
             const isVer = y > 0 && getTile(x, y - 1) === T.ROAD;
             if (isVer && x > 0 && getTile(x - 1, y) !== T.ROAD) {
@@ -915,7 +1219,13 @@ export function render() {
             shopPy + S + awningExtra < cam.y - viewH/2 - 50 || shopPy > cam.y + viewH/2 + 50) {
           // culled
         } else {
-          if(isNewShopDesign(sb)){
+          if(isPoliceStation(sb)){
+            drawPoliceStation(shopPx, shopPy, S, sb.name, shopRot, hasShopInAwningDir);
+          } else if(isHospital(sb)){
+            drawHospital(shopPx, shopPy, S, sb.name, shopRot, hasShopInAwningDir);
+          } else if(isBank(sb)){
+            drawBank(shopPx, shopPy, S, sb.name, shopRot, hasShopInAwningDir);
+          } else if(isNewShopDesign(sb)){
             drawShopNew(shopPx, shopPy, S, sb.name, shopRot, hasShopInAwningDir);
           } else {
             drawShop(shopPx, shopPy, S, sb.name, shopRot, hasShopInAwningDir);

@@ -17,7 +17,9 @@ export const TILE_ASSETS = {
   [T.PAVEMENT]: { name: "pavement", src: "assets/pavement.svg?v=26", img: null },
 };
 
-export const ROAD_CROSSWALK_IMG = { src: "assets/road_crosswalk.svg?v=26", img: null };
 export const SAND_IMG = { src: "assets/sand.svg?v=26", img: null };
 export const PAVEMENT_IMG = { src: "assets/pavement.svg?v=26", img: null };
 export const SHOP_BUILDING_1_IMG = { src: "assets/shop_building_1.svg?v=26", img: null };
+export const POLICE_STATION_IMG = { src: "assets/police_station.svg?v=26", img: null };
+export const HOSPITAL_IMG = { src: "assets/hospital_building.svg?v=26", img: null };
+export const BANK_IMG = { src: "assets/bank_building.svg?v=26", img: null };

@@ -214,18 +214,7 @@ export function update() {
   // Camera
   updateCamera();
 
-  // Wanted timer decay
-  if (player.wanted > 0 && !currentMission) {
-    player.wantedTimer += 16;
-    if (player.wantedTimer > 15000) {
-      player.wanted--;
-      player.wantedTimer = 0;
-      if (player.wanted < 0) player.wanted = 0;
-      updateWantedUI();
-    }
-  } else if (player.wanted > 0) {
-    player.wantedTimer = 0;
-  }
+  // Wanted stars decay is now handled in police.js (6 squares / 20s)
 
   // Mission
   updateMission();

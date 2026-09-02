@@ -6,6 +6,8 @@ export const VEHICLE_ASSETS = [
   { name: "truck", src: "assets/vehicle_truck.svg?v=26", img: null },
   { name: "suv", src: "assets/vehicle_suv.svg?v=26", img: null },
   { name: "police", src: "assets/vehicle_police.svg?v=26", img: null },
+  { name: "BMW-s5", src: "assets/vehicle_bmw.svg?v=26", img: null },
+  { name: "Mercedes-g8", src: "assets/vehicle_mrsds.svg?v=26", img: null },
 ];
 
 // Explosion animation asset (car_explotion.svg) - used when vehicles explode

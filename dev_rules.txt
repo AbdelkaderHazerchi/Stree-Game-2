@@ -1,0 +1,3 @@
+- Never use Git for uploads.
+- Do not remove any existing feature without asking me.
+- When requesting a feature, make sure it is added correctly before finalizing.

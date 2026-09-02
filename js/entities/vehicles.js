@@ -53,6 +53,22 @@ export const VEHICLE_TYPES = [
     color: "#2c3e50",
     accel: 0.18,
   },
+  {
+    name: "BMW-s5",
+    w: 58,
+    h: 30,
+    speed: 5.8,
+    color: "#1a1a2e",
+    accel: 0.22,
+  },
+  {
+    name: "Mercedes-g8",
+    w: 72,
+    h: 38,
+    speed: 5.2,
+    color: "#0d1117",
+    accel: 0.2,
+  },
 ];
 
 // Random car color palettes - shades of blue, green, red, yellow, orange (police excluded)
@@ -80,8 +96,8 @@ export function getRandomCarColorByType(typeName){
 export function spawnVehicles() {
   vehicles.length = 0;
   explosions.length = 0;
-  // Build civilian type pool robustly (exclude police by flag, not position)
-  const civilianPool = VEHICLE_TYPES.filter(t => t.name !== "سيارة شرطة");
+  // Build civilian type pool robustly (exclude police and player-only exclusive cars)
+  const civilianPool = VEHICLE_TYPES.filter(t => t.name !== "سيارة شرطة" && t.name !== "BMW-s5" && t.name !== "Mercedes-g8");
   for (let i = 0; i < CFG.NPC_VEHICLE_COUNT; i++) {
     let x,
       y,

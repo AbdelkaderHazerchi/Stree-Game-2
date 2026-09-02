@@ -1,6 +1,6 @@
 // ======================== PRELOAD ASSETS ========================
 // Extracted from game.js:390-423 - no logic changed
-import { TILE_ASSETS, ROAD_CROSSWALK_IMG, SAND_IMG, PAVEMENT_IMG, SHOP_BUILDING_1_IMG } from "./tileAssets.js?v=26";
+import { TILE_ASSETS, SAND_IMG, PAVEMENT_IMG, SHOP_BUILDING_1_IMG, POLICE_STATION_IMG, HOSPITAL_IMG, BANK_IMG } from "./tileAssets.js?v=26";
 import { VEHICLE_ASSETS, EXPLOSION_ASSET } from "./vehicleAssets.js?v=26";
 
 function loadImgWithTimeout(asset, timeoutMs=3000){
@@ -17,10 +17,12 @@ function loadImgWithTimeout(asset, timeoutMs=3000){
 export function preloadAssets() {
   return Promise.all([
     ...Object.values(TILE_ASSETS).map(a=> loadImgWithTimeout(a)),
-    loadImgWithTimeout(ROAD_CROSSWALK_IMG),
     loadImgWithTimeout(SAND_IMG),
     loadImgWithTimeout(PAVEMENT_IMG),
     loadImgWithTimeout(SHOP_BUILDING_1_IMG),
+    loadImgWithTimeout(POLICE_STATION_IMG),
+    loadImgWithTimeout(HOSPITAL_IMG),
+    loadImgWithTimeout(BANK_IMG),
     ...VEHICLE_ASSETS.map(a=> loadImgWithTimeout(a)),
     loadImgWithTimeout(EXPLOSION_ASSET),
   ]);

@@ -10,7 +10,7 @@ import { gameState, gameOver, currentSaveName, setGameState } from "./core/state
 import { gameLoop, initGame, introVideo } from "./core/gameLoop.js?v=26";
 
 // Assets
-import { TILE_ASSETS, ROAD_CROSSWALK_IMG, SAND_IMG } from "./assets/tileAssets.js?v=26";
+import { TILE_ASSETS, SAND_IMG } from "./assets/tileAssets.js?v=26";
 import { VEHICLE_ASSETS } from "./assets/vehicleAssets.js?v=26";
 import { preloadAssets } from "./assets/preload.js?v=26";
 
