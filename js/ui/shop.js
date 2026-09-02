@@ -830,7 +830,6 @@ export function givePersonalCar(typeIndex) {
     h: type.h,
     speed: type.speed + 0.3,
     cruiseSpeed: 1.6 + Math.random()*0.6,
-    color: "#ffd700",
     type: type,
     typeIdx: typeIndex,
     angle: Math.PI / 2,

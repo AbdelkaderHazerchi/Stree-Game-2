@@ -1593,22 +1593,7 @@ export function render() {
     ctx.ellipse(2, 3, hw + 2, hh + 1, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Car body color
-    ctx.fillStyle = v.isPolice ? "#ffffff" : v.color;
-    ctx.beginPath();
-    ctx.moveTo(-hw + 4, -hh);
-    ctx.lineTo(hw - 4, -hh);
-    ctx.quadraticCurveTo(hw, -hh, hw, -hh + 4);
-    ctx.lineTo(hw, hh - 4);
-    ctx.quadraticCurveTo(hw, hh, hw - 4, hh);
-    ctx.lineTo(-hw + 4, hh);
-    ctx.quadraticCurveTo(-hw, hh, -hw, hh - 4);
-    ctx.lineTo(-hw, -hh + 4);
-    ctx.quadraticCurveTo(-hw, -hh, -hw + 4, -hh);
-    ctx.closePath();
-    ctx.fill();
-
-    // Draw vehicle SVG overlay (wheels, windows, lights) - robust to deserialized types
+    // Draw vehicle SVG directly (no random color body - use SVG as is)
     let va = null;
     if(typeof v.typeIdx === 'number' && v.typeIdx >=0 && VEHICLE_ASSETS[v.typeIdx]){
       va = VEHICLE_ASSETS[v.typeIdx];

@@ -281,7 +281,7 @@ function spawnForStars(config, stations, target) {
     const vType = VEHICLE_TYPES.find(v => v.name === "سيارة شرطة") || VEHICLE_TYPES[4];
     const veh = {
       x: vx, y: vy, w: vType.w, h: vType.h,
-      speed: vType.speed, color: "#ffffff", type: vType, typeIdx: VEHICLE_TYPES.indexOf(vType),
+      speed: vType.speed, type: vType, typeIdx: VEHICLE_TYPES.indexOf(vType),
       angle: Math.random()*Math.PI*2, vx: 0, vy: 0,
       driver: null, isPolice: true, siren: true, occupied: false, isPersonal: false,
       hidden: false, exploding: false, health: 20, maxHealth: 20,

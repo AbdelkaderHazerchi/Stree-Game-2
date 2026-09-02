@@ -18,7 +18,6 @@ export const VEHICLE_TYPES = [
     w: 60,
     h: 32,
     speed: 4.5,
-    color: "#e74c3c",
     accel: 0.15,
   },
   {
@@ -26,7 +25,6 @@ export const VEHICLE_TYPES = [
     w: 56,
     h: 28,
     speed: 5.5,
-    color: "#f1c40f",
     accel: 0.2,
   },
   {
@@ -34,7 +32,6 @@ export const VEHICLE_TYPES = [
     w: 76,
     h: 40,
     speed: 3.5,
-    color: "#3498db",
     accel: 0.08,
   },
   {
@@ -42,7 +39,6 @@ export const VEHICLE_TYPES = [
     w: 68,
     h: 36,
     speed: 4.0,
-    color: "#2ecc71",
     accel: 0.12,
   },
   {
@@ -50,7 +46,6 @@ export const VEHICLE_TYPES = [
     w: 60,
     h: 32,
     speed: 5.0,
-    color: "#2c3e50",
     accel: 0.18,
   },
   {
@@ -58,7 +53,6 @@ export const VEHICLE_TYPES = [
     w: 58,
     h: 30,
     speed: 5.8,
-    color: "#1a1a2e",
     accel: 0.22,
   },
   {
@@ -66,32 +60,9 @@ export const VEHICLE_TYPES = [
     w: 72,
     h: 38,
     speed: 5.2,
-    color: "#0d1117",
     accel: 0.2,
   },
 ];
-
-// Random car color palettes - shades of blue, green, red, yellow, orange (police excluded)
-// Each palette contains 10 curated shades from dark to bright for vivid diversity
-export const CAR_COLOR_PALETTES = {
-  blue: ["#1e293b","#1e3a8a","#1e40af","#1d4ed8","#2563eb","#3b82f6","#60a5fa","#0ea5e9","#0284c7","#38bdf8"],
-  green: ["#052e16","#14532d","#166534","#15803d","#16a34a","#22c55e","#4ade80","#065f46","#10b981","#6ee7b7"],
-  red: ["#450a0a","#7f1d1d","#991b1b","#b91c1c","#dc2626","#ef4444","#f87171","#e74c3c","#c0392b","#ff8787"],
-  yellow: ["#422006","#713f12","#a16207","#ca8a04","#eab308","#facc15","#fde047","#fef08a","#fef9c3","#fde68a"],
-  orange: ["#431407","#7c2d12","#9a3412","#c2410c","#ea580c","#f97316","#fb923c","#fdba74","#ffedd5","#ff7f50"]
-};
-export const CAR_COLOR_KEYS = Object.keys(CAR_COLOR_PALETTES);
-export function getRandomCarColor(){
-  if(!CAR_COLOR_KEYS.length) return "#e74c3c";
-  const paletteKey = CAR_COLOR_KEYS[Math.floor(Math.random()*CAR_COLOR_KEYS.length)];
-  const shades = CAR_COLOR_PALETTES[paletteKey];
-  if(!shades || !shades.length) return "#e74c3c";
-  return shades[Math.floor(Math.random()*shades.length)];
-}
-export function getRandomCarColorByType(typeName){
-  // Optional: keep some type-based bias but still random within hue
-  return getRandomCarColor();
-}
 
 export function spawnVehicles() {
   vehicles.length = 0;
@@ -136,7 +107,6 @@ export function spawnVehicles() {
       h: type.h,
       speed: type.speed + (Math.random() - 0.5) * 0.5,
       cruiseSpeed,
-      color: getRandomCarColor(),
       type: type,
       typeIdx: VEHICLE_TYPES.indexOf(type),
       angle: initAngle,
@@ -184,7 +154,6 @@ export function spawnVehicles() {
       w: pt.w,
       h: pt.h,
       speed: CFG.POLICE_SPEED,
-      color: "#ffffff",
       type: pt,
       typeIdx: VEHICLE_TYPES.indexOf(pt),
       angle: Math.random() * Math.PI * 2,
